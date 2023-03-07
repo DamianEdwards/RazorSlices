@@ -1,0 +1,45 @@
+name: CI (main)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.gitignore"
+      - "**/*.gitattributes"
+
+  workflow_dispatch:
+
+env:
+  PACKAGE_ID: RazorSlices
+
+jobs:
+  build:
+    name: Build & Test
+    uses: ./.github/workflows/_build.yml
+    with:
+      packShipCandidate: true
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+
+      - name: Add GitHub Package Repository source
+        run: dotnet nuget add source --username ${{ secrets.GPR_USERNAME }} --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name GPR ${{ secrets.GPR_URI }}
+
+      - name: Push to GitHub Packages
+        run: dotnet nuget push **/ci/*.nupkg -s "GPR" --skip-duplicate
+
+      - name: Delete old packages
+        uses: smartsquaregmbh/delete-old-packages@v0.5.0
+        with:
+          keep: 5
+          names: ${{ env.PACKAGE_ID }}

@@ -1,0 +1,16 @@
+name: PRs
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.gitignore"
+      - "**/*.gitattributes"
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Test PR
+    uses: ./.github/workflows/_build.yml

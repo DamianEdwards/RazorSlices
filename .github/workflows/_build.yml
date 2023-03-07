@@ -1,0 +1,60 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      packShipCandidate:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build & Test
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install .NET SDK
+      uses: actions/setup-dotnet@v3
+      with:
+        global-json-file: "./global.json"
+    
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Create build number
+      run: |
+        now=$(date +'%Y%m%d')
+        buildNumber=$now.$GITHUB_RUN_NUMBER
+        echo "BUILD_NUMBER=$buildNumber" >> $GITHUB_ENV
+        echo "$buildNumber"
+
+    - name: Build
+      run: dotnet build --configuration Release --no-restore -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
+
+    - name: Test
+      run: dotnet test --configuration Release --no-restore --no-build
+
+    - name: Publish samples
+      run: |
+        for projectPath in ./samples/**/*.csproj ; do
+          projectFileName=${projectPath##*/}
+          projectName=${projectFileName%.*}
+          dotnet publish "$projectPath" --output "./artifacts/$projectName" --configuration Release --no-build --verbosity normal
+        done;
+      
+    - name: Pack (ci)
+      run: dotnet pack --configuration Release --output ./artifacts/ci --verbosity normal -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
+
+    - name: Pack (ship candidate)
+      if: ${{ inputs.packShipCandidate }}
+      run: dotnet pack --configuration Release --output ./artifacts/ship --verbosity normal -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true -p:IsShipCandidate=true
+
+    - name: Upload artifacts (packages)
+      uses: actions/upload-artifact@master
+      with:
+        name: nupkg
+        path: ./artifacts/**/*.nupkg
+        retention-days: 5

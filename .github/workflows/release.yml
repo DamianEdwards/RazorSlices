@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      runId:
+        description: The run ID of the CI workflow to release NuGet artifacts from
+        required: true
+        type: string
+
+env:
+  PACKAGE_ID: RazorSlices
+
+jobs:
+  push-package:
+    name: Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download workflow run details
+        run: |
+          workflowUrl="https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ inputs.runId }}"
+          curl -s -H "Accept: application/json" "${workflowUrl}" > workflow_details.json
+
+      - name: Extract workflow run commit SHA
+        uses: sergeysova/jq-action@v2
+        id: workflowsha
+        with:
+          cmd: 'jq .head_sha workflow_details.json -r'
+
+      - name: Download workflow run artifacts
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          run_id: ${{ inputs.runId }}
+          workflow_conclusion: success
+          name: nupkg
+      
+      - name: Get package version into an environment variable
+        run: |
+          _filepath="$(find ./ship -iname $PACKAGE_ID.*.nupkg)"
+          _filename="${_filepath##*/}"
+          _pkgname="${_filename%.*}"
+          _version="${_pkgname##$PACKAGE_ID.}"
+          echo "PACKAGE_VERSION=${_version}" >> $GITHUB_ENV
+          echo "PACKAGE_FILEPATH=${_filepath}" >> $GITHUB_ENV
+
+      - name: Verify package version doesn't exist
+        run: |
+          _packageId="$PACKAGE_ID"
+          _packageVersion="$PACKAGE_VERSION"
+          _packageIdLower="${_packageId,,}"
+          _packageUrl="https://api.nuget.org/v3/registration5-semver1/${_packageIdLower}/${_packageVersion}.json"
+          echo "Checking for existing package at ${_packageUrl}"
+          _statusCode=$(curl -s -o /dev/null -I -w '%{http_code}' "${_packageUrl}")
+          if [ $_statusCode == "200" ]; then
+            echo "The package ${_packageId} with version ${_packageVersion} already exists on nuget.org"; exit 1
+          elif [ $_statusCode == "404" ]; then
+            echo "Confirmed package ${_packageId} with version ${_packageVersion} does not already exist on nuget.org"
+          else
+            echo "Unexpected status code ${_statusCode} received from nuget.org"; exit 1
+          fi
+
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ env.PACKAGE_VERSION }}
+          commit: ${{ steps.workflowsha.outputs.value }}
+          generateReleaseNotes: true
+          draft: true
+          prerelease: ${{ contains(env.PACKAGE_VERSION, '-') }}
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+
+      - name: Add nuget.org source
+        run: dotnet nuget add source --name NUGET https://www.nuget.org
+
+      - name: Push to nuget.org
+        run: dotnet nuget push "$PACKAGE_FILEPATH" -s "NUGET" -k ${{ secrets.NUGET_API_KEY }}

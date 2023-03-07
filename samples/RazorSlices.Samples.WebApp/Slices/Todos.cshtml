@@ -1,0 +1,26 @@
+﻿@inherits RazorSliceHttpResult<Todo[]>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Todos</title>
+</head>
+<body>
+  <h1>Todos</h1>
+  <table>
+    <tr>
+      <th>Id</th>
+      <th>Title</th>
+      <th>Due by</th>
+      <th>Status</th>
+    </tr>
+    @foreach (var todo in Model) {
+      <tr>
+        <td>@todo.Id</td>
+        <td>@todo.Title</td>
+        <td>@todo.DueBy</td>
+        <td>@(todo.IsComplete ? "Completed" : "Incomplete")</td>
+      </tr>
+    }
+  </table>
+</body>
+</html>
