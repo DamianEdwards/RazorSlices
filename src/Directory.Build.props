@@ -6,7 +6,7 @@
     <VersionSuffix>dev</VersionSuffix>
     <!-- VersionSuffix to be used for CI builds -->
     <VersionSuffix Condition=" '$(ContinuousIntegrationBuild)' == 'true' And '$(BuildNumber)' != '' ">ci.$(BuildNumber)</VersionSuffix>
-    <VersionSuffix Condition=" '$(ContinuousIntegrationBuild)' == 'true' And '$(IsShipCandidate)' == 'true' "></VersionSuffix>
+    <VersionSuffix Condition=" '$(ContinuousIntegrationBuild)' == 'true' And '$(IsShipCandidate)' == 'true' ">pre.$(BuildNumber)</VersionSuffix>
     <!--<VersionSuffix Condition=" '$(ContinuousIntegrationBuild)' == 'true' And '$(IsShipCandidate)' == 'true' ">pre.$(BuildNumber)</VersionSuffix>-->
     <Authors>Damian Edwards</Authors>
     <Copyright>Copyright © Damian Edwards</Copyright>
