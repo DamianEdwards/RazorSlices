@@ -351,12 +351,19 @@ public abstract partial class RazorSlice : IDisposable
     protected void Write<TValue>(TValue? value) => Write(value?.ToString());
 
     /// <summary>
-    /// Disposes the Razor Slice.
+    /// Disposes the instance. Overriding implementations should ensure they call <c>base.Dispose()</c> after performing their
+    /// custom dispose logic, e.g.:
+    /// <code>
+    /// public override void Dispose()
+    /// {
+    ///     // Custom dispose logic here...
+    ///     base.Dispose();
+    /// }
+    /// </code>
     /// </summary>
-    public void Dispose()
+    public virtual void Dispose()
     {
         ReturnPooledObjects();
-        GC.SuppressFinalize(this);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

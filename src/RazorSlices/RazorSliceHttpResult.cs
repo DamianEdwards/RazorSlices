@@ -35,6 +35,7 @@ public abstract class RazorSliceHttpResult : RazorSlice, IResult, IStatusCodeHtt
 
         httpContext.Response.StatusCode = StatusCode;
         httpContext.Response.ContentType = ContentType;
+        httpContext.Response.RegisterForDispose(this);
 
         var renderTask = this.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, HtmlEncoder);
 
