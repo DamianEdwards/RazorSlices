@@ -11,9 +11,11 @@ namespace Microsoft.AspNetCore.Http.HttpResults;
 public abstract class RazorSliceHttpResult<TModel> : RazorSlice<TModel>, IResult, IStatusCodeHttpResult, IContentTypeHttpResult
 {
     /// <summary>
-    /// Gets the HTTP status code: <see cref="StatusCodes.Status200OK"/>
+    /// Gets or sets the HTTP status code. Defaults to <see cref="StatusCodes.Status200OK"/>
     /// </summary>
-    public int? StatusCode => StatusCodes.Status200OK;
+    public int StatusCode { get; set; } = StatusCodes.Status200OK;
+
+    int? IStatusCodeHttpResult.StatusCode => StatusCode;
 
     /// <summary>
     /// Gets the content type: <c>text/html; charset=utf-8</c>
@@ -21,8 +23,8 @@ public abstract class RazorSliceHttpResult<TModel> : RazorSlice<TModel>, IResult
     public string ContentType => "text/html; charset=utf-8";
 
     /// <summary>
-    /// Gets or sets the <see cref="System.Text.Encodings.Web.HtmlEncoder" /> instance to use when rendering the template. If <c>null</c> the template
-    /// will use <see cref="HtmlEncoder.Default" />.
+    /// Gets or sets the <see cref="System.Text.Encodings.Web.HtmlEncoder" /> instance to use when rendering the template. If
+    /// <c>null</c> the template will use <see cref="HtmlEncoder.Default" />.
     /// </summary>
     public HtmlEncoder? HtmlEncoder { get; set; }
 
@@ -31,7 +33,7 @@ public abstract class RazorSliceHttpResult<TModel> : RazorSlice<TModel>, IResult
     {
         ArgumentNullException.ThrowIfNull(httpContext);
 
-        httpContext.Response.StatusCode = StatusCodes.Status200OK;
+        httpContext.Response.StatusCode = StatusCode;
         httpContext.Response.ContentType = ContentType;
 
         var renderTask = this.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, HtmlEncoder);

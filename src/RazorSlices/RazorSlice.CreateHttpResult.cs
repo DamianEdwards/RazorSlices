@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace RazorSlices;
 
@@ -8,31 +9,55 @@ public abstract partial class RazorSlice
     /// Creates and returns a new instance of a <see cref="RazorSliceHttpResult" /> based on the provided name.
     /// </summary>
     /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
+    /// <param name="statusCode">The HTTP status code to return. Defaults to <see cref="StatusCodes.Status200OK"/>.</param>
     /// <returns>The <see cref="RazorSliceHttpResult" /> instance.</returns>
-    public static RazorSliceHttpResult CreateHttpResult(string sliceName) => (RazorSliceHttpResult)Create(ResolveSliceFactory(sliceName, typeof(RazorSliceHttpResult)));
+    public static RazorSliceHttpResult CreateHttpResult(string sliceName, int statusCode = StatusCodes.Status200OK)
+    {
+        var result = (RazorSliceHttpResult)Create(ResolveSliceFactory(sliceName, typeof(RazorSliceHttpResult)));
+        result.StatusCode = statusCode;
+        return result;
+    }
 
     /// <summary>
     /// Creates and returns a new instance of a <see cref="RazorSliceHttpResult" /> using the provided <see cref="SliceFactory" /> delegate.
     /// </summary>
     /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate.</param>
+    /// <param name="statusCode">The HTTP status code to return. Defaults to <see cref="StatusCodes.Status200OK"/>.</param>
     /// <returns>The <see cref="RazorSliceHttpResult" /> instance.</returns>
-    public static RazorSliceHttpResult CreateHttpResult(SliceFactory sliceFactory) => (RazorSliceHttpResult)sliceFactory();
+    public static RazorSliceHttpResult CreateHttpResult(SliceFactory sliceFactory, int statusCode = StatusCodes.Status200OK)
+    {
+        var result = (RazorSliceHttpResult)sliceFactory();
+        result.StatusCode = statusCode;
+        return result;
+    }
 
     /// <summary>
     /// Creates and returns a new instance of a <see cref="RazorSliceHttpResult{TModel}" /> based on the provided name.
     /// </summary>
     /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
     /// <param name="model">The model to use for the template instance.</param>
+    /// <param name="statusCode">The HTTP status code to return. Defaults to <see cref="StatusCodes.Status200OK"/>.</param>
     /// <typeparam name="TModel">The model type of the template.</typeparam>
     /// <returns>The <see cref="RazorSliceHttpResult{TModel}" /> instance.</returns>
-    public static RazorSliceHttpResult<TModel> CreateHttpResult<TModel>(string sliceName, TModel model) => (RazorSliceHttpResult<TModel>)Create(sliceName, model);
+    public static RazorSliceHttpResult<TModel> CreateHttpResult<TModel>(string sliceName, TModel model, int statusCode = StatusCodes.Status200OK)
+    {
+        var result = (RazorSliceHttpResult<TModel>)Create(sliceName, model);
+        result.StatusCode = statusCode;
+        return result;
+    }
 
     /// <summary>
     /// Creates and returns a new instance of a <see cref="RazorSliceHttpResult{TModel}" /> based on the provided name.
     /// </summary>
     /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate.</param>
     /// <param name="model">The model to use for the template instance.</param>
+    /// <param name="statusCode">The HTTP status code to return. Defaults to <see cref="StatusCodes.Status200OK"/>.</param>
     /// <typeparam name="TModel">The model type of the template.</typeparam>
     /// <returns>The <see cref="RazorSliceHttpResult{TModel}" /> instance.</returns>
-    public static RazorSliceHttpResult<TModel> CreateHttpResult<TModel>(SliceFactory sliceFactory, TModel model) => (RazorSliceHttpResult<TModel>)Create(sliceFactory, model);
+    public static RazorSliceHttpResult<TModel> CreateHttpResult<TModel>(SliceFactory sliceFactory, TModel model, int statusCode = StatusCodes.Status200OK)
+    {
+        var result = (RazorSliceHttpResult<TModel>)Create(sliceFactory, model);
+        result.StatusCode = statusCode;
+        return result;
+    }
 }

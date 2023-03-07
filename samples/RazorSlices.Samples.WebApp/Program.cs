@@ -7,6 +7,6 @@ var app = builder.Build();
 
 app.UseStatusCodePages();
 
-app.MapGet("/", () => RazorSlice.CreateHttpResult<Todo[]>("/Slices/Todos.cshtml", Todos.AllTodos));
+app.MapGet("/", () => RazorSlice.CreateHttpResult("/Slices/Todos.cshtml", Todos.AllTodos));
 
 app.Run();

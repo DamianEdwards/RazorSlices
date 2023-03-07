@@ -241,6 +241,10 @@ public abstract partial class RazorSlice : IDisposable
     /// <summary>
     /// Begins writing out an attribute.
     /// </summary>
+    /// <remarks>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all HTML attributes containing Razor expressions in your .cshtml file.
+    /// </remarks>
     /// <param name="name">The name.</param>
     /// <param name="prefix">The prefix.</param>
     /// <param name="prefixOffset">The prefix offset.</param>
@@ -256,12 +260,16 @@ public abstract partial class RazorSlice : IDisposable
         int suffixOffset,
         int attributeValuesCount)
     {
-        throw new NotImplementedException("");
+        throw new NotImplementedException(AttributesNotImplementedYet);
     }
 
     /// <summary>
     /// Writes out an attribute value.
     /// </summary>
+    /// <remarks>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all HTML attributes containing Razor expressions in your .cshtml file.
+    /// </remarks>
     /// <param name="prefix">The prefix.</param>
     /// <param name="prefixOffset">The prefix offset.</param>
     /// <param name="value">The value.</param>
@@ -277,16 +285,20 @@ public abstract partial class RazorSlice : IDisposable
         int valueLength,
         bool isLiteral)
     {
-        throw new NotImplementedException("");
+        throw new NotImplementedException(AttributesNotImplementedYet);
     }
 
     /// <summary>
     /// Ends writing an attribute.
     /// </summary>
+    /// <remarks>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all HTML attributes containing Razor expressions in your .cshtml file.
+    /// </remarks>
     [Obsolete(AttributesNotImplementedYet, true)]
     public virtual void EndWriteAttribute()
     {
-        throw new NotImplementedException("");
+        throw new NotImplementedException(AttributesNotImplementedYet);
     }
 
     /// <summary>
