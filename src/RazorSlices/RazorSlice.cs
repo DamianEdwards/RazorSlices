@@ -364,6 +364,7 @@ public abstract partial class RazorSlice : IDisposable
     public virtual void Dispose()
     {
         ReturnPooledObjects();
+        GC.SuppressFinalize(this);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
