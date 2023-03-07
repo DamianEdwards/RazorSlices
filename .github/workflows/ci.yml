@@ -36,7 +36,7 @@ jobs:
         run: dotnet nuget add source --username DamianEdwards --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name GPR "https://nuget.pkg.github.com/DamianEdwards/index.json"
 
       - name: Push to GitHub Packages
-        run: dotnet nuget push **/ci/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} -source "GPR" --skip-duplicate
+        run: dotnet nuget push **/ci/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "GPR" --skip-duplicate
 
       - name: Delete old packages
         uses: smartsquaregmbh/delete-old-packages@v0.5.0
