@@ -1,0 +1,17 @@
+{
+  "type": "module",
+  "version": "1.0.0",
+  "name": "razorslices.samples.webapp",
+  "private": true,
+  "dependencies": {
+    "bootstrap": "^5.2.3",
+    "jquery": "^3.6.3"
+  },
+  "devDependencies": {
+    "eslint": "^8.35.0"
+  },
+  "scripts": {
+    "copyclientlibs": "node ./Build/copy-client-libs.js",
+    "postinstall": "npm run copyclientlibs"
+  }
+}
