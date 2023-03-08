@@ -211,6 +211,17 @@ public abstract partial class RazorSlice : IDisposable
     /// all blocks of HTML in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
+    /// <typeparam name="TValue">The type of the value being written.</typeparam>
+    protected void WriteLiteral<TValue>(TValue? value) => WriteLiteral(value?.ToString());
+
+    /// <summary>
+    /// Writes the string representation of the provided object to the output without HTML encoding it.
+    /// </summary>
+    /// <remarks>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all blocks of HTML in your .cshtml file.
+    /// </remarks>
+    /// <param name="value">The value to write to the output.</param>
     protected void WriteLiteral(object? value) => WriteLiteral(value?.ToString());
 
     /// <summary>

@@ -59,6 +59,7 @@ public abstract partial class RazorSlice
     /// <param name="valueOffset">The value offset.</param>
     /// <param name="valueLength">The value length.</param>
     /// <param name="isLiteral">Whether the attribute is a literal.</param>
+    /// <typeparam name="TValue">The type of the attribute value being written.</typeparam>
     public void WriteAttributeValue<TValue>(
         string prefix,
         int prefixOffset,
@@ -135,7 +136,7 @@ public abstract partial class RazorSlice
 
     private void WriteUnprefixedAttributeValue<TValue>(TValue? value, bool isLiteral)
     {
-        // The extra branching here is to ensure that we call the correct Write*(string) overload where possible.
+        // The extra branching here is to ensure that we call the correct Write*() overload where possible.
         if (value is string stringValue)
         {
             if (isLiteral)
@@ -147,24 +148,32 @@ public abstract partial class RazorSlice
                 Write(stringValue);
             }
         }
-        else if (isLiteral)
+        else if (value is int intValue && !isLiteral)
         {
-            WriteLiteral(value);
+            Write(intValue);
         }
-        else
+        // TODO: Make sure to add branches for other primitive types here when Write() overloads for them are added
+        else if (value is not null)
         {
-            Write(value);
+            if (isLiteral)
+            {
+                WriteLiteral(value);
+            }
+            else
+            {
+                Write(value);
+            }
         }
     }
 
-    private static bool IsBoolFalseOrNullValue(string? prefix, object? value)
+    private static bool IsBoolFalseOrNullValue<TValue>(string? prefix, TValue? value)
     {
         return string.IsNullOrEmpty(prefix) &&
             (value is null ||
                 (value is bool boolValue && !boolValue));
     }
 
-    private static bool IsBoolTrueWithEmptyPrefixValue(string? prefix, object? value)
+    private static bool IsBoolTrueWithEmptyPrefixValue<TValue>(string? prefix, TValue? value)
     {
         // If the value is just the bool 'true', use the attribute name as the value.
         return string.IsNullOrEmpty(prefix) &&
