@@ -4,20 +4,20 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DE078A12-A280-4586-87D4-5B2C86ADB454}"
+	ProjectSection(SolutionItems) = preProject
+		src\Directory.Build.props = src\Directory.Build.props
+	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RazorSlices", "src\RazorSlices\RazorSlices.csproj", "{B1D1803D-E33C-464D-B816-275A230FE542}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices", "src\RazorSlices\RazorSlices.csproj", "{B1D1803D-E33C-464D-B816-275A230FE542}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{FF8BD96C-F2D4-498B-B7B5-00E521DAFCC9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RazorSlices.Samples.WebApp", "samples\RazorSlices.Samples.WebApp\RazorSlices.Samples.WebApp.csproj", "{BBB1BB8E-1B9B-46C1-9352-6E1D228AF01E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.Samples.WebApp", "samples\RazorSlices.Samples.WebApp\RazorSlices.Samples.WebApp.csproj", "{BBB1BB8E-1B9B-46C1-9352-6E1D228AF01E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{B1D1803D-E33C-464D-B816-275A230FE542}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -28,6 +28,9 @@ Global
 		{BBB1BB8E-1B9B-46C1-9352-6E1D228AF01E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BBB1BB8E-1B9B-46C1-9352-6E1D228AF01E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BBB1BB8E-1B9B-46C1-9352-6E1D228AF01E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B1D1803D-E33C-464D-B816-275A230FE542} = {DE078A12-A280-4586-87D4-5B2C86ADB454}

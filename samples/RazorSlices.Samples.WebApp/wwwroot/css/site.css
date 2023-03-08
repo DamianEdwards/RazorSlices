@@ -54,3 +54,7 @@
         white-space: nowrap;
         -webkit-overflow-scrolling: touch;
     }
+
+.complete {
+    background-color: #eee;
+}

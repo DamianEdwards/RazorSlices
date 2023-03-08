@@ -203,7 +203,6 @@ public abstract partial class RazorSlice : IDisposable
         _textWriter?.Write(value);
     }
 
-    // TODO: Is this actually needed?
     /// <summary>
     /// Writes the string representation of the provided object to the output without HTML encoding it.
     /// </summary>
@@ -232,73 +231,6 @@ public abstract partial class RazorSlice : IDisposable
 
         _bufferWriter?.Write(value);
         _textWriter?.Write(Encoding.Unicode.GetString(value));
-    }
-
-    private const string AttributesNotImplementedYet = "Have not implemented support for attributes containing Razor expressions yet but it's coming soon!";
-
-    // TODO: Implement attribute support: https://github.com/dotnet/aspnetcore/blob/main/src/Mvc/Mvc.Razor/src/RazorPageBase.cs#L719
-
-    /// <summary>
-    /// Begins writing out an attribute.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all HTML attributes containing Razor expressions in your .cshtml file.
-    /// </remarks>
-    /// <param name="name">The name.</param>
-    /// <param name="prefix">The prefix.</param>
-    /// <param name="prefixOffset">The prefix offset.</param>
-    /// <param name="suffix">The suffix.</param>
-    /// <param name="suffixOffset">The suffix offset.</param>
-    /// <param name="attributeValuesCount">The attribute values count.</param>
-    [Obsolete(AttributesNotImplementedYet, true)]
-    public virtual void BeginWriteAttribute(
-        string name,
-        string prefix,
-        int prefixOffset,
-        string suffix,
-        int suffixOffset,
-        int attributeValuesCount)
-    {
-        throw new NotImplementedException(AttributesNotImplementedYet);
-    }
-
-    /// <summary>
-    /// Writes out an attribute value.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all HTML attributes containing Razor expressions in your .cshtml file.
-    /// </remarks>
-    /// <param name="prefix">The prefix.</param>
-    /// <param name="prefixOffset">The prefix offset.</param>
-    /// <param name="value">The value.</param>
-    /// <param name="valueOffset">The value offset.</param>
-    /// <param name="valueLength">The value length.</param>
-    /// <param name="isLiteral">Whether the attribute is a literal.</param>
-    [Obsolete(AttributesNotImplementedYet, true)]
-    public void WriteAttributeValue(
-        string prefix,
-        int prefixOffset,
-        object? value,
-        int valueOffset,
-        int valueLength,
-        bool isLiteral)
-    {
-        throw new NotImplementedException(AttributesNotImplementedYet);
-    }
-
-    /// <summary>
-    /// Ends writing an attribute.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all HTML attributes containing Razor expressions in your .cshtml file.
-    /// </remarks>
-    [Obsolete(AttributesNotImplementedYet, true)]
-    public virtual void EndWriteAttribute()
-    {
-        throw new NotImplementedException(AttributesNotImplementedYet);
     }
 
     /// <summary>

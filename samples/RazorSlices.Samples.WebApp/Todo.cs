@@ -15,10 +15,10 @@ internal static class Todos
 {
     public readonly static Todo[] AllTodos = new Todo[]
         {
-            new() { Id = 0, Title = "Wash the dishes.", DueBy = DateOnly.FromDateTime(DateTime.Now), IsComplete = true },
-            new() { Id = 1, Title = "Dry the dishes.", DueBy = DateOnly.FromDateTime(DateTime.Now), IsComplete = true },
-            new() { Id = 2, Title = "Turn the dishes over.", DueBy = DateOnly.FromDateTime(DateTime.Now), IsComplete = false },
-            new() { Id = 3, Title = "Walk the kangaroo.", DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
-            new() { Id = 4, Title = "Call Grandma.", DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
+            new() { Id = 1, Title = "Wash the dishes.", IsComplete = true },
+            new() { Id = 2, Title = "Dry the dishes.", IsComplete = true },
+            new() { Id = 3, Title = "Turn the dishes over.", DueBy = DateOnly.FromDateTime(DateTime.Now), IsComplete = false },
+            new() { Id = 4, Title = "Walk the kangaroo.", DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
+            new() { Id = 5, Title = "Call Grandma.", DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
         };
 }

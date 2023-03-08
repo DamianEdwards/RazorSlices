@@ -1,10 +1,11 @@
-﻿@inherits RazorSliceHttpResult<Todo[]>
+﻿@using Microsoft.AspNetCore.Html;
+@inherits RazorSliceHttpResult<Todo>
 <!DOCTYPE html>
 <html lang="en" class="h-100">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Todos</title>
+    <title>@Title(Model)</title>
     <base href="/" />
     <link href="lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="css/site.css" rel="stylesheet" />
@@ -14,24 +15,16 @@
 <body class="d-flex flex-column h-100">
     <main class="flex-shrink-0">
         <div class="container">
-            <h1 class="mt-5">Todos</h1>
-            <table class="table">
-                <tr>
-                    <th>Id</th>
-                    <th>Title</th>
-                    <th>Due by</th>
-                    <th>Status</th>
-                </tr>
-                @foreach (var todo in Model)
-                {
-                    <tr class="@(todo.IsComplete ? "complete" : null)">
-                        <td>@todo.Id</td>
-                        <td><a href="@todo.Id">@todo.Title</a></td>
-                        <td>@todo.DueBy</td>
-                        <td>@(todo.IsComplete ? "Completed" : "Incomplete")</td>
-                    </tr>
-                }
-            </table>
+            <a href="/">Back to all todos</a>
+            <h1 class="mt-5">@Title(Model)</h1>
+            @if (Model.DueBy is { } dueBy)
+            {
+                <div class="text-muted">Due by @dueBy</div>
+            }
+            @if (Model.IsComplete)
+            {
+                <div class="text-muted">Completed</div>
+            }
         </div>
     </main>
 
@@ -42,3 +35,10 @@
     </footer>
 </body>
 </html>
+@functions {
+    private IHtmlContent Title(Todo todo)
+    {
+        <text>Todo @todo.Id: @todo.Title</text>
+        return HtmlString.Empty;
+    }
+}
