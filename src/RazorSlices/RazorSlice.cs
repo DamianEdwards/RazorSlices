@@ -245,6 +245,37 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     /// <summary>
+    /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.
+    /// </summary>
+    /// <remarks>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all blocks of HTML in your .cshtml file.
+    /// </remarks>
+    /// <param name="value">The value to write to the output.</param>
+    protected void Write(byte[] value) => Write(value.AsSpan());
+
+    /// <summary>
+    /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.
+    /// </summary>
+    /// <remarks>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all blocks of HTML in your .cshtml file.
+    /// </remarks>
+    /// <param name="value">The value to write to the output.</param>
+    protected void Write(ReadOnlySpan<byte> value)
+    {
+        if (value.Length == 0)
+        {
+            return;
+        }
+
+        _bufferWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
+
+        // TODO: Optimize this with rented buffers, etc.
+        _textWriter?.Write(Encoding.UTF8.GetString(value));
+    }
+
+    /// <summary>
     /// Writes the specified <see cref="HtmlString"/> value to the output without HTML encoding it again.
     /// </summary>
     /// <param name="htmlString">The <see cref="HtmlString"/> value to write to the output.</param>

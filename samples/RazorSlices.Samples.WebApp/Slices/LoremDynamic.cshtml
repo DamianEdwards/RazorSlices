@@ -1,11 +1,13 @@
-﻿@using Microsoft.AspNetCore.Html;
-@inherits RazorSliceHttpResult<Todo>
+﻿@inherits RazorSliceHttpResult<LoremParams>
+@{
+    var title = $"Lorem Ipsum (Dynamic: {Model.ParagraphCount} paragraphs)";
+}
 <!DOCTYPE html>
 <html lang="en" class="h-100">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@Title(Model)</title>
+    <title>@title</title>
     <base href="/" />
     <link href="lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="css/site.css" rel="stylesheet" />
@@ -15,15 +17,11 @@
 <body class="d-flex flex-column h-100">
     <main class="flex-shrink-0">
         <div class="container">
-            <a href="/">Back to all todos</a>
-            <h1 class="mt-5">@Title(Model)</h1>
-            @if (Model.DueBy is { } dueBy)
+            <h1 class="mt-5">@title</h1>
+
+            @for (var i = 0; i < Model.ParagraphCount; i++)
             {
-                <div class="text-muted">Due by @dueBy</div>
-            }
-            @if (Model.IsComplete)
-            {
-                <div class="text-muted">Completed</div>
+                <p>@PageContent.Sentences(Model.ParagraphSentenceCount)</p>
             }
         </div>
     </main>
@@ -35,10 +33,3 @@
     </footer>
 </body>
 </html>
-@functions {
-    private IHtmlContent Title(Todo todo)
-    {
-        <text>Todo @todo.Id: @todo.TitleUtf8</text>
-        return HtmlString.Empty;
-    }
-}

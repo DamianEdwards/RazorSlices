@@ -1,10 +1,32 @@
+using System.Text;
+
 namespace RazorSlices.Samples.WebApp;
 
 public class Todo
 {
     public int Id { get; set; }
 
-    public required string Title { get; set; }
+    private byte[] _titleUtf8 = Array.Empty<byte>();
+    public byte[] TitleUtf8
+    {
+        get => _titleUtf8;
+        set
+        {
+            _titleUtf8 = value;
+            _title = null!; // _title will be set in the getter of its property
+        }
+    }
+
+    private string? _title;
+    public string Title
+    {
+        get => _title ??= _titleUtf8 is not null ? Encoding.UTF8.GetString(_titleUtf8) : string.Empty;
+        set
+        {
+            _titleUtf8 = value is not null ? Encoding.UTF8.GetBytes(value) : Array.Empty<byte>();
+            _title = value;
+        }
+    }
 
     public DateOnly? DueBy { get; set; }
 
@@ -15,10 +37,10 @@ internal static class Todos
 {
     public readonly static Todo[] AllTodos = new Todo[]
         {
-            new() { Id = 1, Title = "Wash the dishes.", IsComplete = true },
-            new() { Id = 2, Title = "Dry the dishes.", IsComplete = true },
-            new() { Id = 3, Title = "Turn the dishes over.", DueBy = DateOnly.FromDateTime(DateTime.Now), IsComplete = false },
-            new() { Id = 4, Title = "Walk the kangaroo.", DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
-            new() { Id = 5, Title = "Call Grandma.", DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
+            new() { Id = 1, TitleUtf8 = "Wash the dishes."u8.ToArray(), IsComplete = true },
+            new() { Id = 2, TitleUtf8 = "Dry the dishes."u8.ToArray(), IsComplete = true },
+            new() { Id = 3, TitleUtf8 = "Turn the dishes over."u8.ToArray(), DueBy = DateOnly.FromDateTime(DateTime.Now), IsComplete = false },
+            new() { Id = 4, TitleUtf8 = "Walk the kangaroo."u8.ToArray(), DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
+            new() { Id = 5, TitleUtf8 = "Call Grandma."u8.ToArray(), DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
         };
 }
