@@ -7,8 +7,8 @@ namespace RazorSlices;
 
 public abstract partial class RazorSlice
 {
-    private static readonly ReadOnlyDictionary<string, (Type, SliceFactory)> _slicesByName;
-    private static readonly ReadOnlyDictionary<Type, (string, SliceFactory)> _slicesByType;
+    private static readonly ReadOnlyDictionary<string, (Type, Delegate)> _slicesByName;
+    private static readonly ReadOnlyDictionary<Type, (string, Delegate)> _slicesByType;
 
     static RazorSlice()
     {
@@ -26,22 +26,79 @@ public abstract partial class RazorSlice
         _slicesByType = sliceDefinitions.ToDictionary(item => item.Type, item => (item.Identifier, item.Factory)).AsReadOnly();
     }
 
-    private static List<(string Identifier, Type Type, SliceFactory Factory)> LoadSlices() => LoadSlices(Assembly.GetEntryAssembly());
+    private static List<(string Identifier, Type Type, Delegate Factory)> LoadSlices() => LoadSlices(Assembly.GetEntryAssembly());
 
-    private static List<(string Identifier, Type Type, SliceFactory Factory)> LoadSlices(Assembly? assembly)
+    private static List<(string Identifier, Type Type, Delegate Factory)> LoadSlices(Assembly? assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);
 
-        var sliceTypes = assembly.GetCustomAttributes<RazorCompiledItemAttribute>()
+        var allSlices= assembly.GetCustomAttributes<RazorCompiledItemAttribute>()
             .Where(rci => rci.Kind == "mvc.1.0.view" && rci.Type.IsAssignableTo(typeof(RazorSlice)))
             .Select(rci => (rci.Identifier, rci.Type, GetSliceFactory(rci.Type)));
 
-        return sliceTypes.ToList();
+        return allSlices.ToList();
     }
 
-    private static SliceFactory GetSliceFactory(Type type)
+    private static Delegate GetSliceFactory(Type sliceType)
     {
-        return Expression.Lambda<SliceFactory>(Expression.New(type)).Compile();
+        if (IsModelSlice(sliceType))
+        {
+            if (sliceType.GetConstructor(Array.Empty<Type>()) == null)
+            {
+                throw new InvalidOperationException("Slice must have a parameterless constructor.");
+            }
+
+            // Strongly-typed model slice
+            var modelPropInfo = sliceType.GetProperty(nameof(RazorSlice<object>.Model))!;
+            var modelType = modelPropInfo.PropertyType;
+            var razorOfModelType = typeof(RazorSlice<>).MakeGenericType(modelType);
+
+            var factoryDelegateType = typeof(SliceFactory<>).MakeGenericType(modelType);
+
+            // Make a SliceFactory<TModel> like:
+            //
+            // RazorSlice<TModel> CreateSlice<TModel>(TModel model)
+            // {
+            //     var slice = new SliceType();
+            //     slice.Model = model
+            //     return slice;
+            // }
+
+            var sliceVariable = Expression.Variable(sliceType, "slice");
+            var modelParam = Expression.Parameter(modelType, "model");
+            var returnTarget = Expression.Label(razorOfModelType);
+
+            return Expression.Lambda(
+                delegateType: factoryDelegateType,
+                body: Expression.Block(
+                    variables: new[] { sliceVariable },
+                    Expression.Assign(sliceVariable, Expression.New(sliceType)),
+                    Expression.Assign(Expression.MakeMemberAccess(sliceVariable, modelPropInfo), modelParam),
+                    Expression.Label(returnTarget, sliceVariable)
+                ),
+                name: "CreateSlice",
+                parameters: new[] { modelParam })
+            .Compile();
+        }
+
+        return Expression.Lambda<SliceFactory>(Expression.New(sliceType)).Compile();
+    }
+
+    private static bool IsModelSlice(Type sliceType)
+    {
+        var baseType = sliceType.BaseType;
+
+        while (baseType is not null)
+        {
+            if (baseType.IsGenericType && baseType.GetGenericTypeDefinition() == typeof(RazorSlice<>))
+            {
+                return true;
+            }
+
+            baseType = baseType.BaseType;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -57,22 +114,22 @@ public abstract partial class RazorSlice
     /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
     /// <typeparam name="TModel">The template model type.</typeparam>
     /// <returns>The <see cref="Type" /> generated from the template .cshtml file.</returns>
-    public static Type ResolveSliceType<TModel>(string sliceName) => ResolveSliceType(sliceName, typeof(RazorSlice<TModel>));
+    public static Type ResolveSliceType<TModel>(string sliceName) => ResolveSliceType(sliceName);
 
     /// <summary>
     /// Resolves a <see cref="SliceFactory" /> delegate for the provided template name.
     /// </summary>
     /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
     /// <returns>The <see cref="SliceFactory" /> delegate that can be used to create instances of the template.</returns>
-    public static SliceFactory ResolveSliceFactory(string sliceName) => ResolveSliceFactory(sliceName, typeof(RazorSlice));
+    public static SliceFactory ResolveSliceFactory(string sliceName) => ResolveSliceFactoryImpl(sliceName);
 
     /// <summary>
-    /// Resolves a <see cref="SliceFactory" /> delegate for the provided template name with a typed model.
+    /// Resolves a <see cref="SliceFactory{TModel}" /> delegate for the provided template name with a typed model.
     /// </summary>
     /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
     /// <typeparam name="TModel">The template model type.</typeparam>
-    /// <returns>The <see cref="SliceFactory" /> delegate that can be used to create instances of the template.</returns>
-    public static SliceFactory ResolveSliceFactory<TModel>(string sliceName) => ResolveSliceFactory(sliceName, typeof(RazorSlice<TModel>));
+    /// <returns>The <see cref="SliceFactory{TModel}" /> delegate that can be used to create instances of the template.</returns>
+    public static SliceFactory<TModel> ResolveSliceFactory<TModel>(string sliceName) => ResolveSliceFactoryImpl<TModel>(sliceName);
 
     /// <summary>
     /// Resolves a <see cref="SliceFactory" /> delegate for the provided template <see cref="Type" />.
@@ -88,7 +145,7 @@ public abstract partial class RazorSlice
 
         var (_, sliceActivator) = _slicesByType[sliceType];
 
-        return sliceActivator;
+        return (SliceFactory)sliceActivator;
     }
 
     /// <summary>
@@ -116,7 +173,7 @@ public abstract partial class RazorSlice
     /// <param name="model">The model to use for the template instance.</param>
     /// <typeparam name="TModel">The model type of the template.</typeparam>
     /// <returns>A <see cref="RazorSlice{TModel}" /> instance for the template.</returns>
-    public static RazorSlice<TModel> Create<TModel>(string sliceName, TModel model) => Create(ResolveSliceFactory(sliceName, typeof(RazorSlice<TModel>)), model);
+    public static RazorSlice<TModel> Create<TModel>(string sliceName, TModel model) => Create(ResolveSliceFactory<TModel>(sliceName), model);
 
     /// <summary>
     /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceFactory" /> delegate with a typed model.
@@ -125,12 +182,7 @@ public abstract partial class RazorSlice
     /// <param name="model">The model to use for the template instance.</param>
     /// <typeparam name="TModel">The model type of the template.</typeparam>
     /// <returns>A <see cref="RazorSlice{TModel}" /> instance for the template.</returns>
-    public static RazorSlice<TModel> Create<TModel>(SliceFactory sliceFactory, TModel model)
-    {
-        var slice = (RazorSlice<TModel>)sliceFactory();
-        slice.Model = model;
-        return slice;
-    }
+    public static RazorSlice<TModel> Create<TModel>(SliceFactory<TModel> sliceFactory, TModel model) => sliceFactory(model);
 
     private static Type ResolveSliceType(string sliceName, Type mustBeAssignableTo)
     {
@@ -150,7 +202,7 @@ public abstract partial class RazorSlice
         return sliceType.Item1;
     }
 
-    private static SliceFactory ResolveSliceFactory(string sliceName, Type mustBeAssignableTo)
+    private static SliceFactory ResolveSliceFactoryImpl(string sliceName)
     {
         if (!_slicesByName.ContainsKey(sliceName))
         {
@@ -159,11 +211,29 @@ public abstract partial class RazorSlice
 
         var (sliceType, sliceActivator) = _slicesByName[sliceName];
 
-        if (!sliceType.IsAssignableTo(mustBeAssignableTo))
+        return (SliceFactory)sliceActivator;
+    }
+
+    private static SliceFactory<TModel> ResolveSliceFactoryImpl<TModel>(string sliceName)
+    {
+        if (!_slicesByName.ContainsKey(sliceName))
         {
-            throw new ArgumentException($"Razor slice with name '{sliceName}' of type {sliceType} was found but is not assignable to type {mustBeAssignableTo.Name}.", nameof(sliceName));
+            throw new ArgumentException($"No Razor slice with name '{sliceName}' was found.", nameof(sliceName));
         }
 
-        return sliceActivator;
+        var (sliceType, sliceActivator) = _slicesByName[sliceName];
+
+        if (sliceActivator is SliceFactory<TModel> factory)
+        {
+            return factory;
+        }
+
+        if (sliceActivator.GetType().IsGenericType && sliceActivator.GetType().GetGenericTypeDefinition() == typeof(SliceFactory<>))
+        {
+            var modelType = sliceActivator.GetType().GenericTypeArguments[0];
+            throw new InvalidOperationException($"Razor slice with name '{sliceName}' was found but it's model type is {modelType.Name}.");
+        }
+
+        throw new InvalidOperationException($"Razor slice with name '{sliceName}' was found but does not declare a model type. Ensure the slice uses `@inherits RazorSlice<{typeof(TModel).Name}>` or `@inherits RazorSliceHttpResult<{typeof(TModel).Name}>` to declare the model type.");
     }
 }

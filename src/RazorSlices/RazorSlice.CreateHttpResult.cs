@@ -13,7 +13,7 @@ public abstract partial class RazorSlice
     /// <returns>The <see cref="RazorSliceHttpResult" /> instance.</returns>
     public static RazorSliceHttpResult CreateHttpResult(string sliceName, int statusCode = StatusCodes.Status200OK)
     {
-        var result = (RazorSliceHttpResult)Create(ResolveSliceFactory(sliceName, typeof(RazorSliceHttpResult)));
+        var result = (RazorSliceHttpResult)Create(ResolveSliceFactory(sliceName));
         result.StatusCode = statusCode;
         return result;
     }
@@ -54,7 +54,7 @@ public abstract partial class RazorSlice
     /// <param name="statusCode">The HTTP status code to return. Defaults to <see cref="StatusCodes.Status200OK"/>.</param>
     /// <typeparam name="TModel">The model type of the template.</typeparam>
     /// <returns>The <see cref="RazorSliceHttpResult{TModel}" /> instance.</returns>
-    public static RazorSliceHttpResult<TModel> CreateHttpResult<TModel>(SliceFactory sliceFactory, TModel model, int statusCode = StatusCodes.Status200OK)
+    public static RazorSliceHttpResult<TModel> CreateHttpResult<TModel>(SliceFactory<TModel> sliceFactory, TModel model, int statusCode = StatusCodes.Status200OK)
     {
         var result = (RazorSliceHttpResult<TModel>)Create(sliceFactory, model);
         result.StatusCode = statusCode;
