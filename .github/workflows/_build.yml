@@ -27,6 +27,7 @@ jobs:
     - name: Install .NET SDK
       uses: actions/setup-dotnet@v3
       with:
+        dotnet-version: 6.0.x
         global-json-file: "./global.json"
     
     - name: Restore dependencies
@@ -48,9 +49,11 @@ jobs:
     - name: Publish samples
       run: |
         for projectPath in ./samples/**/*.csproj ; do
-          projectFileName=${projectPath##*/}
-          projectName=${projectFileName%.*}
-          dotnet publish "$projectPath" --output "./artifacts/$projectName" --configuration Release --no-build --verbosity normal
+          for tfm in "net6.0" "net7.0"; do
+            projectFileName=${projectPath##*/}
+            projectName=${projectFileName%.*}
+            dotnet publish "$projectPath" --output "./artifacts/$projectName" --framework $tfm --configuration Release --no-build --verbosity normal
+          done;
         done;
       
     - name: Pack (ci)

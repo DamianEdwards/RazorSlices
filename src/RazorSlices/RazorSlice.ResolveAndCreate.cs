@@ -10,7 +10,9 @@ public abstract partial class RazorSlice
     private static readonly ReadOnlyDictionary<string, (Type, Delegate)> _slicesByName;
     private static readonly ReadOnlyDictionary<Type, (string, Delegate)> _slicesByType;
 
+#pragma warning disable CA1810 // Initialize reference type static fields inline
     static RazorSlice()
+#pragma warning restore CA1810 // Initialize reference type static fields inline
     {
         // TODO: Support loading slices from referenced assemblies
         var sliceDefinitions = LoadSlices();
