@@ -1,5 +1,6 @@
 # Razor Slices
 
+[![CI (main)](https://github.com/DamianEdwards/RazorSlices/actions/workflows/ci.yml/badge.svg)](https://github.com/DamianEdwards/RazorSlices/actions/workflows/ci.yml)
 [![Nuget](https://img.shields.io/nuget/v/RazorSlices)](https://www.nuget.org/packages/RazorSlices/)
 
 Lightweight Razor-based templates for ASP.NET Core without MVC, Razor Pages, or Blazor, optimized for high-performance rendering. Great for returning HTML from Minimal APIs, middleware, etc. Supports .NET 7+
