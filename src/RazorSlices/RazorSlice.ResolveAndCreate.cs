@@ -209,7 +209,7 @@ public abstract partial class RazorSlice
             throw new ArgumentException($"No Razor slice with name '{sliceName}' was found.", nameof(sliceName));
         }
 
-        var (sliceType, sliceActivator) = _slicesByName[sliceName];
+        var (_, sliceActivator) = _slicesByName[sliceName];
 
         return (SliceFactory)sliceActivator;
     }
@@ -221,7 +221,7 @@ public abstract partial class RazorSlice
             throw new ArgumentException($"No Razor slice with name '{sliceName}' was found.", nameof(sliceName));
         }
 
-        var (sliceType, sliceActivator) = _slicesByName[sliceName];
+        var (_, sliceActivator) = _slicesByName[sliceName];
 
         if (sliceActivator is SliceFactory<TModel> factory)
         {

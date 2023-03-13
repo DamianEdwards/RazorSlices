@@ -7,6 +7,10 @@
     <PackageTags>ASP.NET Web MinimalApis IResult Razor templating templates</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <LangVersion>preview</LangVersion>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <AnalysisModeReliability>All</AnalysisModeReliability>
+    <AnalysisModePerformance>All</AnalysisModePerformance>
+    <AnalysisModeSecurity>All</AnalysisModeSecurity>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +19,7 @@
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\.editorconfig" Link=".editorconfig" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
 

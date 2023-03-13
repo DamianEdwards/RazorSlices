@@ -84,7 +84,6 @@ public abstract partial class RazorSlice : IDisposable
             var flushTask = textWriter.FlushAsync();
             if (flushTask.IsCompletedSuccessfully)
             {
-                flushTask.GetAwaiter().GetResult();
                 return ValueTask.CompletedTask;
             }
             return AwaitOutputFlushTask(flushTask);
@@ -95,7 +94,6 @@ public abstract partial class RazorSlice : IDisposable
 
         if (executeTask.IsCompletedSuccessfully)
         {
-            executeTask.GetAwaiter().GetResult();
             return ValueTask.CompletedTask;
         }
         return new ValueTask(executeTask);
@@ -116,7 +114,7 @@ public abstract partial class RazorSlice : IDisposable
     /// the output will actually be flushed or not before calling this method.
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <returns></returns>
+    /// <returns>A <see cref="ValueTask"/> representing the flush operation.</returns>
     protected ValueTask<HtmlString> FlushAsync(CancellationToken cancellationToken = default)
     {
         if (!CanFlush || _outputFlush is null)
@@ -285,7 +283,7 @@ public abstract partial class RazorSlice : IDisposable
     /// <param name="htmlString">The <see cref="HtmlString"/> value to write to the output.</param>
     protected void Write(HtmlString htmlString)
     {
-        if (htmlString != HtmlString.Empty)
+        if (htmlString is not null && htmlString != HtmlString.Empty)
         {
             WriteLiteral(htmlString.Value);
         }
@@ -297,6 +295,11 @@ public abstract partial class RazorSlice : IDisposable
     /// <param name="htmlContent">The <see cref="IHtmlContent"/> value to write to the output.</param>
     protected void Write(IHtmlContent htmlContent)
     {
+        if (htmlContent is null)
+        {
+            return;
+        }
+
         if (_bufferWriter is not null)
         {
             _utf8BufferTextWriter ??= Utf8BufferTextWriter.Get(_bufferWriter);
