@@ -41,6 +41,7 @@ public abstract class RazorSliceHttpResult<TModel> : RazorSlice<TModel>, IResult
 
         if (renderTask.IsCompletedSuccessfully)
         {
+            renderTask.GetAwaiter().GetResult();
             return httpContext.Response.BodyWriter.FlushAsync().AsTask();
         }
 

@@ -10,9 +10,6 @@ internal static class BufferWriterHtmlExtensions
     private const int SmallWriteCharSize = SmallWriteByteSize / 2;
     private const int MaxBufferSize = 1024;
 
-    private static readonly ArrayPool<char> _charBufferPool = ArrayPool<char>.Shared;
-    private static readonly ArrayPool<byte> _byteBufferPool = ArrayPool<byte>.Shared;
-
     public static void HtmlEncodeAndWriteUtf8(this IBufferWriter<byte> bufferWriter, ReadOnlySpan<byte> utf8Text) =>
         HtmlEncodeAndWriteUtf8(bufferWriter, utf8Text, HtmlEncoder.Default);
 
@@ -37,7 +34,7 @@ internal static class BufferWriterHtmlExtensions
                     waitingToAdvance = 0;
                 }
                 // TODO: What size should this be, i.e. how much space to allow for HTML encoding the string
-                var spanSizeHint = Math.Min(MaxBufferSize, (int)Math.Round(utf8Text.Length * 1.1));
+                var spanSizeHint = GetEncodedSizeHint(utf8Text.Length);
                 writerSpan = bufferWriter.GetSpan(spanSizeHint);
             }
 
@@ -88,8 +85,8 @@ internal static class BufferWriterHtmlExtensions
             return;
         }
 
-        var sizeHint = Math.Min(MaxBufferSize, (int)Math.Round(textSpan.Length * 1.1));
-        var rentedBuffer = _charBufferPool.Rent(sizeHint);
+        var sizeHint = GetEncodedSizeHint(textSpan.Length);
+        var rentedBuffer = ArrayPool<char>.Shared.Rent(sizeHint);
         Span<char> bufferSpan = rentedBuffer;
         var waitingToWrite = 0;
         var encodeStatus = OperationStatus.Done;
@@ -124,7 +121,7 @@ internal static class BufferWriterHtmlExtensions
             {
                 WriteHtml(bufferWriter, rentedBuffer.AsSpan()[..waitingToWrite]);
             }
-            _charBufferPool.Return(rentedBuffer);
+            ArrayPool<char>.Shared.Return(rentedBuffer);
         }
 
         Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
@@ -202,5 +199,10 @@ internal static class BufferWriterHtmlExtensions
         }
 
         Debug.Assert(status == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
+    }
+
+    private static int GetEncodedSizeHint(int length)
+    {
+        return Math.Min(MaxBufferSize, (int)Math.Round(length * 1.1));
     }
 }

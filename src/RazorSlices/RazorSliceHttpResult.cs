@@ -41,6 +41,7 @@ public abstract class RazorSliceHttpResult : RazorSlice, IResult, IStatusCodeHtt
 
         if (renderTask.IsCompletedSuccessfully)
         {
+            renderTask.GetAwaiter().GetResult();
             return httpContext.Response.BodyWriter.FlushAsync().AsTask();
         }
 

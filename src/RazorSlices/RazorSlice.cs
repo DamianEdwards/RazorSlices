@@ -54,6 +54,7 @@ public abstract partial class RazorSlice : IDisposable
 
         if (executeTask.IsCompletedSuccessfully)
         {
+            executeTask.GetAwaiter().GetResult();
             return ValueTask.CompletedTask;
         }
         return new ValueTask(executeTask);
@@ -83,6 +84,7 @@ public abstract partial class RazorSlice : IDisposable
             var flushTask = textWriter.FlushAsync();
             if (flushTask.IsCompletedSuccessfully)
             {
+                flushTask.GetAwaiter().GetResult();
                 return ValueTask.CompletedTask;
             }
             return AwaitOutputFlushTask(flushTask);
@@ -93,6 +95,7 @@ public abstract partial class RazorSlice : IDisposable
 
         if (executeTask.IsCompletedSuccessfully)
         {
+            executeTask.GetAwaiter().GetResult();
             return ValueTask.CompletedTask;
         }
         return new ValueTask(executeTask);
@@ -125,6 +128,7 @@ public abstract partial class RazorSlice : IDisposable
 
         if (flushTask.IsCompletedSuccessfully)
         {
+            flushTask.GetAwaiter().GetResult();
             return ValueTask.FromResult(HtmlString.Empty);
         }
 
