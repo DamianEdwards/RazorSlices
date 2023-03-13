@@ -2,17 +2,16 @@
 
 public static class PageContent
 {
-    public static readonly byte[] Sentence = "Lorem ipsum dolor sit amet ipsum sed feugiat rebum et voluptua autem dolore amet magna."u8.ToArray();
+    public static ReadOnlySpan<byte> Sentence => "Lorem ipsum dolor sit amet ipsum sed feugiat rebum et voluptua autem dolore amet magna."u8;
 
-    public static byte[] Sentences(int count)
+    public static ReadOnlySpan<byte> Sentences(int count)
     {
         if (count == 1)
         {
             return Sentence;
         }
 
-        var sentenceSpan = Sentence.AsSpan();
-        var sentenceLength = sentenceSpan.Length;
+        var sentenceLength = Sentence.Length;
         // Number of sentences + allowance for space in between each sentence
         var bufferLength = (sentenceLength * count) + (count - 1);
         var output = new byte[bufferLength];
@@ -26,16 +25,16 @@ public static class PageContent
                 " "u8.CopyTo(outputSpan);
                 outputSpan = outputSpan[1..];
             }
-            sentenceSpan.CopyTo(outputSpan);
-            outputSpan = outputSpan[sentenceSpan.Length..];
+            Sentence.CopyTo(outputSpan);
+            outputSpan = outputSpan[Sentence.Length..];
         }
 
         return output;
     }
 
-    public static readonly byte[] Paragraph = "Lorem ipsum dolor sit amet no sit sit invidunt velit minim lorem et ex adipiscing sanctus sit. Eirmod tincidunt magna feugait praesent erat nonumy et accusam dolor eirmod labore consetetur no tempor eirmod dolor doming est. Aliquip amet dolor dolor accumsan rebum aliquyam tempor tincidunt et ipsum sit gubergren nulla magna commodo ipsum. Aliquyam consectetuer zzril nonumy takimata ut dolor accusam elitr. Veniam ut ipsum ut magna sed ea nonumy nulla dolores. Ipsum et dolores kasd est. Dolor vero delenit lorem est nonumy tincidunt lorem ex. Gubergren vero sit ex labore eos consequat amet in duo. Dolores magna amet. Vero dolore gubergren diam ipsum no dolores dolor eu. Dolor kasd eirmod sed quis eos ut dolores feugait est amet feugiat dolore congue. Facilisis diam duo tempor dolore duo iriure consequat aliquip dolor vero facilisis laoreet. Vero eum consetetur dolore et sed facilisis et lorem erat nonumy et duo accusam. Justo dolore erat magna ea et eos amet wisi takimata clita iusto sed nostrud kasd. Consetetur et nobis diam elit dolor et dolore sea sit takimata molestie. Eros et ut ipsum eirmod. Nisl sed volutpat sea te et sadipscing erat invidunt elitr consequat commodo no."u8.ToArray();
+    public static ReadOnlySpan<byte> Paragraph => "Lorem ipsum dolor sit amet no sit sit invidunt velit minim lorem et ex adipiscing sanctus sit. Eirmod tincidunt magna feugait praesent erat nonumy et accusam dolor eirmod labore consetetur no tempor eirmod dolor doming est. Aliquip amet dolor dolor accumsan rebum aliquyam tempor tincidunt et ipsum sit gubergren nulla magna commodo ipsum. Aliquyam consectetuer zzril nonumy takimata ut dolor accusam elitr. Veniam ut ipsum ut magna sed ea nonumy nulla dolores. Ipsum et dolores kasd est. Dolor vero delenit lorem est nonumy tincidunt lorem ex. Gubergren vero sit ex labore eos consequat amet in duo. Dolores magna amet. Vero dolore gubergren diam ipsum no dolores dolor eu. Dolor kasd eirmod sed quis eos ut dolores feugait est amet feugiat dolore congue. Facilisis diam duo tempor dolore duo iriure consequat aliquip dolor vero facilisis laoreet. Vero eum consetetur dolore et sed facilisis et lorem erat nonumy et duo accusam. Justo dolore erat magna ea et eos amet wisi takimata clita iusto sed nostrud kasd. Consetetur et nobis diam elit dolor et dolore sea sit takimata molestie. Eros et ut ipsum eirmod. Nisl sed volutpat sea te et sadipscing erat invidunt elitr consequat commodo no."u8;
 
-    public static readonly byte[] Html = """
+    public static ReadOnlySpan<byte> Html => """
         <p>Philosophi autem in suis lectulis plerumque moriuntur. Quod, inquit, quamquam voluptatibus quibusdam est saepe iucundius, tamen expetitur propter voluptatem. <mark>Cur iustitia laudatur?</mark> Quae tamen a te agetur non melior, quam illae sunt, quas interdum optines. Non quaero, quid dicat, sed quid convenienter possit rationi et sententiae suae dicere. Nonne odio multos dignos putamus, qui quodam motu aut statu videntur naturae legem et modum contempsisse? Iam argumenti ratione conclusi caput esse faciunt ea, quae perspicua dicunt, deinde ordinem sequuntur, tum, quid verum sit in singulis, extrema conclusio est. <i>Respondeat totidem verbis.</i> Atque haec ita iustitiae propria sunt, ut sint virtutum reliquarum communia. </p>
 
         <p><a href='http://loripsum.net/' target='_blank'>Eadem fortitudinis ratio reperietur.</a> Nunc dicam de voluptate, nihil scilicet novi, ea tamen, quae te ipsum probaturum esse confidam. Id enim volumus, id contendimus, ut officii fructus sit ipsum officium. Crasso, quem semel ait in vita risisse Lucilius, non contigit, ut ea re minus agelastoj ut ait idem, vocaretur. Estne, quaeso, inquam, sitienti in bibendo voluptas? Minime vero probatur huic disciplinae, de qua loquor, aut iustitiam aut amicitiam propter utilitates adscisci aut probari. </p>
@@ -95,5 +94,5 @@ public static class PageContent
             <li>Tamen aberramus a proposito, et, ne longius, prorsus, inquam, Piso, si ista mala sunt, placet.</li>
             <li>Restincta enim sitis stabilitatem voluptatis habet, inquit, illa autem voluptas ipsius restinctionis in motu est.</li>
         </ul>
-        """u8.ToArray();
+        """u8;
 }
