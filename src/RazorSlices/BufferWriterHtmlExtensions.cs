@@ -38,7 +38,7 @@ internal static class BufferWriterHtmlExtensions
                 writerSpan = bufferWriter.GetSpan(spanSizeHint);
             }
 
-            // Encode to rented buffer
+            // Encode to buffer
             encodeStatus = htmlEncoder.EncodeUtf8(utf8Text, writerSpan, out var bytesConsumed, out var bytesWritten);
             waitingToAdvance += bytesWritten;
 
