@@ -3,7 +3,7 @@
 [![CI (main)](https://github.com/DamianEdwards/RazorSlices/actions/workflows/ci.yml/badge.svg)](https://github.com/DamianEdwards/RazorSlices/actions/workflows/ci.yml)
 [![Nuget](https://img.shields.io/nuget/v/RazorSlices)](https://www.nuget.org/packages/RazorSlices/)
 
-Lightweight Razor-based templates for ASP.NET Core without MVC, Razor Pages, or Blazor, optimized for high-performance rendering. Great for returning HTML from Minimal APIs, middleware, etc. Supports .NET 7+
+Lightweight Razor-based templates for ASP.NET Core without MVC, Razor Pages, or Blazor, optimized for high-performance rendering. Great for returning HTML from Minimal APIs, middleware, etc. Supports .NET 6+
 
 - [Getting Started](#getting-started)
 - [Installation](#installation)
@@ -11,7 +11,7 @@ Lightweight Razor-based templates for ASP.NET Core without MVC, Razor Pages, or 
 
 ## Getting Started
 
-1. [Install the NuGet package](#installation) into your ASP.NET Core project (.NET 7+):
+1. [Install the NuGet package](#installation) into your ASP.NET Core project (.NET 6+):
 
     ``` shell
     > dotnet add package RazorSlices
@@ -90,6 +90,7 @@ The library is still new and features are being actively added.
 
 ### Currently supported
 
+- ASP.NET Core 6.0 and above
 - Strongly-typed models (via `@inherits RazorSlice<MyModel>` or `@inherits RazorSliceHttpResult<MyModel>`)
 - Razor constructs:
   - [Implicit expressions](https://learn.microsoft.com/aspnet/core/mvc/views/razor#implicit-razor-expressions), e.g. `@someVariable`
@@ -145,7 +146,6 @@ The library is still new and features are being actively added.
   - Support compiling static template elements to UTF8 string literals (`ReadOnlySpan<char>`) instead of string literals to save on the UTF16 to UTF8 conversion during rendering
   - Support disabling the default registered `@addtaghelper` and `@inject` directives which rely on MVC
 - Rendering directly to a string, `StringBuilder`, etc.
-- Support for .NET 6
 
 ### No intention to support
 
