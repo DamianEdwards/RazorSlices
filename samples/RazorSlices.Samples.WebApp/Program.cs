@@ -11,6 +11,8 @@ app.MapGet("/lorem", () => Results.Redirect("/lorem-static"));
 app.MapGet("/lorem-static", () => Results.Extensions.RazorSlice("/Slices/LoremStatic.cshtml"));
 app.MapGet("/lorem-dynamic", (int? paraCount, int? paraLength) =>
     Results.Extensions.RazorSlice("/Slices/LoremDynamic.cshtml", new LoremParams(paraCount, paraLength)));
+app.MapGet("/lorem-formattable", (int? paraCount, int? paraLength) =>
+    Results.Extensions.RazorSlice("/Slices/LoremFormattable.cshtml", new LoremParams(paraCount, paraLength)));
 
 app.MapGet("/", () => Results.Extensions.RazorSlice("/Slices/Todos.cshtml", Todos.AllTodos));
 app.MapGet("/{id:int}", (int id) =>

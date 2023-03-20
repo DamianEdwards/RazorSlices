@@ -43,6 +43,21 @@ public abstract partial class RazorSlice
     protected void Write(int value) => WriteNumeric(value, default);
 
     /// <summary>
+    /// Write the specified <see cref="ISpanFormattable"/> value to the output.
+    /// </summary>
+    /// <param name="formattable">The value to write to the output.</param>
+    protected void Write(ISpanFormattable? formattable)
+    {
+        if (formattable is null)
+        {
+            return;
+        }
+
+        _bufferWriter?.HtmlEncodeAndWrite(formattable, _htmlEncoder);
+        _textWriter?.HtmlEncodeAndWrite(formattable, _htmlEncoder);
+    }
+
+    /// <summary>
     /// Write the specified <see cref="Nullable{T}"/> value to the output using the specified <see cref="StandardFormat"/>.
     /// </summary>
     /// <param name="value">The value to write to the output.</param>

@@ -1,15 +1,13 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
+using RazorSlices;
 
 namespace System.Buffers;
 
 internal static class BufferWriterHtmlExtensions
 {
-    private const int SmallWriteByteSize = 256;
-    private const int SmallWriteCharSize = SmallWriteByteSize / 2;
-    private const int MaxBufferSize = 1024;
-
     public static void HtmlEncodeAndWriteUtf8(this IBufferWriter<byte> bufferWriter, ReadOnlySpan<byte> utf8Text) =>
         HtmlEncodeAndWriteUtf8(bufferWriter, utf8Text, HtmlEncoder.Default);
 
@@ -59,6 +57,45 @@ internal static class BufferWriterHtmlExtensions
         Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
     }
 
+    public static void HtmlEncodeAndWrite(this IBufferWriter<byte> bufferWriter, ISpanFormattable? formattable, HtmlEncoder htmlEncoder)
+    {
+        if (formattable is null)
+        {
+            return;
+        }
+
+        if (TryHtmlEncodeAndWriteSmall(bufferWriter, formattable, htmlEncoder))
+        {
+            return;
+        }
+
+        //var bufferSize = BufferLimits.MaxBufferSize;
+        var bufferSize = 256;
+        var rentedBuffer = ArrayPool<char>.Shared.Rent(bufferSize);
+        int charsWritten;
+
+        while (!formattable.TryFormat(rentedBuffer, out charsWritten, default, CultureInfo.CurrentCulture))
+        {
+            bufferSize = rentedBuffer.Length * 2;
+            ArrayPool<char>.Shared.Return(rentedBuffer);
+            rentedBuffer = ArrayPool<char>.Shared.Rent(bufferSize);
+        }
+
+        HtmlEncodeAndWrite(bufferWriter, rentedBuffer[..charsWritten].AsSpan(), htmlEncoder);
+        ArrayPool<char>.Shared.Return(rentedBuffer);
+    }
+
+    private static bool TryHtmlEncodeAndWriteSmall(IBufferWriter<byte> bufferWriter, ISpanFormattable formattable, HtmlEncoder htmlEncoder)
+    {
+        Span<char> buffer = stackalloc char[BufferLimits.SmallWriteCharSize];
+        if (formattable.TryFormat(buffer, out var charsWritten, default, CultureInfo.CurrentCulture))
+        {
+            HtmlEncodeAndWrite(bufferWriter, buffer[..charsWritten], htmlEncoder);
+            return true;
+        }
+        return false;
+    }
+
     public static void HtmlEncodeAndWrite(this IBufferWriter<byte> bufferWriter, string? text) =>
         HtmlEncodeAndWrite(bufferWriter, text, HtmlEncoder.Default);
 
@@ -79,7 +116,7 @@ internal static class BufferWriterHtmlExtensions
             return;
         }
 
-        if (textSpan.Length <= SmallWriteCharSize)
+        if (textSpan.Length <= BufferLimits.SmallWriteCharSize)
         {
             HtmlEncodeAndWriteSmall(bufferWriter, textSpan, htmlEncoder);
             return;
@@ -99,6 +136,7 @@ internal static class BufferWriterHtmlExtensions
                 {
                     WriteHtml(bufferWriter, rentedBuffer.AsSpan()[..waitingToWrite]);
                     waitingToWrite = 0;
+                    bufferSpan = rentedBuffer;
                 }
             }
 
@@ -115,21 +153,19 @@ internal static class BufferWriterHtmlExtensions
             bufferSpan = bufferSpan[charsWritten..];
         }
 
-        if (rentedBuffer is not null)
+        if (waitingToWrite > 0)
         {
-            if (waitingToWrite > 0)
-            {
-                WriteHtml(bufferWriter, rentedBuffer.AsSpan()[..waitingToWrite]);
-            }
-            ArrayPool<char>.Shared.Return(rentedBuffer);
+            WriteHtml(bufferWriter, rentedBuffer.AsSpan()[..waitingToWrite]);
         }
+
+        ArrayPool<char>.Shared.Return(rentedBuffer);
 
         Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
     }
 
     private static void HtmlEncodeAndWriteSmall(IBufferWriter<byte> bufferWriter, ReadOnlySpan<char> textSpan, HtmlEncoder htmlEncoder)
     {
-        Span<char> encodedBuffer = stackalloc char[SmallWriteCharSize];
+        Span<char> encodedBuffer = stackalloc char[BufferLimits.SmallWriteCharSize];
         var encodeStatus = OperationStatus.Done;
 
         // It's possible for encoding to take multiple cycles if an unusually high number of chars need HTML encoding and/or the
@@ -177,7 +213,7 @@ internal static class BufferWriterHtmlExtensions
                     bufferWriter.Advance(waitingToAdvance);
                     waitingToAdvance = 0;
                 }
-                var spanLengthHint = Math.Min(html.Length, MaxBufferSize);
+                var spanLengthHint = Math.Min(html.Length, BufferLimits.MaxBufferSize);
                 writerSpan = bufferWriter.GetSpan(spanLengthHint);
             }
 
@@ -203,6 +239,6 @@ internal static class BufferWriterHtmlExtensions
 
     private static int GetEncodedSizeHint(int length)
     {
-        return Math.Min(MaxBufferSize, (int)Math.Round(length * 1.1));
+        return Math.Min(BufferLimits.MaxBufferSize, (int)Math.Round(length * 1.1));
     }
 }

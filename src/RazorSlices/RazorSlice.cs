@@ -274,7 +274,7 @@ public abstract partial class RazorSlice : IDisposable
         _bufferWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
 
         // TODO: Optimize this with rented buffers, etc.
-        _textWriter?.Write(Encoding.UTF8.GetString(value));
+        _textWriter?.Write(_htmlEncoder.Encode(Encoding.UTF8.GetString(value)));
     }
 
     /// <summary>
@@ -329,7 +329,21 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     /// <typeparam name="TValue">The object type.</typeparam>
     /// <param name="value">The object to write to the output.</param>
-    protected void Write<TValue>(TValue? value) => Write(value?.ToString());
+    protected void Write<TValue>(TValue? value)
+    {
+        if (value is ISpanFormattable spanFormattable)
+        {
+            Write(spanFormattable);
+        }
+        else if (value is IHtmlContent htmlContent)
+        {
+            Write(htmlContent);
+        }
+        else
+        {
+            Write(value?.ToString());
+        }
+    }
 
     /// <summary>
     /// Disposes the instance. Overriding implementations should ensure they call <c>base.Dispose()</c> after performing their
