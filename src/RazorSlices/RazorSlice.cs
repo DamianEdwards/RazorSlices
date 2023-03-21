@@ -331,14 +331,40 @@ public abstract partial class RazorSlice : IDisposable
     /// <param name="value">The object to write to the output.</param>
     protected void Write<TValue>(TValue? value)
     {
+        if (value is null)
+        {
+            return;
+        }
+
+        // This generic overload will win when passing values that derive from types specified in other 
+        // overloads so it's critical that we runtime type check here and forward the call to the appropriate
+        // overload for the type.
+        // Furthermore, boxed value type values passed will use this method too, so type checking against all
+        // other overload parameter types is necessary to in order to get the optimized rendering.
+
+        // Handle derived types
         if (value is ISpanFormattable spanFormattable)
         {
             Write(spanFormattable);
+        }
+        else if (value is HtmlString htmlString)
+        {
+            Write(htmlString);
         }
         else if (value is IHtmlContent htmlContent)
         {
             Write(htmlContent);
         }
+        // Handle boxed values
+        else if (value is int intValue)
+        {
+            Write(intValue);
+        }
+        else if (value is byte[] byteArrayValue)
+        {
+            Write(byteArrayValue);
+        }
+        // Fallback to ToString()
         else
         {
             Write(value?.ToString());

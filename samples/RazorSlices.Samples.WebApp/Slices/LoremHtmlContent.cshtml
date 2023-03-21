@@ -1,0 +1,53 @@
+﻿@using System.IO;
+@using System.Text.Encodings.Web;
+@inherits RazorSliceHttpResult<HtmlContentParams>
+@{
+    var title = $"Lorem Ipsum (IHtmlContent)";
+    var content = new LoremHtmlContent { HtmlEncode = Model.Encode };
+}
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@title</title>
+    <base href="/" />
+    <link href="lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="css/site.css" rel="stylesheet" />
+    <link rel="icon" href="/docs/5.3/assets/img/favicons/favicon.ico">
+    <link href="css/site.css" rel="stylesheet" />
+</head>
+<body class="d-flex flex-column h-100">
+    <main class="flex-shrink-0">
+        <div class="container">
+            <h1 class="mt-5">@title</h1>
+            @content
+        </div>
+    </main>
+
+    <footer class="footer mt-auto py-3 bg-light">
+        <div class="container">
+            <a href="https://github.com/DamianEdwards/RazorSlices"><span class="text-muted">RazorSlices</span></a>
+        </div>
+    </footer>
+</body>
+</html>
+
+@functions {
+    public class LoremHtmlContent : IHtmlContent
+    {
+        public bool HtmlEncode { get; set; }
+
+        public void WriteTo(TextWriter writer, HtmlEncoder encoder)
+        {
+            if (HtmlEncode)
+            {
+                writer.Write(encoder.Encode(PageContent.Html));
+            }
+            else
+            {
+                writer.Write(PageContent.Html);
+            }
+        }
+    }
+}

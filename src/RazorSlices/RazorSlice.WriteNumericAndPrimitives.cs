@@ -10,6 +10,66 @@ public abstract partial class RazorSlice
     // TODO: Add overloads for other values supported by Utf8Formatter.TryFormat, e.g. numeric types, DateTime, etc.
     // TODO: Review this for HtmlEncoding requirements
 
+    // <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(DateTime? value) => WriteDateTime(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(DateTime value) => WriteDateTime(value, default);
+
+    // <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(DateTimeOffset? value) => WriteDateTime(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(DateTimeOffset value) => WriteDateTime(value, default);
+
+    // <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(TimeSpan? value) => WriteTimeSpan(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(TimeSpan value) => WriteTimeSpan(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(byte? value) => WriteNumeric(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(byte value) => WriteNumeric(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(short? value) => WriteNumeric(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(short value) => WriteNumeric(value, default);
+
     /// <summary>
     /// Write the specified <see cref="Nullable{T}"/> value to the output.
     /// </summary>
@@ -43,6 +103,42 @@ public abstract partial class RazorSlice
     protected void Write(int value) => WriteNumeric(value, default);
 
     /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(long? value) => WriteNumeric(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(long value) => WriteNumeric(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(double? value) => WriteNumeric(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(double value) => WriteNumeric(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(decimal? value) => WriteNumeric(value, default);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    protected void Write(decimal value) => WriteNumeric(value, default);
+
+    /// <summary>
     /// Write the specified <see cref="ISpanFormattable"/> value to the output.
     /// </summary>
     /// <param name="formattable">The value to write to the output.</param>
@@ -58,27 +154,27 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
-    /// Write the specified <see cref="Nullable{T}"/> value to the output using the specified <see cref="StandardFormat"/>.
+    /// 
     /// </summary>
-    /// <param name="value">The value to write to the output.</param>
-    /// <param name="format">The format to use when writing the value.</param>
-    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
-    protected HtmlString WriteNumeric(int? value, StandardFormat format)
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteDateTime(DateTime? value, StandardFormat format)
     {
         if (value.HasValue)
         {
-            return WriteNumeric(value.Value, format);
+            return WriteDateTime(value.Value, format);
         }
         return HtmlString.Empty;
     }
 
     /// <summary>
-    /// Write the specified <see cref="int"/> value to the output using the specified <see cref="StandardFormat"/>.
+    /// 
     /// </summary>
-    /// <param name="value">The value to write to the output.</param>
-    /// <param name="format">The format to use when writing the value.</param>
-    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
-    protected HtmlString WriteNumeric(int value, StandardFormat format)
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteDateTime(DateTime value, StandardFormat format)
     {
         if (_bufferWriter is not null)
         {
@@ -91,7 +187,7 @@ public abstract partial class RazorSlice
             }
             else
             {
-                WriteNumericSlow(value, format, _bufferWriter);
+                WriteDateTimeSlow(value, format, _bufferWriter);
             }
         }
         if (_textWriter is not null)
@@ -109,7 +205,676 @@ public abstract partial class RazorSlice
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void WriteNumericSlow(int value, StandardFormat format, IBufferWriter<byte> bufferWriter)
+    private static void WriteDateTimeSlow(DateTime value, StandardFormat format, IBufferWriter<byte> bufferWriter)
+    {
+        var lengthHint = 64;
+        int actualLength;
+
+        while (true)
+        {
+            var span = bufferWriter.GetSpan(lengthHint);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                actualLength = bytesWritten;
+                break;
+            }
+
+            lengthHint *= 2;
+        }
+        bufferWriter.Advance(actualLength);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteDateTime(DateTimeOffset? value, StandardFormat format)
+    {
+        if (value.HasValue)
+        {
+            return WriteDateTime(value.Value, format);
+        }
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteDateTime(DateTimeOffset value, StandardFormat format)
+    {
+        if (_bufferWriter is not null)
+        {
+            // Try to format the number into a fixed-length span first
+            var span = _bufferWriter.GetSpan(32);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                _bufferWriter.Advance(bytesWritten);
+            }
+            else
+            {
+                WriteDateTimeSlow(value, format, _bufferWriter);
+            }
+        }
+        if (_textWriter is not null)
+        {
+            if (format.IsDefault)
+            {
+                _textWriter.Write(value);
+            }
+            else
+            {
+                _textWriter.Write(format.ToString(), value);
+            }
+        }
+        return HtmlString.Empty;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void WriteDateTimeSlow(DateTimeOffset value, StandardFormat format, IBufferWriter<byte> bufferWriter)
+    {
+        var lengthHint = 64;
+        int actualLength;
+
+        while (true)
+        {
+            var span = bufferWriter.GetSpan(lengthHint);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                actualLength = bytesWritten;
+                break;
+            }
+
+            lengthHint *= 2;
+        }
+        bufferWriter.Advance(actualLength);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteTimeSpan(TimeSpan? value, StandardFormat format)
+    {
+        if (value.HasValue)
+        {
+            return WriteTimeSpan(value.Value, format);
+        }
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteTimeSpan(TimeSpan value, StandardFormat format)
+    {
+        if (_bufferWriter is not null)
+        {
+            // Try to format the number into a fixed-length span first
+            var span = _bufferWriter.GetSpan(32);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                _bufferWriter.Advance(bytesWritten);
+            }
+            else
+            {
+                WriteTimeSpanSlow(value, format, _bufferWriter);
+            }
+        }
+        if (_textWriter is not null)
+        {
+            if (format.IsDefault)
+            {
+                _textWriter.Write(value);
+            }
+            else
+            {
+                _textWriter.Write(format.ToString(), value);
+            }
+        }
+        return HtmlString.Empty;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void WriteTimeSpanSlow(TimeSpan value, StandardFormat format, IBufferWriter<byte> bufferWriter)
+    {
+        var lengthHint = 64;
+        int actualLength;
+
+        while (true)
+        {
+            var span = bufferWriter.GetSpan(lengthHint);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                actualLength = bytesWritten;
+                break;
+            }
+
+            lengthHint *= 2;
+        }
+        bufferWriter.Advance(actualLength);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(byte? value, StandardFormat format)
+    {
+        if (value.HasValue)
+        {
+            return WriteNumeric(value.Value, format);
+        }
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(byte value, StandardFormat format)
+        => WriteByte(value, format);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(short? value, StandardFormat format)
+    {
+        if (value.HasValue)
+        {
+            return WriteNumeric(value.Value, format);
+        }
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(short value, StandardFormat format)
+        => WriteInt16(value, format);
+
+    /// <summary>
+    /// Write the specified <see cref="Nullable{T}"/> value to the output using the specified <see cref="StandardFormat"/>.
+    /// </summary>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
+    protected HtmlString WriteNumeric(int? value, StandardFormat format)
+    {
+        if (value.HasValue)
+        {
+            return WriteNumeric(value.Value, format);
+        }
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(long? value, StandardFormat format)
+    {
+        if (value.HasValue)
+        {
+            return WriteNumeric(value.Value, format);
+        }
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(int value, StandardFormat format) =>
+        WriteInt32(value, format);
+
+    /// <summary>
+    /// Write the specified <see cref="int"/> value to the output using the specified <see cref="StandardFormat"/>.
+    /// </summary>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
+    protected HtmlString WriteNumeric(long value, StandardFormat format) =>
+        WriteInt64(value, format);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(float? value, StandardFormat format)
+    {
+        if (value.HasValue)
+        {
+            return WriteNumeric(value.Value, format);
+        }
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(float value, StandardFormat format)
+        => WriteSingle(value, format);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(double? value, StandardFormat format)
+    {
+        if (value.HasValue)
+        {
+            return WriteNumeric(value.Value, format);
+        }
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(double value, StandardFormat format)
+        => WriteDouble(value, format);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(decimal? value, StandardFormat format)
+    {
+        if (value.HasValue)
+        {
+            return WriteNumeric(value.Value, format);
+        }
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="format"></param>
+    /// <returns></returns>
+    protected HtmlString WriteNumeric(decimal value, StandardFormat format)
+        => WriteDecimal(value, format);
+
+    private HtmlString WriteDecimal(decimal value, StandardFormat format)
+    {
+        if (_bufferWriter is not null)
+        {
+            // Try to format the number into a fixed-length span first
+            var span = _bufferWriter.GetSpan(32);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                _bufferWriter.Advance(bytesWritten);
+            }
+            else
+            {
+                WriteDecimalSlow(value, format, _bufferWriter);
+            }
+        }
+        if (_textWriter is not null)
+        {
+            if (format.IsDefault)
+            {
+                _textWriter.Write(value);
+            }
+            else
+            {
+                _textWriter.Write(format.ToString(), value);
+            }
+        }
+        return HtmlString.Empty;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void WriteDecimalSlow(decimal value, StandardFormat format, IBufferWriter<byte> bufferWriter)
+    {
+        var lengthHint = 64;
+        int actualLength;
+
+        while (true)
+        {
+            var span = bufferWriter.GetSpan(lengthHint);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                actualLength = bytesWritten;
+                break;
+            }
+
+            lengthHint *= 2;
+        }
+        bufferWriter.Advance(actualLength);
+    }
+
+    private HtmlString WriteSingle(float value, StandardFormat format)
+    {
+        if (_bufferWriter is not null)
+        {
+            // Try to format the number into a fixed-length span first
+            var span = _bufferWriter.GetSpan(32);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                _bufferWriter.Advance(bytesWritten);
+            }
+            else
+            {
+                WriteDoubleSlow(value, format, _bufferWriter);
+            }
+        }
+        if (_textWriter is not null)
+        {
+            if (format.IsDefault)
+            {
+                _textWriter.Write(value);
+            }
+            else
+            {
+                _textWriter.Write(format.ToString(), value);
+            }
+        }
+        return HtmlString.Empty;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void WriteSingleSlow(float value, StandardFormat format, IBufferWriter<byte> bufferWriter)
+    {
+        var lengthHint = 64;
+        int actualLength;
+
+        while (true)
+        {
+            var span = bufferWriter.GetSpan(lengthHint);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                actualLength = bytesWritten;
+                break;
+            }
+
+            lengthHint *= 2;
+        }
+        bufferWriter.Advance(actualLength);
+    }
+
+    private HtmlString WriteDouble(double value, StandardFormat format)
+    {
+        if (_bufferWriter is not null)
+        {
+            // Try to format the number into a fixed-length span first
+            var span = _bufferWriter.GetSpan(32);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                _bufferWriter.Advance(bytesWritten);
+            }
+            else
+            {
+                WriteDoubleSlow(value, format, _bufferWriter);
+            }
+        }
+        if (_textWriter is not null)
+        {
+            if (format.IsDefault)
+            {
+                _textWriter.Write(value);
+            }
+            else
+            {
+                _textWriter.Write(format.ToString(), value);
+            }
+        }
+        return HtmlString.Empty;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void WriteDoubleSlow(double value, StandardFormat format, IBufferWriter<byte> bufferWriter)
+    {
+        var lengthHint = 64;
+        int actualLength;
+
+        while (true)
+        {
+            var span = bufferWriter.GetSpan(lengthHint);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                actualLength = bytesWritten;
+                break;
+            }
+
+            lengthHint *= 2;
+        }
+        bufferWriter.Advance(actualLength);
+    }
+
+    private HtmlString WriteByte(byte value, StandardFormat format)
+    {
+        if (_bufferWriter is not null)
+        {
+            // Try to format the number into a fixed-length span first
+            var span = _bufferWriter.GetSpan(3);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                _bufferWriter.Advance(bytesWritten);
+            }
+            else
+            {
+                WriteByteSlow(value, format, _bufferWriter);
+            }
+        }
+        if (_textWriter is not null)
+        {
+            if (format.IsDefault)
+            {
+                _textWriter.Write(value);
+            }
+            else
+            {
+                _textWriter.Write(format.ToString(), value);
+            }
+        }
+        return HtmlString.Empty;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void WriteByteSlow(byte value, StandardFormat format, IBufferWriter<byte> bufferWriter)
+    {
+        var lengthHint = 6;
+        int actualLength;
+
+        while (true)
+        {
+            var span = bufferWriter.GetSpan(lengthHint);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                actualLength = bytesWritten;
+                break;
+            }
+
+            lengthHint *= 2;
+        }
+        bufferWriter.Advance(actualLength);
+    }
+
+    private HtmlString WriteInt16(short value, StandardFormat format)
+    {
+        if (_bufferWriter is not null)
+        {
+            // Try to format the number into a fixed-length span first
+            var span = _bufferWriter.GetSpan(32);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                _bufferWriter.Advance(bytesWritten);
+            }
+            else
+            {
+                WriteInt16Slow(value, format, _bufferWriter);
+            }
+        }
+        if (_textWriter is not null)
+        {
+            if (format.IsDefault)
+            {
+                _textWriter.Write(value);
+            }
+            else
+            {
+                _textWriter.Write(format.ToString(), value);
+            }
+        }
+        return HtmlString.Empty;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void WriteInt16Slow(short value, StandardFormat format, IBufferWriter<byte> bufferWriter)
+    {
+        var lengthHint = GetFormattedLengthHint(value, format);
+        int actualLength;
+
+        while (true)
+        {
+            var span = bufferWriter.GetSpan(lengthHint);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                actualLength = bytesWritten;
+                break;
+            }
+
+            lengthHint *= 2;
+        }
+        bufferWriter.Advance(actualLength);
+    }
+
+    private HtmlString WriteInt32(int value, StandardFormat format)
+    {
+        if (_bufferWriter is not null)
+        {
+            // Try to format the number into a fixed-length span first
+            var span = _bufferWriter.GetSpan(32);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                _bufferWriter.Advance(bytesWritten);
+            }
+            else
+            {
+                WriteInt32Slow(value, format, _bufferWriter);
+            }
+        }
+        if (_textWriter is not null)
+        {
+            if (format.IsDefault)
+            {
+                _textWriter.Write(value);
+            }
+            else
+            {
+                _textWriter.Write(format.ToString(), value);
+            }
+        }
+        return HtmlString.Empty;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void WriteInt32Slow(long value, StandardFormat format, IBufferWriter<byte> bufferWriter)
+    {
+        var lengthHint = GetFormattedLengthHint(value, format);
+        int actualLength;
+
+        while (true)
+        {
+            var span = bufferWriter.GetSpan(lengthHint);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                actualLength = bytesWritten;
+                break;
+            }
+
+            lengthHint *= 2;
+        }
+        bufferWriter.Advance(actualLength);
+    }
+
+    private HtmlString WriteInt64(long value, StandardFormat format)
+    {
+        if (_bufferWriter is not null)
+        {
+            // Try to format the number into a fixed-length span first
+            var span = _bufferWriter.GetSpan(32);
+
+            if (Utf8Formatter.TryFormat(value, span, out var bytesWritten, format))
+            {
+                _bufferWriter.Advance(bytesWritten);
+            }
+            else
+            {
+                WriteInt64Slow(value, format, _bufferWriter);
+            }
+        }
+        if (_textWriter is not null)
+        {
+            if (format.IsDefault)
+            {
+                _textWriter.Write(value);
+            }
+            else
+            {
+                _textWriter.Write(format.ToString(), value);
+            }
+        }
+        return HtmlString.Empty;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void WriteInt64Slow(long value, StandardFormat format, IBufferWriter<byte> bufferWriter)
     {
         var lengthHint = GetFormattedLengthHint(value, format);
         int actualLength;
@@ -130,7 +895,7 @@ public abstract partial class RazorSlice
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int GetFormattedLengthHint(int value, StandardFormat format)
+    private static int GetFormattedLengthHint(long value, StandardFormat format)
     {
         var logBase = format.Symbol switch
         {
