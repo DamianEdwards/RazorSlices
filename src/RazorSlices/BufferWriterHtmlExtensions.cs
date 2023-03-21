@@ -57,14 +57,14 @@ internal static class BufferWriterHtmlExtensions
         Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
     }
 
-    public static void HtmlEncodeAndWrite(this IBufferWriter<byte> bufferWriter, ISpanFormattable? formattable, HtmlEncoder htmlEncoder)
+    public static void HtmlEncodeAndWrite(this IBufferWriter<byte> bufferWriter, ISpanFormattable? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default)
     {
         if (formattable is null)
         {
             return;
         }
 
-        if (TryHtmlEncodeAndWriteSmall(bufferWriter, formattable, htmlEncoder))
+        if (TryHtmlEncodeAndWriteSmall(bufferWriter, formattable, htmlEncoder, format))
         {
             return;
         }
@@ -74,7 +74,7 @@ internal static class BufferWriterHtmlExtensions
         var rentedBuffer = ArrayPool<char>.Shared.Rent(bufferSize);
         int charsWritten;
 
-        while (!formattable.TryFormat(rentedBuffer, out charsWritten, default, CultureInfo.CurrentCulture))
+        while (!formattable.TryFormat(rentedBuffer, out charsWritten, format, CultureInfo.CurrentCulture))
         {
             bufferSize = rentedBuffer.Length * 2;
             ArrayPool<char>.Shared.Return(rentedBuffer);
@@ -85,10 +85,10 @@ internal static class BufferWriterHtmlExtensions
         ArrayPool<char>.Shared.Return(rentedBuffer);
     }
 
-    private static bool TryHtmlEncodeAndWriteSmall(IBufferWriter<byte> bufferWriter, ISpanFormattable formattable, HtmlEncoder htmlEncoder)
+    private static bool TryHtmlEncodeAndWriteSmall(IBufferWriter<byte> bufferWriter, ISpanFormattable formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default)
     {
         Span<char> buffer = stackalloc char[BufferLimits.SmallWriteCharSize];
-        if (formattable.TryFormat(buffer, out var charsWritten, default, CultureInfo.CurrentCulture))
+        if (formattable.TryFormat(buffer, out var charsWritten, format, CultureInfo.CurrentCulture))
         {
             HtmlEncodeAndWrite(bufferWriter, buffer[..charsWritten], htmlEncoder);
             return true;

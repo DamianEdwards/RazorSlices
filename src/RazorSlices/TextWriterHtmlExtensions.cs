@@ -7,14 +7,14 @@ namespace RazorSlices;
 
 internal static class TextWriterHtmlExtensions
 {
-    public static void HtmlEncodeAndWrite(this TextWriter textWriter, ISpanFormattable formattable, HtmlEncoder htmlEncoder)
+    public static void HtmlEncodeAndWrite(this TextWriter textWriter, ISpanFormattable formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default)
     {
         if (formattable is null)
         {
             return;
         }
 
-        if (TryHtmlEncodeAndWriteSmall(textWriter, formattable, htmlEncoder))
+        if (TryHtmlEncodeAndWriteSmall(textWriter, formattable, htmlEncoder, format))
         {
             return;
         }
@@ -23,7 +23,7 @@ internal static class TextWriterHtmlExtensions
         var formatBuffer = ArrayPool<char>.Shared.Rent(bufferSize);
         int charsWritten;
 
-        while (!formattable.TryFormat(formatBuffer, out charsWritten, default, CultureInfo.CurrentCulture))
+        while (!formattable.TryFormat(formatBuffer, out charsWritten, format, CultureInfo.CurrentCulture))
         {
             bufferSize = formatBuffer.Length * 2;
             ArrayPool<char>.Shared.Return(formatBuffer);
@@ -71,10 +71,10 @@ internal static class TextWriterHtmlExtensions
         Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in TextWriter HTML writing extensions");
     }
 
-    private static bool TryHtmlEncodeAndWriteSmall(TextWriter textWriter, ISpanFormattable formattable, HtmlEncoder htmlEncoder)
+    private static bool TryHtmlEncodeAndWriteSmall(TextWriter textWriter, ISpanFormattable formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default)
     {
         Span<char> formatBuffer = stackalloc char[BufferLimits.SmallWriteCharSize];
-        if (formattable.TryFormat(formatBuffer, out var charsWritten, default, CultureInfo.CurrentCulture))
+        if (formattable.TryFormat(formatBuffer, out var charsWritten, format, CultureInfo.CurrentCulture))
         {
             if ((charsWritten * 1.1) < BufferLimits.SmallWriteCharSize)
             {

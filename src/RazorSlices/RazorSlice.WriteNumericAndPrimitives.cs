@@ -7,67 +7,127 @@ namespace RazorSlices;
 
 public abstract partial class RazorSlice
 {
-    // TODO: Add overloads for other values supported by Utf8Formatter.TryFormat, e.g. numeric types, DateTime, etc.
+    // TODO: Add overloads for other values supported by Utf8Formatter.TryFormat, e.g. unsigned numeric types
     // TODO: Review this for HtmlEncoding requirements
 
-    // <summary>
-    /// 
+    /// <summary>
+    /// Write the specified <see cref="DateTime"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(DateTime? value) => WriteDateTime(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="DateTime"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(DateTime value) => WriteDateTime(value, default);
 
-    // <summary>
-    /// 
+    /// <summary>
+    /// Write the specified <see cref="DateTimeOffset"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(DateTimeOffset? value) => WriteDateTime(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="DateTimeOffset"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(DateTimeOffset value) => WriteDateTime(value, default);
 
-    // <summary>
-    /// 
+    /// <summary>
+    /// Write the specified <see cref="TimeSpan"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// any Razor write expression for a <see cref="TimeSpan"/> value in your .cshtml file, e.g. <c>@item.Qty</c>.
+    /// </para>
+    /// <para>
+    /// To specify a format, call <see cref="WriteTimeSpan(TimeSpan?, StandardFormat)"/> instead, or use <see cref="TimeSpan.ToString(string?)"/>,
+    /// e.g. <c>@item.Duration?.ToString("G")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(TimeSpan? value) => WriteTimeSpan(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="TimeSpan"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// any Razor write expression for a <see cref="TimeSpan"/> value in your .cshtml file, e.g. <c>@item.Qty</c>.
+    /// </para>
+    /// <para>
+    /// To specify a format, call <see cref="WriteTimeSpan(TimeSpan, StandardFormat)"/> instead, or use <see cref="TimeSpan.ToString(string?)"/>,
+    /// e.g. <c>@item.Duration.ToString("G")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(TimeSpan value) => WriteTimeSpan(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="byte"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// any Razor write expression for a <see cref="byte"/> value in your .cshtml file, e.g. <c>@item.Qty</c>.
+    /// </para>
+    /// <para>
+    /// To specify a format, call <see cref="WriteNumeric(byte?, StandardFormat)"/> instead, or use <see cref="byte.ToString(string?)"/>,
+    /// e.g. <c>@item.Qty?.ToString("G")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(byte? value) => WriteNumeric(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="byte"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// any Razor write expression for a <see cref="byte"/> value in your .cshtml file, e.g. <c>@item.Qty</c>.
+    /// </para>
+    /// <para>
+    /// To specify a format, call <see cref="WriteNumeric(byte, StandardFormat)"/> instead, or use <see cref="byte.ToString(string?)"/>,
+    /// e.g. <c>@item.Qty.ToString("G")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(byte value) => WriteNumeric(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="short"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// any Razor write expression for a <see cref="short"/> value in your .cshtml file, e.g. <c>@item.Qty</c>.
+    /// </para>
+    /// <para>
+    /// To specify a format, call <see cref="WriteNumeric(short?, StandardFormat)"/> instead, or use <see cref="short.ToString(string?)"/>,
+    /// e.g. <c>@item.Qty?.ToString("G")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(short? value) => WriteNumeric(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="short"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// any Razor write expression for a <see cref="short"/> value in your .cshtml file, e.g. <c>@item.Qty</c>.
+    /// </para>
+    /// <para>
+    /// To specify a format, call <see cref="WriteNumeric(short, StandardFormat)"/> instead, or use <see cref="short.ToString(string?)"/>,
+    /// e.g. <c>@item.Qty.ToString("G")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(short value) => WriteNumeric(value, default);
 
     /// <summary>
@@ -103,39 +163,39 @@ public abstract partial class RazorSlice
     protected void Write(int value) => WriteNumeric(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="long"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(long? value) => WriteNumeric(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="long"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(long value) => WriteNumeric(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="double"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(double? value) => WriteNumeric(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="double"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(double value) => WriteNumeric(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="decimal"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(decimal? value) => WriteNumeric(value, default);
 
     /// <summary>
-    /// 
+    /// Write the specified <see cref="decimal"/> value to the output.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(decimal value) => WriteNumeric(value, default);
 
     /// <summary>
@@ -149,16 +209,34 @@ public abstract partial class RazorSlice
             return;
         }
 
-        _bufferWriter?.HtmlEncodeAndWrite(formattable, _htmlEncoder);
-        _textWriter?.HtmlEncodeAndWrite(formattable, _htmlEncoder);
+        WriteFormattable(formattable);
+    }
+
+    /// <summary>
+    /// Write the specified <see cref="ISpanFormattable"/> value to the output with the specified format.
+    /// </summary>
+    /// <param name="formattable">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value to the output.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteFormattable(item.DueBy, "d")</c></returns>
+    protected HtmlString WriteFormattable(ISpanFormattable? formattable, ReadOnlySpan<char> format = default)
+    {
+        if (formattable is null)
+        {
+            return HtmlString.Empty;
+        }
+
+        _bufferWriter?.HtmlEncodeAndWrite(formattable, _htmlEncoder, format);
+        _textWriter?.HtmlEncodeAndWrite(formattable, _htmlEncoder, format);
+
+        return HtmlString.Empty;
     }
 
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteDateTime(item.DueBy, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteDateTime(DateTime? value, StandardFormat format)
     {
         if (value.HasValue)
@@ -171,9 +249,9 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteDateTime(item.DueBy, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteDateTime(DateTime value, StandardFormat format)
     {
         if (_bufferWriter is not null)
@@ -228,9 +306,9 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteDateTime(item.DueBy, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteDateTime(DateTimeOffset? value, StandardFormat format)
     {
         if (value.HasValue)
@@ -243,9 +321,9 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteDateTime(item.DueBy, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteDateTime(DateTimeOffset value, StandardFormat format)
     {
         if (_bufferWriter is not null)
@@ -300,9 +378,9 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteTimeSpan(entry.Duration, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteTimeSpan(TimeSpan? value, StandardFormat format)
     {
         if (value.HasValue)
@@ -315,9 +393,9 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteTimeSpan(entry.Duration, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteTimeSpan(TimeSpan value, StandardFormat format)
     {
         if (_bufferWriter is not null)
@@ -372,9 +450,9 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteNumeric(byte? value, StandardFormat format)
     {
         if (value.HasValue)
@@ -387,17 +465,17 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteNumeric(byte value, StandardFormat format)
         => WriteByte(value, format);
 
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
     /// <returns></returns>
     protected HtmlString WriteNumeric(short? value, StandardFormat format)
     {
@@ -411,9 +489,9 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteNumeric(short value, StandardFormat format)
         => WriteInt16(value, format);
 
@@ -437,7 +515,7 @@ public abstract partial class RazorSlice
     /// </summary>
     /// <param name="value"></param>
     /// <param name="format"></param>
-    /// <returns></returns>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteNumeric(long? value, StandardFormat format)
     {
         if (value.HasValue)
@@ -452,7 +530,7 @@ public abstract partial class RazorSlice
     /// </summary>
     /// <param name="value"></param>
     /// <param name="format"></param>
-    /// <returns></returns>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteNumeric(int value, StandardFormat format) =>
         WriteInt32(value, format);
 
@@ -468,9 +546,9 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteNumeric(float? value, StandardFormat format)
     {
         if (value.HasValue)
@@ -483,18 +561,18 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteNumeric(float value, StandardFormat format)
         => WriteSingle(value, format);
 
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteNumeric(double? value, StandardFormat format)
     {
         if (value.HasValue)
@@ -507,18 +585,18 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteNumeric(double value, StandardFormat format)
         => WriteDouble(value, format);
 
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteNumeric(decimal? value, StandardFormat format)
     {
         if (value.HasValue)
@@ -531,9 +609,9 @@ public abstract partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="format"></param>
-    /// <returns></returns>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteNumeric(item.Qty, StandardFormat.Parse("G"))</c></returns>
     protected HtmlString WriteNumeric(decimal value, StandardFormat format)
         => WriteDecimal(value, format);
 
@@ -601,7 +679,7 @@ public abstract partial class RazorSlice
             }
             else
             {
-                WriteDoubleSlow(value, format, _bufferWriter);
+                WriteSingleSlow(value, format, _bufferWriter);
             }
         }
         if (_textWriter is not null)
