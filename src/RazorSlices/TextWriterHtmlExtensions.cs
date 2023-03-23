@@ -1,37 +1,38 @@
 ﻿using System.Buffers;
 using System.Diagnostics;
-using System.Globalization;
 using System.Text.Encodings.Web;
 
 namespace RazorSlices;
 
 internal static class TextWriterHtmlExtensions
 {
-    public static void HtmlEncodeAndWrite(this TextWriter textWriter, ISpanFormattable formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default)
+    public static void HtmlEncodeAndWriteSpanFormattable<T>(this TextWriter textWriter, T formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
+        where T : ISpanFormattable
     {
         if (formattable is null)
         {
             return;
         }
 
-        if (TryHtmlEncodeAndWriteSmall(textWriter, formattable, htmlEncoder, format))
+        if (TryHtmlEncodeAndWriteSpanFormattableSmall(textWriter, formattable, htmlEncoder, format, formatProvider))
         {
             return;
         }
 
-        var bufferSize = BufferLimits.MaxBufferSize;
+        var bufferSize = BufferSizes.MaxBufferSize;
         var formatBuffer = ArrayPool<char>.Shared.Rent(bufferSize);
         int charsWritten;
 
-        while (!formattable.TryFormat(formatBuffer, out charsWritten, format, CultureInfo.CurrentCulture))
+        while (!formattable.TryFormat(formatBuffer, out charsWritten, format, formatProvider))
         {
+            // Buffer was too small, return the current buffer and rent a new buffer twice the size
             bufferSize = formatBuffer.Length * 2;
             ArrayPool<char>.Shared.Return(formatBuffer);
             formatBuffer = ArrayPool<char>.Shared.Rent(bufferSize);
         }
 
         var textToEncode = formatBuffer.AsSpan(..charsWritten);
-        var encodeBuffer = ArrayPool<char>.Shared.Rent((int)Math.Floor(bufferSize * 1.1));
+        var encodeBuffer = ArrayPool<char>.Shared.Rent(BufferSizes.GetHtmlEncodedSizeHint(textToEncode.Length));
         var encodeBufferSpan = encodeBuffer.AsSpan();
         var encodeStatus = OperationStatus.Done;
         var waitingToWrite = 0;
@@ -71,14 +72,15 @@ internal static class TextWriterHtmlExtensions
         Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in TextWriter HTML writing extensions");
     }
 
-    private static bool TryHtmlEncodeAndWriteSmall(TextWriter textWriter, ISpanFormattable formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default)
+    private static bool TryHtmlEncodeAndWriteSpanFormattableSmall<T>(TextWriter textWriter, T formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
+        where T : ISpanFormattable
     {
-        Span<char> formatBuffer = stackalloc char[BufferLimits.SmallWriteCharSize];
-        if (formattable.TryFormat(formatBuffer, out var charsWritten, format, CultureInfo.CurrentCulture))
+        Span<char> formatBuffer = stackalloc char[BufferSizes.SmallFormattableWriteCharSize];
+        if (formattable.TryFormat(formatBuffer, out var charsWritten, format, formatProvider))
         {
-            if ((charsWritten * 1.1) < BufferLimits.SmallWriteCharSize)
+            if ((charsWritten * BufferSizes.HtmlEncodeAllowanceRatio) < BufferSizes.SmallFormattableWriteCharSize)
             {
-                Span<char> encodedBuffer = stackalloc char[BufferLimits.SmallWriteCharSize];
+                Span<char> encodedBuffer = stackalloc char[BufferSizes.SmallFormattableWriteCharSize];
                 if (htmlEncoder.Encode(formatBuffer, encodedBuffer, out var charsConsumed, out var charsEncoded) == OperationStatus.Done)
                 {
                     return true;

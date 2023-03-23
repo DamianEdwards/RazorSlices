@@ -1,20 +1,25 @@
-﻿using System.Diagnostics;
-using System.Globalization;
+﻿using System.Buffers.Text;
+using System.Diagnostics;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
+using Microsoft.AspNetCore.Razor.TagHelpers;
 using RazorSlices;
 
 namespace System.Buffers;
 
 internal static class BufferWriterHtmlExtensions
 {
-    public static void HtmlEncodeAndWriteUtf8(this IBufferWriter<byte> bufferWriter, ReadOnlySpan<byte> utf8Text) =>
-        HtmlEncodeAndWriteUtf8(bufferWriter, utf8Text, HtmlEncoder.Default);
-
     public static void HtmlEncodeAndWriteUtf8(this IBufferWriter<byte> bufferWriter, ReadOnlySpan<byte> utf8Text, HtmlEncoder htmlEncoder)
     {
         if (utf8Text.Length == 0)
         {
+            return;
+        }
+
+        if (htmlEncoder == NullHtmlEncoder.Default)
+        {
+            // No HTML encoding required
+            bufferWriter.Write(utf8Text);
             return;
         }
 
@@ -31,8 +36,8 @@ internal static class BufferWriterHtmlExtensions
                     bufferWriter.Advance(waitingToAdvance);
                     waitingToAdvance = 0;
                 }
-                // TODO: What size should this be, i.e. how much space to allow for HTML encoding the string
-                var spanSizeHint = GetEncodedSizeHint(utf8Text.Length);
+                // Allow space for HTML encoding the string
+                var spanSizeHint = BufferSizes.GetHtmlEncodedSizeHint(utf8Text.Length);
                 writerSpan = bufferWriter.GetSpan(spanSizeHint);
             }
 
@@ -57,56 +62,45 @@ internal static class BufferWriterHtmlExtensions
         Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
     }
 
-    public static void HtmlEncodeAndWrite(this IBufferWriter<byte> bufferWriter, ISpanFormattable? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default)
+    public static void HtmlEncodeAndWriteSpanFormattable<T>(this IBufferWriter<byte> bufferWriter, T? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
+        where T : ISpanFormattable
     {
         if (formattable is null)
         {
             return;
         }
 
-        if (TryHtmlEncodeAndWriteSmall(bufferWriter, formattable, htmlEncoder, format))
+        if (TryHtmlEncodeAndWriteSpanFormattableSmall(bufferWriter, formattable, htmlEncoder, format, formatProvider))
         {
             return;
         }
 
-        //var bufferSize = BufferLimits.MaxBufferSize;
-        var bufferSize = 256;
+        var bufferSize = BufferSizes.SmallFormattableWriteCharSize * 2;
         var rentedBuffer = ArrayPool<char>.Shared.Rent(bufferSize);
         int charsWritten;
 
-        while (!formattable.TryFormat(rentedBuffer, out charsWritten, format, CultureInfo.CurrentCulture))
+        while (!formattable.TryFormat(rentedBuffer, out charsWritten, format, formatProvider))
         {
+            // Buffer was too small, return the current buffer and rent a new buffer twice the size
             bufferSize = rentedBuffer.Length * 2;
             ArrayPool<char>.Shared.Return(rentedBuffer);
             rentedBuffer = ArrayPool<char>.Shared.Rent(bufferSize);
         }
 
-        HtmlEncodeAndWrite(bufferWriter, rentedBuffer[..charsWritten].AsSpan(), htmlEncoder);
+        HtmlEncodeAndWrite(bufferWriter, rentedBuffer.AsSpan()[..charsWritten], htmlEncoder);
         ArrayPool<char>.Shared.Return(rentedBuffer);
     }
 
-    private static bool TryHtmlEncodeAndWriteSmall(IBufferWriter<byte> bufferWriter, ISpanFormattable formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default)
+    private static bool TryHtmlEncodeAndWriteSpanFormattableSmall<T>(IBufferWriter<byte> bufferWriter, T formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
+        where T : ISpanFormattable
     {
-        Span<char> buffer = stackalloc char[BufferLimits.SmallWriteCharSize];
-        if (formattable.TryFormat(buffer, out var charsWritten, format, CultureInfo.CurrentCulture))
+        Span<char> buffer = stackalloc char[BufferSizes.SmallFormattableWriteCharSize];
+        if (formattable.TryFormat(buffer, out var charsWritten, format, formatProvider))
         {
             HtmlEncodeAndWrite(bufferWriter, buffer[..charsWritten], htmlEncoder);
             return true;
         }
         return false;
-    }
-
-    public static void HtmlEncodeAndWrite(this IBufferWriter<byte> bufferWriter, string? text) =>
-        HtmlEncodeAndWrite(bufferWriter, text, HtmlEncoder.Default);
-
-    public static void HtmlEncodeAndWrite(this IBufferWriter<byte> bufferWriter, string? text, HtmlEncoder htmlEncoder)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return;
-        }
-
-        HtmlEncodeAndWrite(bufferWriter, text.AsSpan(), htmlEncoder);
     }
 
     public static void HtmlEncodeAndWrite(this IBufferWriter<byte> bufferWriter, ReadOnlySpan<char> textSpan, HtmlEncoder htmlEncoder)
@@ -116,13 +110,20 @@ internal static class BufferWriterHtmlExtensions
             return;
         }
 
-        if (textSpan.Length <= BufferLimits.SmallWriteCharSize)
+        if (htmlEncoder == NullHtmlEncoder.Default)
+        {
+            // No HTML encoding required
+            WriteHtml(bufferWriter, textSpan);
+            return;
+        }
+
+        if (textSpan.Length <= BufferSizes.SmallTextWriteCharSize)
         {
             HtmlEncodeAndWriteSmall(bufferWriter, textSpan, htmlEncoder);
             return;
         }
 
-        var sizeHint = GetEncodedSizeHint(textSpan.Length);
+        var sizeHint = BufferSizes.GetHtmlEncodedSizeHint(textSpan.Length);
         var rentedBuffer = ArrayPool<char>.Shared.Rent(sizeHint);
         Span<char> bufferSpan = rentedBuffer;
         var waitingToWrite = 0;
@@ -165,7 +166,7 @@ internal static class BufferWriterHtmlExtensions
 
     private static void HtmlEncodeAndWriteSmall(IBufferWriter<byte> bufferWriter, ReadOnlySpan<char> textSpan, HtmlEncoder htmlEncoder)
     {
-        Span<char> encodedBuffer = stackalloc char[BufferLimits.SmallWriteCharSize];
+        Span<char> encodedBuffer = stackalloc char[BufferSizes.SmallTextWriteCharSize];
         var encodeStatus = OperationStatus.Done;
 
         // It's possible for encoding to take multiple cycles if an unusually high number of chars need HTML encoding and/or the
@@ -187,16 +188,6 @@ internal static class BufferWriterHtmlExtensions
         Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
     }
 
-    public static void WriteHtml(this IBufferWriter<byte> bufferWriter, string? html)
-    {
-        if (string.IsNullOrEmpty(html))
-        {
-            return;
-        }
-
-        WriteHtml(bufferWriter, html.AsSpan());
-    }
-
     public static void WriteHtml(this IBufferWriter<byte> bufferWriter, ReadOnlySpan<char> html)
     {
         Span<byte> writerSpan = default;
@@ -213,7 +204,7 @@ internal static class BufferWriterHtmlExtensions
                     bufferWriter.Advance(waitingToAdvance);
                     waitingToAdvance = 0;
                 }
-                var spanLengthHint = Math.Min(html.Length, BufferLimits.MaxBufferSize);
+                var spanLengthHint = Math.Min(html.Length, BufferSizes.MaxBufferSize);
                 writerSpan = bufferWriter.GetSpan(spanLengthHint);
             }
 
@@ -237,8 +228,15 @@ internal static class BufferWriterHtmlExtensions
         Debug.Assert(status == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
     }
 
-    private static int GetEncodedSizeHint(int length)
+    private static readonly int TrueStringLength = bool.TrueString.Length;
+    private static readonly int FalseStringLength = bool.FalseString.Length;
+
+    public static void Write(this IBufferWriter<byte> bufferWriter, bool value)
     {
-        return Math.Min(BufferLimits.MaxBufferSize, (int)Math.Round(length * 1.1));
+        var buffer = bufferWriter.GetSpan(value ? TrueStringLength : FalseStringLength);
+        if (!Utf8Formatter.TryFormat(value, buffer, out var _))
+        {
+            throw new FormatException("Unexpectedly insufficent space in buffer to format bool value.");
+        }
     }
 }

@@ -1,10 +1,12 @@
 ﻿using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Internal;
+using Microsoft.AspNetCore.Razor.TagHelpers;
 
 namespace RazorSlices;
 
@@ -70,6 +72,7 @@ public abstract partial class RazorSlice : IDisposable
     /// <param name="textWriter">The <see cref="TextWriter"/> to render the template to.</param>
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="textWriter"/> is <c>null</c>.</exception>
     [MemberNotNull(nameof(_textWriter), nameof(_outputFlush))]
     public ValueTask RenderAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder = null)
     {
@@ -146,9 +149,10 @@ public abstract partial class RazorSlice : IDisposable
     /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method
     /// for each use of the <c>@section</c> directive in your .cshtml file.
     /// </remarks>
-    /// <param name="name"></param>
-    /// <param name="section"></param>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <param name="name">The name of the section.</param>
+    /// <param name="section">The section delegate.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> or <paramref name="section"/> is <c>null</c>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a section with this name is already defined.</exception>
     protected virtual void DefineSection(string name, Func<Task> section)
     {
         ArgumentNullException.ThrowIfNull(name);
@@ -169,7 +173,7 @@ public abstract partial class RazorSlice : IDisposable
     /// <param name="sectionName">The section name.</param>
     /// <param name="required">Whether the section is required or not.</param>
     /// <returns>A <see cref="ValueTask{TResult}"/> representing the rendering of the section.</returns>
-    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="ArgumentException">Thrown when no section with name <paramref name="sectionName"/> has been defined by the slice being rendered.</exception>
     /// <exception cref="NotImplementedException"></exception>
     protected ValueTask<HtmlString> RenderSectionAsync(string sectionName, bool required)
     {
@@ -213,26 +217,20 @@ public abstract partial class RazorSlice : IDisposable
     /// all blocks of HTML in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
-    /// <typeparam name="TValue">The type of the value being written.</typeparam>
-    protected void WriteLiteral<TValue>(TValue? value) => WriteLiteral(value?.ToString());
-
-    /// <summary>
-    /// Writes the string representation of the provided object to the output without HTML encoding it.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all blocks of HTML in your .cshtml file.
-    /// </remarks>
-    /// <param name="value">The value to write to the output.</param>
     protected void WriteLiteral(object? value) => WriteLiteral(value?.ToString());
 
     /// <summary>
     /// Writes a buffer of UTF8 bytes to the output without HTML encoding it.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
     /// all blocks of HTML in your .cshtml file.
-    /// NOTE: We'd need a tweak to the Razor compiler to to have it support emitting <see cref="WriteLiteral(ReadOnlySpan{byte})"/> calls with UTF8 string literals.
+    /// </para>
+    /// <para>
+    /// NOTE: We'd need a tweak to the Razor compiler to to have it support emitting <see cref="WriteLiteral(ReadOnlySpan{byte})"/> calls with UTF8 string literals
+    ///       i.e. https://github.com/dotnet/razor/issues/8429
+    /// </para>
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
     protected void WriteLiteral(ReadOnlySpan<byte> value)
@@ -247,11 +245,26 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     /// <summary>
+    /// Writes a <see cref="bool"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a value, use <see cref="WriteBool"/> instead, e.g. <c>@WriteBool(todo.Complete)</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(bool? value) => WriteBool(value);
+
+    /// <summary>
     /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.
     /// </summary>
     /// <remarks>
     /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all blocks of HTML in your .cshtml file.
+    /// all matching Razor expressions in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
     protected void Write(byte[] value) => Write(value.AsSpan());
@@ -261,7 +274,7 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     /// <remarks>
     /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all blocks of HTML in your .cshtml file.
+    /// all matching Razor expressions in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
     protected void Write(ReadOnlySpan<byte> value)
@@ -278,36 +291,54 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     /// <summary>
+    /// Write the specified <typeparamref name="T"/>:<see cref="ISpanFormattable"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a value, use <see cref="WriteSpanFormattable"/> instead,
+    /// e.g. <c>@WriteSpanFormattable(DateTime.Now, "G", Culture.InvariantCulture)</c>
+    /// </para>
+    /// </remarks>
+    /// <typeparam name="T">The type that implements <see cref="ISpanFormattable"/>.</typeparam>
+    /// <param name="formattable">The value to write to the output.</param>
+    protected void Write<T>(T? formattable) where T : ISpanFormattable
+        => WriteSpanFormattable(formattable);
+
+    /// <summary>
     /// Writes the specified <see cref="HtmlString"/> value to the output without HTML encoding it again.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a value, use <see cref="WriteHtml{T}(T)"/> instead,
+    /// e.g. <c>@WriteHtmlContent(myCustomHtmlString)</c>
+    /// </para>
+    /// </remarks>
     /// <param name="htmlString">The <see cref="HtmlString"/> value to write to the output.</param>
     protected void Write(HtmlString htmlString)
     {
         if (htmlString is not null && htmlString != HtmlString.Empty)
         {
-            WriteLiteral(htmlString.Value);
+            WriteHtml(htmlString);
         }
     }
 
     /// <summary>
-    /// Writes the specified <see cref="IHtmlContent"/> value to the output.
+    /// Writes the specified <see cref="IHtmlContent"/> value to the output without HTML encoding it again.
     /// </summary>
     /// <param name="htmlContent">The <see cref="IHtmlContent"/> value to write to the output.</param>
-    protected void Write(IHtmlContent htmlContent)
+    protected void Write(IHtmlContent? htmlContent)
     {
-        if (htmlContent is null)
+        if (htmlContent is not null)
         {
-            return;
-        }
-
-        if (_bufferWriter is not null)
-        {
-            _utf8BufferTextWriter ??= Utf8BufferTextWriter.Get(_bufferWriter);
-            htmlContent.WriteTo(_utf8BufferTextWriter, _htmlEncoder);
-        }
-        if (_textWriter is not null)
-        {
-            htmlContent.WriteTo(_textWriter, _htmlEncoder);
+            WriteHtml(htmlContent);
         }
     }
 
@@ -327,43 +358,132 @@ public abstract partial class RazorSlice : IDisposable
     /// <summary>
     /// Writes the specified object to the output after HTML encoding the result of calling <see cref="object.ToString"/> on it.
     /// </summary>
-    /// <typeparam name="TValue">The object type.</typeparam>
+    /// <remarks>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit calls to the most appropriate overload of
+    /// the <c>Write</c> method for all Razor expressions in your .cshtml file, e.g. <c>@someVariable</c>.
+    /// </remarks>
     /// <param name="value">The object to write to the output.</param>
-    protected void Write<TValue>(TValue? value)
+    protected void Write(object? value)
+    {
+        WriteValue(value);
+    }
+
+    /// <summary>
+    /// Writes a <see cref="bool"/> value to the output.
+    /// </summary>
+    /// <param name="value">The value to write to the output.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteBool(todo.Completed)</c></returns>
+    protected HtmlString WriteBool(bool? value)
+    {
+        if (value.HasValue)
+        {
+            _bufferWriter?.Write(value.Value);
+            _textWriter?.Write(value.Value);
+        }
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// Write the specified <see cref="ISpanFormattable"/> value to the output with the specified format and optional <see cref="IFormatProvider" />.
+    /// </summary>
+    /// <param name="formattable">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value to the output. Defaults to the default format for the value's type if not provided.</param>
+    /// <param name="formatProvider">The <see cref="IFormatProvider" /> to use when writing the value to the output. Defaults to <see cref="CultureInfo.CurrentCulture"/> if <c>null</c>.</param>
+    /// <param name="htmlEncode">Whether to HTML encode the value or not. Defaults to <c>true</c>.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteSpanFormattable(item.DueBy, "d")</c></returns>
+    protected HtmlString WriteSpanFormattable<T>(T? formattable, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null, bool htmlEncode = true)
+        where T : ISpanFormattable
+    {
+        if (formattable is not null)
+        {
+            var htmlEncoder = htmlEncode ? _htmlEncoder : NullHtmlEncoder.Default;
+            _bufferWriter?.HtmlEncodeAndWriteSpanFormattable(formattable, htmlEncoder, format, formatProvider);
+            _textWriter?.HtmlEncodeAndWriteSpanFormattable(formattable, htmlEncoder, format, formatProvider);
+        }
+
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// Writes the specified <see cref="IHtmlContent"/> value to the output.
+    /// </summary>
+    /// <param name="htmlContent">The <see cref="IHtmlContent"/> value to write to the output.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtmlContent(myCustomHtmlContent)</c></returns>
+    protected HtmlString WriteHtml<T>(T htmlContent)
+        where T : IHtmlContent
+    {
+        if (htmlContent is not null)
+        {
+            if (_bufferWriter is not null)
+            {
+                _utf8BufferTextWriter ??= Utf8BufferTextWriter.Get(_bufferWriter);
+                htmlContent.WriteTo(_utf8BufferTextWriter, _htmlEncoder);
+            }
+            if (_textWriter is not null)
+            {
+                htmlContent.WriteTo(_textWriter, _htmlEncoder);
+            }
+        }
+
+        return HtmlString.Empty;
+    }
+
+    /// <summary>
+    /// Writes the specified <see cref="HtmlString"/> value to the output.
+    /// </summary>
+    /// <param name="htmlstring">The <see cref="HtmlString"/> value to write to the output.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtmlContent(myCustomHtmlContent)</c></returns>
+    protected HtmlString WriteHtml(HtmlString htmlstring)
+    {
+        if (htmlstring is not null && htmlstring != HtmlString.Empty)
+        {
+            _bufferWriter?.WriteHtml(htmlstring.Value);
+        }
+
+        return HtmlString.Empty;
+    }
+
+    // Both places that call this method currently pass the value as object? and thus box as their generic overloads are reserved
+    // for the ISpanFormattable case.
+    private void WriteValue<T>(T value)
     {
         if (value is null)
         {
             return;
         }
 
-        // This generic overload will win when passing values that derive from types specified in other 
-        // overloads so it's critical that we runtime type check here and forward the call to the appropriate
-        // overload for the type.
-        // Furthermore, boxed value type values passed will use this method too, so type checking against all
-        // other overload parameter types is necessary to in order to get the optimized rendering.
-
-        // Handle derived types
-        if (value is ISpanFormattable spanFormattable)
+        // Dispatch to the most appropriately typed method
+        if (value is string stringValue)
         {
-            Write(spanFormattable);
+            Write(stringValue);
+        }
+        else if (value is byte[] utf8ByteArrayValue)
+        {
+            Write(utf8ByteArrayValue.AsSpan());
+        }
+        else if (TryWriteFormattableValue(value))
+        {
+            return;
+        }
+        // Handle derived types (this currently results in value types being boxed)
+        else if (value is ISpanFormattable spanFormattable)
+        {
+            WriteSpanFormattable(spanFormattable, default, null);
         }
         else if (value is HtmlString htmlString)
         {
-            Write(htmlString);
+            WriteHtml(htmlString);
         }
         else if (value is IHtmlContent htmlContent)
         {
-            Write(htmlContent);
+            WriteHtml(htmlContent);
         }
-        // Handle boxed values
-        else if (value is int intValue)
+#if NET8_0_OR_GREATER
+        else if (value is Enum enumValue)
         {
-            Write(intValue);
+            WriteSpanFormattable(enumValue);
         }
-        else if (value is byte[] byteArrayValue)
-        {
-            Write(byteArrayValue);
-        }
+#endif
         // Fallback to ToString()
         else
         {

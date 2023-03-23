@@ -36,9 +36,9 @@
 </body>
 </html>
 @functions {
-    private IHtmlContent Title(Todo todo)
+    private string? Title(Todo todo)
     {
         <text>Todo @todo.Id: @todo.TitleUtf8</text>
-        return HtmlString.Empty;
+        return null;
     }
 }
