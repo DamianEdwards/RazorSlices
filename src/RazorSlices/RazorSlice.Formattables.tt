@@ -1,0 +1,135 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<#
+    var typeDetails = new[]
+    {
+        new { AnOrA = "a", IsStruct = true, Name = "char", SpecificMethodName = "WriteChar", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "'の'" },
+        new { AnOrA = "a", IsStruct = true, Name = "byte", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "rgb.Red, \"G\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "short", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "ushort", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "an", IsStruct = true, Name = "int", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "uint", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "long", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "events.Count, \"E\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "ulong", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "events.Count, \"E\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "BigInteger", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "events.Count, \"E\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "Half", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "matrix.A, \"C\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "float", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Price, \"C\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "double", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Price, \"C\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "decimal", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Price, \"C\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "DateTime", SpecificMethodName = "WriteDate", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "todo.DueBy, \"yyyy-MM-dd\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "DateTimeOffset", SpecificMethodName = "WriteDate", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "todo.DueBy, \"yyyy-MM-dd\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "TimeSpan", SpecificMethodName = "WriteTimeSpan", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "appointment.Duration, \"HH:mm:ss\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "DateOnly", SpecificMethodName = "WriteDate", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "todo.DueBy, \"yyyy-MM-dd\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "TimeOnly", SpecificMethodName = "WriteTime", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "appointment.StartsAt, \"HH:mm\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "Guid", SpecificMethodName = "WriteGuid", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Id, \"D\"" },
+        new { AnOrA = "a", IsStruct = false, Name = "Version", SpecificMethodName = "WriteVersion", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "assembly.Version" },
+    };
+#>
+using System.Globalization;
+using System.Numerics;
+using Microsoft.AspNetCore.Html;
+
+namespace RazorSlices;
+
+public abstract partial class RazorSlice
+{
+<#
+    foreach (var typeDetail in typeDetails)
+    {
+#>
+    /// <summary>
+    /// Writes <#= typeDetail.AnOrA #> <see cref="<#= typeDetail.Name #>"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="<#= typeDetail.Name #>"/> value, use <see cref="<#= typeDetail.SpecificMethodName #>(<#= typeDetail.Name #>?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@<#= typeDetail.SpecificMethodName #>(<#= typeDetail.ManualSampleValue #>)</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(<#= typeDetail.Name #>? value)
+    {
+<#    if (typeDetail.IsStruct) { #>
+        if (value.HasValue)
+<#    }
+      else { #>
+        if (value is not null)
+<#    } #>
+        {
+<#    if (typeDetail.IsStruct) { #>
+            <#= typeDetail.FordwardMethodName #>(value.Value);
+<#    }
+      else { #>
+            <#= typeDetail.FordwardMethodName #>(value);
+<#    } #>
+        }
+    }
+
+<#
+    }
+#>
+
+<#
+    foreach (var typeDetail in typeDetails)
+    {
+#>
+    /// <summary>
+    /// Writes <#= typeDetail.AnOrA #> <see cref="<#= typeDetail.Name #>"/> value to the output.
+    /// </summary>
+    /// <param name="value">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value to the output. Defaults to the default format for the value's type if not provided.</param>
+    /// <param name="formatProvider">The <see cref="IFormatProvider" /> to use when writing the value to the output. Defaults to <see cref="CultureInfo.CurrentCulture"/> if <c>null</c>.</param>
+    /// <param name="htmlEncode">Whether to HTML encode the value or not. Defaults to <c>true</c>.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@<#= typeDetail.SpecificMethodName #>(<#= typeDetail.ManualSampleValue #>)</c></returns>
+    protected HtmlString <#= typeDetail.SpecificMethodName #>(<#= typeDetail.Name #>? value, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null, bool htmlEncode = true)
+    {
+<#    if (typeDetail.IsStruct) { #>
+        if (value.HasValue)
+<#    }
+      else { #>
+        if (value is not null)
+<#    } #>
+        {
+<#    if (typeDetail.IsStruct) { #>
+            <#= typeDetail.FordwardMethodName #>(value.Value, format, formatProvider, htmlEncode);
+<#    }
+      else { #>
+            <#= typeDetail.FordwardMethodName #>(value, format, formatProvider, htmlEncode);
+<#    } #>
+        }
+        return HtmlString.Empty;
+    }
+
+<#
+    }
+#>
+
+    private bool TryWriteFormattableValue<T>(T? value)
+    {
+        if (value is null)
+        {
+            return false;
+        }
+<#
+    foreach (var typeDetail in typeDetails)
+    {
+#>
+        if (value is <#= typeDetail.Name #> <#= typeDetail.Name #>Value)
+        {
+            <#= typeDetail.FordwardMethodName #>(<#= typeDetail.Name #>Value, default, null);
+            return true;
+        }
+<#
+    }
+#>
+        return false;
+    }
+}
