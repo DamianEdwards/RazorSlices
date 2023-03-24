@@ -15,6 +15,8 @@ app.MapGet("/lorem-formattable", (int? paraCount, int? paraLength) =>
     Results.Extensions.RazorSlice("/Slices/LoremFormattable.cshtml", new LoremParams(paraCount, paraLength)));
 app.MapGet("/lorem-htmlcontent", (bool? encode) =>
     Results.Extensions.RazorSlice("/Slices/LoremHtmlContent.cshtml", new HtmlContentParams(encode)));
+app.MapGet("/unicode", () =>
+    Results.Extensions.RazorSlice("/Slices/Unicode.cshtml"));
 
 app.MapGet("/", () => Results.Extensions.RazorSlice("/Slices/Todos.cshtml", Todos.AllTodos));
 app.MapGet("/{id:int}", (int id) =>

@@ -58,3 +58,15 @@
 .complete {
     background-color: #eee;
 }
+
+@font-face {
+    font-family: noto-emojipedia-fallback;
+    font-style: normal;
+    font-weight: 400;
+    src: url(./notoemoji.woff2) format("woff2")
+}
+
+.emoji {
+    font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Segoe UI Symbol', 'Noto Color Emoji Compat', emoji, 'noto-emojipedia-fallback';
+    font-weight: 400
+}

@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -241,7 +242,18 @@ public abstract partial class RazorSlice : IDisposable
         }
 
         _bufferWriter?.Write(value);
-        _textWriter?.Write(Encoding.Unicode.GetString(value));
+
+        if (_textWriter is not null)
+        {
+            var charCount = Encoding.Unicode.GetCharCount(value);
+            var buffer = ArrayPool<char>.Shared.Rent(charCount);
+            var bytesDecoded = Encoding.Unicode.GetChars(value, buffer);
+
+            Debug.Assert(bytesDecoded == value.Length, "Bad decoding when writing to TextWriter in WriteLiteral(ReadOnlySpan<byte>)");
+
+            _textWriter.Write(buffer, 0, charCount);
+            ArrayPool<char>.Shared.Return(buffer);
+        }
     }
 
     /// <summary>
@@ -286,8 +298,17 @@ public abstract partial class RazorSlice : IDisposable
 
         _bufferWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
 
-        // TODO: Optimize this with rented buffers, etc.
-        _textWriter?.Write(_htmlEncoder.Encode(Encoding.UTF8.GetString(value)));
+        if (_textWriter is not null)
+        {
+            var charCount = Encoding.UTF8.GetCharCount(value);
+            var buffer = ArrayPool<char>.Shared.Rent(charCount);
+            var bytesDecoded = Encoding.UTF8.GetChars(value, buffer);
+
+            Debug.Assert(bytesDecoded == value.Length, "Bad decoding when writing to TextWriter in Write(ReadOnlySpan<byte>)");
+            
+            _htmlEncoder.Encode(_textWriter, buffer, 0, charCount);
+            ArrayPool<char>.Shared.Return(buffer);
+        }
     }
 
     /// <summary>
@@ -350,8 +371,26 @@ public abstract partial class RazorSlice : IDisposable
     {
         if (!string.IsNullOrEmpty(value))
         {
+            Write(value.AsSpan());
+        }
+    }
+
+    /// <summary>
+    /// Writes the specified value to the output after HTML encoding it.
+    /// </summary>
+    /// <param name="value">The value to write to the output.</param>
+    protected void Write(ReadOnlySpan<char> value)
+    {
+        if (value.Length > 0)
+        {
             _bufferWriter?.HtmlEncodeAndWrite(value, _htmlEncoder);
-            _textWriter?.Write(_htmlEncoder.Encode(value));
+            if (_textWriter is not null)
+            {
+                var buffer = ArrayPool<char>.Shared.Rent(value.Length);
+                value.CopyTo(buffer);
+                _htmlEncoder.Encode(_textWriter, buffer, 0, value.Length);
+                ArrayPool<char>.Shared.Return(buffer);
+            }
         }
     }
 
