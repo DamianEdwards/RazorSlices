@@ -1,3 +1,4 @@
+using RazorSlices;
 using RazorSlices.Samples.WebApp;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +16,13 @@ app.MapGet("/lorem-formattable", (int? paraCount, int? paraLength) =>
     Results.Extensions.RazorSlice("/Slices/LoremFormattable.cshtml", new LoremParams(paraCount, paraLength)));
 app.MapGet("/lorem-htmlcontent", (bool? encode) =>
     Results.Extensions.RazorSlice("/Slices/LoremHtmlContent.cshtml", new HtmlContentParams(encode)));
+app.MapGet("/lorem-stream", (HttpContext httpContext) =>
+{
+    var slice = RazorSlice.Create("/Slices/LoremStatic.cshtml");
+    httpContext.Response.StatusCode = StatusCodes.Status200OK;
+    httpContext.Response.ContentType = "text/html; charset=utf-8";
+    return slice.RenderAsync(httpContext.Response.Body);
+});
 app.MapGet("/unicode", () =>
     Results.Extensions.RazorSlice("/Slices/Unicode.cshtml"));
 
