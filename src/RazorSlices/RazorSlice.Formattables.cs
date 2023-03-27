@@ -29,6 +29,25 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
+    /// Writes a <see cref="char"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="char"/> value, use <see cref="WriteChar(char?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteChar('の')</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(char value)
+    {
+        WriteSpanFormattable(value);
+    }
+
+    /// <summary>
     /// Writes a <see cref="byte"/> value to the output.
     /// </summary>
     /// <remarks>
@@ -48,6 +67,25 @@ public abstract partial class RazorSlice
         {
             WriteSpanFormattable(value.Value);
         }
+    }
+
+    /// <summary>
+    /// Writes a <see cref="byte"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="byte"/> value, use <see cref="WriteNumber(byte?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(rgb.Red, "G", CultureInfo.InvariantCulture)</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(byte value)
+    {
+        WriteSpanFormattable(value);
     }
 
     /// <summary>
@@ -73,6 +111,25 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
+    /// Writes a <see cref="short"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="short"/> value, use <see cref="WriteNumber(short?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(item.Qty, "G", CultureInfo.InvariantCulture)</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(short value)
+    {
+        WriteSpanFormattable(value);
+    }
+
+    /// <summary>
     /// Writes a <see cref="ushort"/> value to the output.
     /// </summary>
     /// <remarks>
@@ -92,6 +149,25 @@ public abstract partial class RazorSlice
         {
             WriteSpanFormattable(value.Value);
         }
+    }
+
+    /// <summary>
+    /// Writes a <see cref="ushort"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="ushort"/> value, use <see cref="WriteNumber(ushort?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(item.Qty, "G", CultureInfo.InvariantCulture)</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(ushort value)
+    {
+        WriteSpanFormattable(value);
     }
 
     /// <summary>
@@ -117,6 +193,25 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
+    /// Writes an <see cref="int"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="int"/> value, use <see cref="WriteNumber(int?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(item.Qty, "G", CultureInfo.InvariantCulture)</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(int value)
+    {
+        WriteSpanFormattable(value);
+    }
+
+    /// <summary>
     /// Writes a <see cref="uint"/> value to the output.
     /// </summary>
     /// <remarks>
@@ -136,6 +231,25 @@ public abstract partial class RazorSlice
         {
             WriteSpanFormattable(value.Value);
         }
+    }
+
+    /// <summary>
+    /// Writes a <see cref="uint"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="uint"/> value, use <see cref="WriteNumber(uint?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(item.Qty, "G", CultureInfo.InvariantCulture)</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(uint value)
+    {
+        WriteSpanFormattable(value);
     }
 
     /// <summary>
@@ -161,6 +275,25 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
+    /// Writes a <see cref="long"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="long"/> value, use <see cref="WriteNumber(long?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(events.Count, "E", CultureInfo.InvariantCulture)</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(long value)
+    {
+        WriteSpanFormattable(value);
+    }
+
+    /// <summary>
     /// Writes a <see cref="ulong"/> value to the output.
     /// </summary>
     /// <remarks>
@@ -180,6 +313,25 @@ public abstract partial class RazorSlice
         {
             WriteSpanFormattable(value.Value);
         }
+    }
+
+    /// <summary>
+    /// Writes a <see cref="ulong"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="ulong"/> value, use <see cref="WriteNumber(ulong?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(events.Count, "E", CultureInfo.InvariantCulture)</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(ulong value)
+    {
+        WriteSpanFormattable(value);
     }
 
     /// <summary>
@@ -205,6 +357,25 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
+    /// Writes a <see cref="BigInteger"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="BigInteger"/> value, use <see cref="WriteNumber(BigInteger?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(events.Count, "E", CultureInfo.InvariantCulture)</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(BigInteger value)
+    {
+        WriteSpanFormattable(value);
+    }
+
+    /// <summary>
     /// Writes a <see cref="Half"/> value to the output.
     /// </summary>
     /// <remarks>
@@ -224,6 +395,25 @@ public abstract partial class RazorSlice
         {
             WriteSpanFormattable(value.Value);
         }
+    }
+
+    /// <summary>
+    /// Writes a <see cref="Half"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="Half"/> value, use <see cref="WriteNumber(Half?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(matrix.A, "C")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(Half value)
+    {
+        WriteSpanFormattable(value);
     }
 
     /// <summary>
@@ -249,6 +439,25 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
+    /// Writes a <see cref="float"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="float"/> value, use <see cref="WriteNumber(float?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(item.Price, "C")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(float value)
+    {
+        WriteSpanFormattable(value);
+    }
+
+    /// <summary>
     /// Writes a <see cref="double"/> value to the output.
     /// </summary>
     /// <remarks>
@@ -268,6 +477,25 @@ public abstract partial class RazorSlice
         {
             WriteSpanFormattable(value.Value);
         }
+    }
+
+    /// <summary>
+    /// Writes a <see cref="double"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="double"/> value, use <see cref="WriteNumber(double?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(item.Price, "C")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(double value)
+    {
+        WriteSpanFormattable(value);
     }
 
     /// <summary>
@@ -293,6 +521,25 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
+    /// Writes a <see cref="decimal"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="decimal"/> value, use <see cref="WriteNumber(decimal?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteNumber(item.Price, "C")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(decimal value)
+    {
+        WriteSpanFormattable(value);
+    }
+
+    /// <summary>
     /// Writes a <see cref="DateTime"/> value to the output.
     /// </summary>
     /// <remarks>
@@ -312,6 +559,25 @@ public abstract partial class RazorSlice
         {
             WriteSpanFormattable(value.Value);
         }
+    }
+
+    /// <summary>
+    /// Writes a <see cref="DateTime"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="DateTime"/> value, use <see cref="WriteDate(DateTime?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteDate(todo.DueBy, "yyyy-MM-dd")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(DateTime value)
+    {
+        WriteSpanFormattable(value);
     }
 
     /// <summary>
@@ -337,6 +603,25 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
+    /// Writes a <see cref="DateTimeOffset"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="DateTimeOffset"/> value, use <see cref="WriteDate(DateTimeOffset?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteDate(todo.DueBy, "yyyy-MM-dd")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(DateTimeOffset value)
+    {
+        WriteSpanFormattable(value);
+    }
+
+    /// <summary>
     /// Writes a <see cref="TimeSpan"/> value to the output.
     /// </summary>
     /// <remarks>
@@ -356,6 +641,25 @@ public abstract partial class RazorSlice
         {
             WriteSpanFormattable(value.Value);
         }
+    }
+
+    /// <summary>
+    /// Writes a <see cref="TimeSpan"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="TimeSpan"/> value, use <see cref="WriteTimeSpan(TimeSpan?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteTimeSpan(appointment.Duration, "HH:mm:ss")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(TimeSpan value)
+    {
+        WriteSpanFormattable(value);
     }
 
     /// <summary>
@@ -381,6 +685,25 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
+    /// Writes a <see cref="DateOnly"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="DateOnly"/> value, use <see cref="WriteDate(DateOnly?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteDate(todo.DueBy, "yyyy-MM-dd")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(DateOnly value)
+    {
+        WriteSpanFormattable(value);
+    }
+
+    /// <summary>
     /// Writes a <see cref="TimeOnly"/> value to the output.
     /// </summary>
     /// <remarks>
@@ -400,6 +723,25 @@ public abstract partial class RazorSlice
         {
             WriteSpanFormattable(value.Value);
         }
+    }
+
+    /// <summary>
+    /// Writes a <see cref="TimeOnly"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="TimeOnly"/> value, use <see cref="WriteTime(TimeOnly?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteTime(appointment.StartsAt, "HH:mm")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(TimeOnly value)
+    {
+        WriteSpanFormattable(value);
     }
 
     /// <summary>
@@ -425,6 +767,25 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
+    /// Writes a <see cref="Guid"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="Guid"/> value, use <see cref="WriteGuid(Guid?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@WriteGuid(item.Id, "D")</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(Guid value)
+    {
+        WriteSpanFormattable(value);
+    }
+
+    /// <summary>
     /// Writes a <see cref="Version"/> value to the output.
     /// </summary>
     /// <remarks>
@@ -445,6 +806,7 @@ public abstract partial class RazorSlice
             WriteSpanFormattable(value);
         }
     }
+
 
 
     /// <summary>
