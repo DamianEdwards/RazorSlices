@@ -23,8 +23,8 @@ app.MapGet("/lorem-stream", (HttpContext httpContext) =>
     httpContext.Response.ContentType = "text/html; charset=utf-8";
     return slice.RenderAsync(httpContext.Response.Body);
 });
-app.MapGet("/unicode", () =>
-    Results.Extensions.RazorSlice("/Slices/Unicode.cshtml"));
+app.MapGet("/unicode", () => Results.Extensions.RazorSlice("/Slices/Unicode.cshtml"));
+app.MapGet("/library", () => Results.Extensions.RazorSlice("/Slices/FromLibrary.cshtml"));
 
 app.MapGet("/", () => Results.Extensions.RazorSlice("/Slices/Todos.cshtml", Todos.AllTodos));
 app.MapGet("/{id:int}", (int id) =>
