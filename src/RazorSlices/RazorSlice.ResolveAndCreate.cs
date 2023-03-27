@@ -14,8 +14,36 @@ public abstract partial class RazorSlice
     static RazorSlice()
 #pragma warning restore CA1810 // Initialize reference type static fields inline
     {
-        // TODO: Support loading slices from referenced assemblies
-        var sliceDefinitions = LoadSlices();
+        var entryAssembly = Assembly.GetEntryAssembly() ?? throw new NotSupportedException("Application entry assembly could not be determined.");
+
+        // Load slices from app/entry assembly
+        // TODO: This is likely problematic for testing, etc. Should almost certainly be doing this via IHostingEnvironment & DI.
+        var sliceDefinitions = LoadSlices(entryAssembly);
+
+        // Load slices from referenced assemblies
+        var referencedAssemblies = entryAssembly.GetReferencedAssemblies();
+        foreach (var assemblyName in referencedAssemblies)
+        {
+            AddSlicesFromAssembly(sliceDefinitions, Assembly.Load(assemblyName));
+        }
+
+        // Load slices from bin-deployed assemblies
+        if (Path.GetDirectoryName(entryAssembly.Location) is { } binDir && Directory.Exists(binDir))
+        {
+            var assembliesInBin = Directory.GetFiles(binDir, "*.dll");
+            foreach (var assemblyPath in assembliesInBin)
+            {
+                if (assemblyPath != entryAssembly.Location && File.Exists(assemblyPath))
+                {
+                    var peerAssembly = Assembly.LoadFrom(assemblyPath);
+                    if (referencedAssemblies.FirstOrDefault(ra => ra.FullName == peerAssembly.GetName().FullName) is null)
+                    {
+                        AddSlicesFromAssembly(sliceDefinitions, peerAssembly);
+                    }
+                }
+            }
+        }
+
         _slicesByName = sliceDefinitions
             // Add entries without leading slash
             .Concat(sliceDefinitions.Select(slice => (slice.Identifier[1..], slice.Type, slice.Factory)))
@@ -26,15 +54,27 @@ public abstract partial class RazorSlice
             .ToDictionary(entry => entry.Item1, entry => (entry.Type, entry.Factory))
             .AsReadOnly();
         _slicesByType = sliceDefinitions.ToDictionary(item => item.Type, item => (item.Identifier, item.Factory)).AsReadOnly();
+
+        static void AddSlicesFromAssembly(List<(string Identifier, Type Type, Delegate Factory)> definitions, Assembly assembly)
+        {
+            foreach (var slice in LoadSlices(assembly))
+            {
+                if (!slice.Identifier.Equals("_ViewImports.cshtml", StringComparison.OrdinalIgnoreCase)
+                    && !slice.Identifier.Equals("_ViewStart.cshtml", StringComparison.OrdinalIgnoreCase)
+                    && !definitions.Exists(sd => string.Equals(sd.Identifier, slice.Identifier, StringComparison.Ordinal)))
+                {
+                    // No slice from the entry assembly with this identifier so go ahead and add it
+                    definitions.Add(slice);
+                }
+            }
+        }
     }
 
-    private static List<(string Identifier, Type Type, Delegate Factory)> LoadSlices() => LoadSlices(Assembly.GetEntryAssembly());
-
-    private static List<(string Identifier, Type Type, Delegate Factory)> LoadSlices(Assembly? assembly)
+    private static List<(string Identifier, Type Type, Delegate Factory)> LoadSlices(Assembly assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);
 
-        var allSlices= assembly.GetCustomAttributes<RazorCompiledItemAttribute>()
+        var allSlices = assembly.GetCustomAttributes<RazorCompiledItemAttribute>()
             .Where(rci => rci.Kind == "mvc.1.0.view" && rci.Type.IsAssignableTo(typeof(RazorSlice)))
             .Select(rci => (rci.Identifier, rci.Type, GetSliceFactory(rci.Type)));
 
