@@ -7,6 +7,8 @@ namespace RazorSlices;
 
 public abstract partial class RazorSlice
 {
+    private static readonly HashSet<string> ExcludedSliceNames =
+        new(StringComparer.OrdinalIgnoreCase) { "_ViewImports.cshtml", "_ViewStart.cshtml", "_PageImports.cshtml", "_PageStart.cshtml" };
     private static readonly ReadOnlyDictionary<string, (Type, Delegate)> _slicesByName;
     private static readonly ReadOnlyDictionary<Type, (string, Delegate)> _slicesByType;
 
@@ -16,9 +18,11 @@ public abstract partial class RazorSlice
     {
         var entryAssembly = Assembly.GetEntryAssembly() ?? throw new NotSupportedException("Application entry assembly could not be determined.");
 
+        var sliceDefinitions = new List<(string Identifier, Type Type, Delegate Factory)>();
+
         // Load slices from app/entry assembly
         // TODO: This is likely problematic for testing, etc. Should almost certainly be doing this via IHostingEnvironment & DI.
-        var sliceDefinitions = LoadSlices(entryAssembly);
+        AddSlicesFromAssembly(sliceDefinitions, entryAssembly);
 
         // Load slices from referenced assemblies
         var referencedAssemblies = entryAssembly.GetReferencedAssemblies();
@@ -59,11 +63,10 @@ public abstract partial class RazorSlice
         {
             foreach (var slice in LoadSlices(assembly))
             {
-                if (!slice.Identifier.Equals("_ViewImports.cshtml", StringComparison.OrdinalIgnoreCase)
-                    && !slice.Identifier.Equals("_ViewStart.cshtml", StringComparison.OrdinalIgnoreCase)
+                if (!ExcludedSliceNames.Contains(slice.Identifier)
                     && !definitions.Exists(sd => string.Equals(sd.Identifier, slice.Identifier, StringComparison.Ordinal)))
                 {
-                    // No slice from the entry assembly with this identifier so go ahead and add it
+                    // Slice with same identifier isn't already in the list so add it
                     definitions.Add(slice);
                 }
             }
