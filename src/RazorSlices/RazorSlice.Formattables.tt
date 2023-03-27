@@ -122,9 +122,9 @@ public abstract partial class RazorSlice
     foreach (var typeDetail in typeDetails)
     {
 #>
-        if (value is <#= typeDetail.Name #> <#= typeDetail.Name #>Value)
+        if (value is <#= typeDetail.Name #>)
         {
-            <#= typeDetail.FordwardMethodName #>(<#= typeDetail.Name #>Value, default, null);
+            <#= typeDetail.FordwardMethodName #>((<#= typeDetail.Name #>)(object)value, default, null);
             return true;
         }
 <#

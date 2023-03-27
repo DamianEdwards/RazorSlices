@@ -794,104 +794,104 @@ public abstract partial class RazorSlice
         {
             return false;
         }
-        if (value is char charValue)
+        if (value is char)
         {
-            WriteSpanFormattable(charValue, default, null);
+            WriteSpanFormattable((char)(object)value, default, null);
             return true;
         }
-        if (value is byte byteValue)
+        if (value is byte)
         {
-            WriteSpanFormattable(byteValue, default, null);
+            WriteSpanFormattable((byte)(object)value, default, null);
             return true;
         }
-        if (value is short shortValue)
+        if (value is short)
         {
-            WriteSpanFormattable(shortValue, default, null);
+            WriteSpanFormattable((short)(object)value, default, null);
             return true;
         }
-        if (value is ushort ushortValue)
+        if (value is ushort)
         {
-            WriteSpanFormattable(ushortValue, default, null);
+            WriteSpanFormattable((ushort)(object)value, default, null);
             return true;
         }
-        if (value is int intValue)
+        if (value is int)
         {
-            WriteSpanFormattable(intValue, default, null);
+            WriteSpanFormattable((int)(object)value, default, null);
             return true;
         }
-        if (value is uint uintValue)
+        if (value is uint)
         {
-            WriteSpanFormattable(uintValue, default, null);
+            WriteSpanFormattable((uint)(object)value, default, null);
             return true;
         }
-        if (value is long longValue)
+        if (value is long)
         {
-            WriteSpanFormattable(longValue, default, null);
+            WriteSpanFormattable((long)(object)value, default, null);
             return true;
         }
-        if (value is ulong ulongValue)
+        if (value is ulong)
         {
-            WriteSpanFormattable(ulongValue, default, null);
+            WriteSpanFormattable((ulong)(object)value, default, null);
             return true;
         }
-        if (value is BigInteger BigIntegerValue)
+        if (value is BigInteger)
         {
-            WriteSpanFormattable(BigIntegerValue, default, null);
+            WriteSpanFormattable((BigInteger)(object)value, default, null);
             return true;
         }
-        if (value is Half HalfValue)
+        if (value is Half)
         {
-            WriteSpanFormattable(HalfValue, default, null);
+            WriteSpanFormattable((Half)(object)value, default, null);
             return true;
         }
-        if (value is float floatValue)
+        if (value is float)
         {
-            WriteSpanFormattable(floatValue, default, null);
+            WriteSpanFormattable((float)(object)value, default, null);
             return true;
         }
-        if (value is double doubleValue)
+        if (value is double)
         {
-            WriteSpanFormattable(doubleValue, default, null);
+            WriteSpanFormattable((double)(object)value, default, null);
             return true;
         }
-        if (value is decimal decimalValue)
+        if (value is decimal)
         {
-            WriteSpanFormattable(decimalValue, default, null);
+            WriteSpanFormattable((decimal)(object)value, default, null);
             return true;
         }
-        if (value is DateTime DateTimeValue)
+        if (value is DateTime)
         {
-            WriteSpanFormattable(DateTimeValue, default, null);
+            WriteSpanFormattable((DateTime)(object)value, default, null);
             return true;
         }
-        if (value is DateTimeOffset DateTimeOffsetValue)
+        if (value is DateTimeOffset)
         {
-            WriteSpanFormattable(DateTimeOffsetValue, default, null);
+            WriteSpanFormattable((DateTimeOffset)(object)value, default, null);
             return true;
         }
-        if (value is TimeSpan TimeSpanValue)
+        if (value is TimeSpan)
         {
-            WriteSpanFormattable(TimeSpanValue, default, null);
+            WriteSpanFormattable((TimeSpan)(object)value, default, null);
             return true;
         }
-        if (value is DateOnly DateOnlyValue)
+        if (value is DateOnly)
         {
-            WriteSpanFormattable(DateOnlyValue, default, null);
+            WriteSpanFormattable((DateOnly)(object)value, default, null);
             return true;
         }
-        if (value is TimeOnly TimeOnlyValue)
+        if (value is TimeOnly)
         {
-            WriteSpanFormattable(TimeOnlyValue, default, null);
+            WriteSpanFormattable((TimeOnly)(object)value, default, null);
             return true;
         }
-        if (value is Guid GuidValue)
+        if (value is Guid)
         {
-            WriteSpanFormattable(GuidValue, default, null);
+            WriteSpanFormattable((Guid)(object)value, default, null);
             return true;
         }
-        if (value is Version VersionValue)
+        if (value is Version)
         {
-            WriteSpanFormattable(VersionValue, default, null);
+            WriteSpanFormattable((Version)(object)value, default, null);
             return true;
         }
         return false;

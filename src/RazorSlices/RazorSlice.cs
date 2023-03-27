@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -64,8 +65,6 @@ public abstract partial class RazorSlice : IDisposable
 
         // TODO: Should we explicitly flush here if flushAsync is not null?
     }
-
-    // TODO: Add a RenderAsync overload that renders to a Stream
 
     /// <summary>
     /// Renders the template to the specified <see cref="TextWriter"/>.
@@ -496,31 +495,31 @@ public abstract partial class RazorSlice : IDisposable
         {
             Write(stringValue);
         }
-        else if (value is byte[] utf8ByteArrayValue)
+        else if (value is byte[])
         {
-            Write(utf8ByteArrayValue.AsSpan());
+            Write(((byte[])(object)value).AsSpan());
         }
         else if (TryWriteFormattableValue(value))
         {
             return;
         }
         // Handle derived types (this currently results in value types being boxed)
-        else if (value is ISpanFormattable spanFormattable)
+        else if (value is ISpanFormattable)
         {
-            WriteSpanFormattable(spanFormattable, default, null);
+            WriteSpanFormattable((ISpanFormattable)(object)value, default, null);
         }
-        else if (value is HtmlString htmlString)
+        else if (value is HtmlString)
         {
-            WriteHtml(htmlString);
+            WriteHtml((HtmlString)(object)value);
         }
-        else if (value is IHtmlContent htmlContent)
+        else if (value is IHtmlContent)
         {
-            WriteHtml(htmlContent);
+            WriteHtml((IHtmlContent)(object)value);
         }
 #if NET8_0_OR_GREATER
-        else if (value is Enum enumValue)
+        else if (value is Enum)
         {
-            WriteSpanFormattable(enumValue);
+            WriteSpanFormattable((Enum)(object)value);
         }
 #endif
         // Fallback to ToString()
