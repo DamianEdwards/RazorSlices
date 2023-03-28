@@ -47,7 +47,8 @@ jobs:
         run: dotnet nuget push **/ci/*.nupkg --source "GPR" --skip-duplicate
 
       - name: Delete old packages
-        uses: smartsquaregmbh/delete-old-packages@v0.5.0
+        uses: actions/delete-package-versions@v4
         with:
-          keep: 5
-          names: ${{ env.PACKAGE_ID }}
+          min-versions-to-keep: 5
+          package-type: 'nuget'
+          package-name: '${{ env.PACKAGE_ID }}'
