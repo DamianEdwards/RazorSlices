@@ -102,7 +102,14 @@ public abstract partial class RazorSlice
 
             if (valueIsAttributeName)
             {
-                WriteUnprefixedAttributeValue(_attributeInfo.Name, isLiteral);
+                if (isLiteral)
+                {
+                    WriteLiteral(_attributeInfo.Name);
+                }
+                else
+                {
+                    Write(_attributeInfo.Name);
+                }
             }
             else
             {
@@ -123,62 +130,7 @@ public abstract partial class RazorSlice
     }
 
     /// <summary>
-    /// Writes out an attribute value.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all HTML attributes containing Razor expressions in your .cshtml file.
-    /// </remarks>
-    /// <param name="prefix">The prefix.</param>
-    /// <param name="prefixOffset">The prefix offset.</param>
-    /// <param name="value">The value.</param>
-    /// <param name="valueOffset">The value offset.</param>
-    /// <param name="valueLength">The value length.</param>
-    /// <param name="isLiteral">Whether the attribute is a literal.</param>
-    protected void WriteAttributeValue(
-        string prefix,
-        int prefixOffset,
-        string? value,
-#pragma warning disable IDE0060 // Remove unused parameter
-        int valueOffset,
-        int valueLength,
-#pragma warning restore IDE0060 // Remove unused parameter
-        bool isLiteral)
-    {
-        if (_attributeInfo.AttributeValuesCount == 1)
-        {
-            if (IsNullOrEmptyValue(prefix, value))
-            {
-                // Value is null with no prefix; don't render the attribute.
-                _attributeInfo.Suppressed = true;
-                return;
-            }
-
-            // We are not omitting the attribute. Write the prefix.
-            WritePositionTaggedLiteral(_attributeInfo.Prefix, _attributeInfo.PrefixOffset);
-        }
-
-        // This block handles two cases.
-        // 1. Single value with prefix.
-        // 2. Multiple values with or without prefix.
-        if (value is not null)
-        {
-            if (!string.IsNullOrEmpty(prefix))
-            {
-                WritePositionTaggedLiteral(prefix, prefixOffset);
-            }
-
-            WriteUnprefixedAttributeValue(value, isLiteral);
-        }
-
-        static bool IsNullOrEmptyValue(string? prefix, string? value)
-        {
-            return string.IsNullOrEmpty(prefix) && string.IsNullOrEmpty(value);
-        }
-    }
-
-    /// <summary>
-    /// Writes out an <see cref="ISpanFormattable"/> attribute value.
+    /// Writes out the <typeparamref name="TValue"/> attribute value.
     /// </summary>
     /// <remarks>
     /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
@@ -200,10 +152,13 @@ public abstract partial class RazorSlice
         int valueLength,
 #pragma warning restore IDE0060 // Remove unused parameter
         bool isLiteral)
-        where TValue : ISpanFormattable
     {
         if (_attributeInfo.AttributeValuesCount == 1)
         {
+            // NOTE: In some edge cases, 'value' could render an empty string, e.g. custom ISpanFormattable/IHtmlContent, and thus
+            //       this IsNullValue() check will fail, but we want to avoid any allocation here so we only check if the value is
+            //       null or is actually a string and is empty. In the edge case, the attribute will still be rendered with an
+            //       empty value.
             if (IsNullValue(prefix, value))
             {
                 // Value is null with no prefix; don't render the attribute.
@@ -225,43 +180,22 @@ public abstract partial class RazorSlice
                 WritePositionTaggedLiteral(prefix, prefixOffset);
             }
 
-            WriteSpanFormattable(value, htmlEncode: !isLiteral);
+            if (isLiteral)
+            {
+                WriteLiteral(value);
+            }
+            else
+            {
+                WriteValue(value);
+            }
         }
 
         static bool IsNullValue(string? prefix, TValue? value)
         {
-            return string.IsNullOrEmpty(prefix) && value is null;
+            return string.IsNullOrEmpty(prefix)
+                && (value is null
+                    || (value is string && string.IsNullOrEmpty((string)(object)value)));
         }
-    }
-
-    /// <summary>
-    /// Writes out an attribute value.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all HTML attributes containing Razor expressions in your .cshtml file.
-    /// </remarks>
-    /// <param name="prefix">The prefix.</param>
-    /// <param name="prefixOffset">The prefix offset.</param>
-    /// <param name="value">The value.</param>
-    /// <param name="valueOffset">The value offset.</param>
-    /// <param name="valueLength">The value length.</param>
-    /// <param name="isLiteral">Whether the attribute is a literal.</param>
-    protected void WriteAttributeValue(
-        string prefix,
-        int prefixOffset,
-        object? value,
-        int valueOffset,
-        int valueLength,
-        bool isLiteral)
-    {
-        var stringValue = value switch
-        {
-            string s => s,
-            null => null,
-            _ => value.ToString()
-        };
-        WriteAttributeValue(prefix, prefixOffset, stringValue, valueOffset, valueLength, isLiteral);
     }
 
     /// <summary>
@@ -284,23 +218,6 @@ public abstract partial class RazorSlice
 #pragma warning restore IDE0060 // Remove unused parameter
     {
         WriteLiteral(value);
-    }
-
-    private void WriteUnprefixedAttributeValue(object? value, bool isLiteral)
-    {
-        if (value is null)
-        {
-            return;
-        }
-
-        if (isLiteral)
-        {
-            WriteLiteral(value);
-        }
-        else
-        {
-            WriteValue(value);
-        }
     }
 
     private struct AttributeInfo

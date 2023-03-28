@@ -217,7 +217,15 @@ public abstract partial class RazorSlice : IDisposable
     /// all blocks of HTML in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
-    protected void WriteLiteral(object? value) => WriteLiteral(value?.ToString());
+    protected void WriteLiteral<T>(T? value)
+    {
+        if (value is ISpanFormattable)
+        {
+            WriteSpanFormattable((ISpanFormattable)(object)value, htmlEncode: false);
+            return;
+        }
+        WriteLiteral(value?.ToString());
+    }
 
     /// <summary>
     /// Writes a buffer of UTF8 bytes to the output without HTML encoding it.
@@ -311,24 +319,6 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     /// <summary>
-    /// Write the specified <typeparamref name="T"/>:<see cref="ISpanFormattable"/> value to the output.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all matching Razor expressions in your .cshtml file.
-    /// </para>
-    /// <para>
-    /// To manually write out a value, use <see cref="WriteSpanFormattable"/> instead,
-    /// e.g. <c>@WriteSpanFormattable(DateTime.Now, "G", Culture.InvariantCulture)</c>
-    /// </para>
-    /// </remarks>
-    /// <typeparam name="T">The type that implements <see cref="ISpanFormattable"/>.</typeparam>
-    /// <param name="formattable">The value to write to the output.</param>
-    protected void Write<T>(T? formattable) where T : ISpanFormattable
-        => WriteSpanFormattable(formattable);
-
-    /// <summary>
     /// Writes the specified <see cref="HtmlString"/> value to the output without HTML encoding it again.
     /// </summary>
     /// <remarks>
@@ -394,14 +384,14 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     /// <summary>
-    /// Writes the specified object to the output after HTML encoding the result of calling <see cref="object.ToString"/> on it.
+    /// Writes the specified <typeparamref name="T"/> to the output.
     /// </summary>
     /// <remarks>
     /// You generally shouldn't call this method directly. The Razor compiler will emit calls to the most appropriate overload of
     /// the <c>Write</c> method for all Razor expressions in your .cshtml file, e.g. <c>@someVariable</c>.
     /// </remarks>
-    /// <param name="value">The object to write to the output.</param>
-    protected void Write(object? value)
+    /// <param name="value">The <typeparamref name="T"/> to write to the output.</param>
+    protected void Write<T>(T? value)
     {
         WriteValue(value);
     }
@@ -481,8 +471,6 @@ public abstract partial class RazorSlice : IDisposable
         return HtmlString.Empty;
     }
 
-    // Both places that call this method currently pass the value as object? and thus box as their generic overloads are reserved
-    // for the ISpanFormattable case.
     private void WriteValue<T>(T value)
     {
         if (value is null)
@@ -491,17 +479,18 @@ public abstract partial class RazorSlice : IDisposable
         }
 
         // Dispatch to the most appropriately typed method
-        if (value is string stringValue)
+        if (TryWriteFormattableValue(value))
         {
-            Write(stringValue);
+            return;
+        }
+
+        if (value is string)
+        {
+            Write((string)(object)value);
         }
         else if (value is byte[])
         {
             Write(((byte[])(object)value).AsSpan());
-        }
-        else if (TryWriteFormattableValue(value))
-        {
-            return;
         }
         // Handle derived types (this currently results in value types being boxed)
         else if (value is ISpanFormattable)

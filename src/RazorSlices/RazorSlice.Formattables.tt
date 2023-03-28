@@ -73,6 +73,27 @@ public abstract partial class RazorSlice
         }
     }
 
+<# if (typeDetail.IsStruct) { #>
+    /// <summary>
+    /// Writes <#= typeDetail.AnOrA #> <see cref="<#= typeDetail.Name #>"/> value to the output.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </para>
+    /// <para>
+    /// To manually write out a <see cref="<#= typeDetail.Name #>"/> value, use <see cref="<#= typeDetail.SpecificMethodName #>(<#= typeDetail.Name #>?, ReadOnlySpan{char}, IFormatProvider?, bool)"/>
+    /// instead, e.g. <c>@<#= typeDetail.SpecificMethodName #>(<#= typeDetail.ManualSampleValue #>)</c>
+    /// </para>
+    /// </remarks>
+    /// <param name="value"></param>
+    protected void Write(<#= typeDetail.Name #> value)
+    {
+        <#= typeDetail.FordwardMethodName #>(value);
+    }
+<# } #>
+
 <#
     }
 #>
