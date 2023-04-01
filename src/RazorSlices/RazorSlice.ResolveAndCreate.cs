@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.AspNetCore.Mvc.Razor.Internal;
 using Microsoft.AspNetCore.Razor.Hosting;
 
 namespace RazorSlices;
@@ -9,8 +10,10 @@ public abstract partial class RazorSlice
 {
     private static readonly HashSet<string> ExcludedSliceNames =
         new(StringComparer.OrdinalIgnoreCase) { "_ViewImports.cshtml", "_ViewStart.cshtml", "_PageImports.cshtml", "_PageStart.cshtml" };
-    private static readonly ReadOnlyDictionary<string, (Type, Delegate)> _slicesByName;
-    private static readonly ReadOnlyDictionary<Type, (string, Delegate)> _slicesByType;
+    private static readonly HashSet<string> ExcludedServiceNames =
+        new(StringComparer.OrdinalIgnoreCase) { "IModelExpressionProvider", "IUrlHelper", "IViewComponentHelper", "IJsonHelper", "IHtmlHelper`1" };
+    private static readonly ReadOnlyDictionary<string, SliceDefinition> _slicesByName;
+    private static readonly ReadOnlyDictionary<Type, SliceDefinition> _slicesByType;
 
 #pragma warning disable CA1810 // Initialize reference type static fields inline
     static RazorSlice()
@@ -18,7 +21,7 @@ public abstract partial class RazorSlice
     {
         var entryAssembly = Assembly.GetEntryAssembly() ?? throw new NotSupportedException("Application entry assembly could not be determined.");
 
-        var sliceDefinitions = new List<(string Identifier, Type Type, Delegate Factory)>();
+        var sliceDefinitions = new List<SliceDefinition>();
 
         // Load slices from app/entry assembly
         // TODO: This is likely problematic for testing, etc. Should almost certainly be doing this via IHostingEnvironment & DI.
@@ -49,17 +52,17 @@ public abstract partial class RazorSlice
         }
 
         _slicesByName = sliceDefinitions
-            // Add entries without leading slash
-            .Concat(sliceDefinitions.Select(slice => (slice.Identifier[1..], slice.Type, slice.Factory)))
-            // Add entries without .cshtml suffix
-            .Concat(sliceDefinitions.Select(slice => (slice.Identifier[..slice.Identifier.LastIndexOf('.')], slice.Type, slice.Factory)))
-            // Add entries without leading slash and .cshtml suffix
-            .Concat(sliceDefinitions.Select(slice => (slice.Identifier[1..slice.Identifier.LastIndexOf('.')], slice.Type, slice.Factory)))
-            .ToDictionary(entry => entry.Item1, entry => (entry.Type, entry.Factory))
+            //// Add entries without leading slash
+            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..], slice.SliceType, slice.Factory, slice.InjectableProperties)))
+            //// Add entries without .cshtml suffix
+            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.Factory, slice.InjectableProperties)))
+            //// Add entries without leading slash and .cshtml suffix
+            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.Factory, slice.InjectableProperties)))
+            .ToDictionary(entry => entry.Identifier, entry => entry)
             .AsReadOnly();
-        _slicesByType = sliceDefinitions.ToDictionary(item => item.Type, item => (item.Identifier, item.Factory)).AsReadOnly();
+        _slicesByType = sliceDefinitions.ToDictionary(item => item.SliceType, item => item).AsReadOnly();
 
-        static void AddSlicesFromAssembly(List<(string Identifier, Type Type, Delegate Factory)> definitions, Assembly assembly)
+        static void AddSlicesFromAssembly(List<SliceDefinition> definitions, Assembly assembly)
         {
             foreach (var slice in LoadSlices(assembly))
             {
@@ -73,15 +76,24 @@ public abstract partial class RazorSlice
         }
     }
 
-    private static List<(string Identifier, Type Type, Delegate Factory)> LoadSlices(Assembly assembly)
+    private static List<SliceDefinition> LoadSlices(Assembly assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);
 
-        var allSlices = assembly.GetCustomAttributes<RazorCompiledItemAttribute>()
-            .Where(rci => rci.Kind == "mvc.1.0.view" && rci.Type.IsAssignableTo(typeof(RazorSlice)))
-            .Select(rci => (rci.Identifier, rci.Type, GetSliceFactory(rci.Type)));
+        IEnumerable<RazorCompiledItemAttribute> rcis = assembly.GetCustomAttributes<RazorCompiledItemAttribute>()
+            .Where(rci => rci.Kind == "mvc.1.0.view" && rci.Type.IsAssignableTo(typeof(RazorSlice)));
 
-        return allSlices.ToList();
+        List<SliceDefinition> allSlices = new();
+
+        foreach (var rci in rcis)
+        {
+            IEnumerable<PropertyInfo> properties = rci.Type.GetProperties()
+                .Where(property => property.IsDefined(typeof(RazorInjectAttribute)) && !ExcludedServiceNames.Contains(property.PropertyType.Name));
+            var sliceDefinition = new SliceDefinition(rci.Identifier, rci.Type, GetSliceFactory(rci.Type), properties);
+            allSlices.Add(sliceDefinition);
+        }
+
+        return allSlices;
     }
 
     private static Delegate GetSliceFactory(Type sliceType)
@@ -188,9 +200,9 @@ public abstract partial class RazorSlice
             throw new ArgumentException($"No Razor slice of type {sliceType.Name} was found.", nameof(sliceType));
         }
 
-        var (_, sliceActivator) = _slicesByType[sliceType];
+        var sliceDefinition = _slicesByType[sliceType];
 
-        return (SliceFactory)sliceActivator;
+        return (SliceFactory)sliceDefinition.Factory;
     }
 
     /// <summary>
@@ -236,15 +248,16 @@ public abstract partial class RazorSlice
             throw new ArgumentException($"No Razor slice with name '{sliceName}' was found.", nameof(sliceName));
         }
 
-        var sliceType = _slicesByName[sliceName];
+        var sliceDefinition = _slicesByName[sliceName];
+        var sliceType = sliceDefinition.SliceType;
 
-        if (!sliceType.Item1.IsAssignableTo(mustBeAssignableTo))
+        if (!sliceType.IsAssignableTo(mustBeAssignableTo))
         {
             // TODO: Improve this exception message for cases where the template has a model and the passed model type is incorrect, e.g. RazorSlice<List<Todo>> vs. RazorSlice<Todo[]>
             throw new ArgumentException($"Razor slice with name '{sliceName}' of type {sliceType} was found but is not assignable to type {mustBeAssignableTo.Name}.", nameof(sliceName));
         }
 
-        return sliceType.Item1;
+        return sliceType;
     }
 
     private static SliceFactory ResolveSliceFactoryImpl(string sliceName)
@@ -254,9 +267,9 @@ public abstract partial class RazorSlice
             throw new ArgumentException($"No Razor slice with name '{sliceName}' was found.", nameof(sliceName));
         }
 
-        var (_, sliceActivator) = _slicesByName[sliceName];
+        var sliceDefinition = _slicesByName[sliceName];
 
-        return (SliceFactory)sliceActivator;
+        return (SliceFactory)sliceDefinition.Factory;
     }
 
     private static SliceFactory<TModel> ResolveSliceFactoryImpl<TModel>(string sliceName)
@@ -266,16 +279,16 @@ public abstract partial class RazorSlice
             throw new ArgumentException($"No Razor slice with name '{sliceName}' was found.", nameof(sliceName));
         }
 
-        var (_, sliceActivator) = _slicesByName[sliceName];
+        var sliceDefinition = _slicesByName[sliceName];
 
-        if (sliceActivator is SliceFactory<TModel> factory)
+        if (sliceDefinition.Factory is SliceFactory<TModel> factory)
         {
             return factory;
         }
 
-        if (sliceActivator.GetType().IsGenericType && sliceActivator.GetType().GetGenericTypeDefinition() == typeof(SliceFactory<>))
+        if (sliceDefinition.Factory.GetType().IsGenericType && sliceDefinition.Factory.GetType().GetGenericTypeDefinition() == typeof(SliceFactory<>))
         {
-            var modelType = sliceActivator.GetType().GenericTypeArguments[0];
+            var modelType = sliceDefinition.Factory.GetType().GenericTypeArguments[0];
             throw new InvalidOperationException($"Razor slice with name '{sliceName}' was found but it's model type is {modelType.Name}.");
         }
 
