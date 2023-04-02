@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc.Razor.Internal;
 using Microsoft.AspNetCore.Razor.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RazorSlices;
 
@@ -52,11 +53,11 @@ public abstract partial class RazorSlice
         }
 
         _slicesByName = sliceDefinitions
-            //// Add entries without leading slash
+            // Add entries without leading slash
             .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..], slice.SliceType, slice.Factory, slice.InjectableProperties)))
-            //// Add entries without .cshtml suffix
+            // Add entries without .cshtml suffix
             .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.Factory, slice.InjectableProperties)))
-            //// Add entries without leading slash and .cshtml suffix
+            // Add entries without leading slash and .cshtml suffix
             .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.Factory, slice.InjectableProperties)))
             .ToDictionary(entry => entry.Identifier, entry => entry)
             .AsReadOnly();
@@ -87,9 +88,19 @@ public abstract partial class RazorSlice
 
         foreach (var rci in rcis)
         {
-            IEnumerable<PropertyInfo> properties = rci.Type.GetProperties()
+            IEnumerable<PropertyInfo> injectableProperties = rci.Type.GetProperties()
                 .Where(property => property.IsDefined(typeof(RazorInjectAttribute)) && !ExcludedServiceNames.Contains(property.PropertyType.Name));
-            var sliceDefinition = new SliceDefinition(rci.Identifier, rci.Type, GetSliceFactory(rci.Type), properties);
+            Delegate sliceFactory;
+            if (injectableProperties.Any())
+            {
+                // if rci has injectable properties then create a SliceWithServiceFactory
+                sliceFactory = GetSliceFactory(rci.Type, injectableProperties);
+            }
+            else
+            {
+                sliceFactory = GetSliceFactory(rci.Type);
+            }
+            var sliceDefinition = new SliceDefinition(rci.Identifier, rci.Type, sliceFactory, injectableProperties);
             allSlices.Add(sliceDefinition);
         }
 
@@ -141,6 +152,105 @@ public abstract partial class RazorSlice
         return Expression.Lambda<SliceFactory>(Expression.New(sliceType)).Compile();
     }
 
+    private static Delegate GetSliceFactory(Type sliceType, IEnumerable<PropertyInfo> injectableProperties)
+    {
+        Type serviceProviderType = typeof(IServiceProvider);
+        Type serviceProviderExtensionsType = typeof(ServiceProviderServiceExtensions);
+        MethodInfo getRequiredServiceMethod = serviceProviderExtensionsType.GetMethods()
+            .Where(method => method.Name == "GetRequiredService" && method.IsGenericMethod)
+            .First();
+
+        Type factoryDelegateType;
+        List<ParameterExpression> parameters = new();
+        List<Expression> expressions = new();
+
+        var sliceVariable = Expression.Variable(sliceType, "slice");
+        var serviceProviderParam = Expression.Parameter(serviceProviderType, "serviceProvider");
+
+        // Create expressions to set all the injectable properties
+        foreach (PropertyInfo injectablePropertyInfo in injectableProperties)
+        {
+            var memberAccess = Expression.MakeMemberAccess(sliceVariable, injectablePropertyInfo);
+            var getRequiredServiceCall = Expression.Call(getRequiredServiceMethod.MakeGenericMethod(injectablePropertyInfo.PropertyType), serviceProviderParam);
+            expressions.Add(Expression.Assign(memberAccess, getRequiredServiceCall));
+        }
+
+        if (IsModelSlice(sliceType))
+        {
+            if (sliceType.GetConstructor(Array.Empty<Type>()) == null)
+            {
+                throw new InvalidOperationException("Slice must have a parameterless constructor.");
+            }
+
+            // Strongly-typed model slice
+            var modelPropInfo = sliceType.GetProperty(nameof(RazorSlice<object>.Model))!;
+            var modelType = modelPropInfo.PropertyType;
+            var razorOfModelType = typeof(RazorSlice<>).MakeGenericType(modelType);
+
+            if (injectableProperties.Any())
+            {
+                factoryDelegateType = typeof(SliceWithServiceFactory<>).MakeGenericType(modelType);
+            }
+            else
+            {
+                factoryDelegateType = typeof(SliceFactory<>).MakeGenericType(modelType);
+            }
+
+            // Make a SliceWithServiceFactory<TModel> like:
+            //
+            // RazorSlice<TModel> CreateSlice<TModel>(TModel model, IServiceProvider serviceProvider)
+            // {
+            //     var slice = new SliceType();
+            //     slice.MyService = serviceProvider.GetRequiredServices(typeof(MyService))
+            //     // ...
+            //     slice.Model = model
+            //     return slice;
+            // }
+
+            var modelParam = Expression.Parameter(modelType, "model");
+            var returnTarget = Expression.Label(razorOfModelType);
+
+            expressions.Add(Expression.Assign(Expression.MakeMemberAccess(sliceVariable, modelPropInfo), modelParam));
+            expressions.Add(Expression.Label(returnTarget, sliceVariable));
+
+            parameters.Add(modelParam);
+        }
+        else
+        {
+            // Make a SliceWithServiceFactory like:
+            //
+            // RazorSlice CreateSlice(IServiceProvider serviceProvider)
+            // {
+            //     var slice = new SliceType();
+            //     slice.MyService = serviceProvider.GetRequiredServices(typeof(MyService))
+            //     // ...
+            //     return slice;
+            // }
+            if (injectableProperties.Any())
+            {
+                factoryDelegateType = typeof(SliceWithServiceFactory);
+            }
+            else
+            {
+                factoryDelegateType = typeof(SliceFactory);
+            }
+            expressions.Add(Expression.Label(Expression.Label(typeof(RazorSlice)), sliceVariable));
+        }
+        
+        parameters.Add(serviceProviderParam);
+
+        return Expression.Lambda(
+            delegateType: factoryDelegateType,
+            body: Expression.Block(
+                variables: new[] { sliceVariable },
+                Expression.Assign(sliceVariable, Expression.New(sliceType)),
+                Expression.Block(expressions)
+            ),
+            name: "CreateSlice",
+            parameters: parameters
+        ).Compile();
+    }
+
     private static bool IsModelSlice(Type sliceType)
     {
         var baseType = sliceType.BaseType;
@@ -181,12 +291,28 @@ public abstract partial class RazorSlice
     public static SliceFactory ResolveSliceFactory(string sliceName) => ResolveSliceFactoryImpl(sliceName);
 
     /// <summary>
+    /// Resolves a <see cref="SliceFactory" /> delegate for the provided template name.
+    /// </summary>
+    /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
+    /// <returns>The <see cref="SliceWithServiceFactory" /> delegate that can be used to create instances of the template.</returns>
+    public static SliceWithServiceFactory ResolveSliceWithServiceFactory(string sliceName) => ResolveSliceWithServiceFactoryImpl(sliceName);
+
+    /// <summary>
     /// Resolves a <see cref="SliceFactory{TModel}" /> delegate for the provided template name with a typed model.
     /// </summary>
     /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
     /// <typeparam name="TModel">The template model type.</typeparam>
     /// <returns>The <see cref="SliceFactory{TModel}" /> delegate that can be used to create instances of the template.</returns>
     public static SliceFactory<TModel> ResolveSliceFactory<TModel>(string sliceName) => ResolveSliceFactoryImpl<TModel>(sliceName);
+
+    /// <summary>
+    /// Resolves a <see cref="SliceFactory{TModel}" /> delegate for the provided template name with a typed model.
+    /// </summary>
+    /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
+    /// <typeparam name="TModel">The template model type.</typeparam>
+    /// <returns>The <see cref="SliceWithServiceFactory{TModel}" /> delegate that can be used to create instances of the template.</returns>
+    public static SliceWithServiceFactory<TModel> ResolveSliceWithServiceFactory<TModel>(string sliceName) 
+        => ResolveSliceWithServiceFactoryImpl<TModel>(sliceName);
 
     /// <summary>
     /// Resolves a <see cref="SliceFactory" /> delegate for the provided template <see cref="Type" />.
@@ -224,6 +350,14 @@ public abstract partial class RazorSlice
     public static RazorSlice Create(SliceFactory sliceFactory) => sliceFactory();
 
     /// <summary>
+    /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceFactory" /> delegate.
+    /// </summary>
+    /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate to create the template with.</param>
+    /// <param name="serviceProvider"></param>
+    /// <returns>A <see cref="RazorSlice" /> instance for the template.</returns>
+    public static RazorSlice Create(SliceWithServiceFactory sliceFactory, IServiceProvider serviceProvider) => sliceFactory(serviceProvider);
+
+    /// <summary>
     /// Creates an instance of a <see cref="RazorSlice" /> template for the provided template name with a typed model.
     /// </summary>
     /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
@@ -240,6 +374,17 @@ public abstract partial class RazorSlice
     /// <typeparam name="TModel">The model type of the template.</typeparam>
     /// <returns>A <see cref="RazorSlice{TModel}" /> instance for the template.</returns>
     public static RazorSlice<TModel> Create<TModel>(SliceFactory<TModel> sliceFactory, TModel model) => sliceFactory(model);
+
+    /// <summary>
+    /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceFactory" /> delegate with a typed model.
+    /// </summary>
+    /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate to create the template with.</param>
+    /// <param name="model">The model to use for the template instance.</param>
+    /// <param name="serviceProvider"></param>
+    /// <typeparam name="TModel">The model type of the template.</typeparam>
+    /// <returns>A <see cref="RazorSlice{TModel}" /> instance for the template.</returns>
+    public static RazorSlice<TModel> Create<TModel>(SliceWithServiceFactory<TModel> sliceFactory, TModel model, IServiceProvider serviceProvider) 
+        => sliceFactory(model, serviceProvider);
 
     private static Type ResolveSliceType(string sliceName, Type mustBeAssignableTo)
     {
@@ -269,7 +414,24 @@ public abstract partial class RazorSlice
 
         var sliceDefinition = _slicesByName[sliceName];
 
+        if (sliceDefinition.InjectableProperties.Any())
+        {
+            throw new InvalidOperationException($"{sliceName} has injectable properties but IServiceProvider is not provided");
+        }
+
         return (SliceFactory)sliceDefinition.Factory;
+    }
+
+    private static SliceWithServiceFactory ResolveSliceWithServiceFactoryImpl(string sliceName)
+    {
+        if (!_slicesByName.ContainsKey(sliceName))
+        {
+            throw new ArgumentException($"No Razor slice with name '{sliceName}' was found.", nameof(sliceName));
+        }
+
+        var sliceDefinition = _slicesByName[sliceName];
+
+        return (SliceWithServiceFactory)sliceDefinition.Factory;
     }
 
     private static SliceFactory<TModel> ResolveSliceFactoryImpl<TModel>(string sliceName)
@@ -281,12 +443,40 @@ public abstract partial class RazorSlice
 
         var sliceDefinition = _slicesByName[sliceName];
 
+        if (sliceDefinition.InjectableProperties.Any())
+        {
+            throw new InvalidOperationException($"{sliceName} has injectable properties but IServiceProvider is not provided");
+        }
+
         if (sliceDefinition.Factory is SliceFactory<TModel> factory)
         {
             return factory;
         }
 
         if (sliceDefinition.Factory.GetType().IsGenericType && sliceDefinition.Factory.GetType().GetGenericTypeDefinition() == typeof(SliceFactory<>))
+        {
+            var modelType = sliceDefinition.Factory.GetType().GenericTypeArguments[0];
+            throw new InvalidOperationException($"Razor slice with name '{sliceName}' was found but it's model type is {modelType.Name}.");
+        }
+
+        throw new InvalidOperationException($"Razor slice with name '{sliceName}' was found but does not declare a model type. Ensure the slice uses `@inherits RazorSlice<{typeof(TModel).Name}>` or `@inherits RazorSliceHttpResult<{typeof(TModel).Name}>` to declare the model type.");
+    }
+
+    private static SliceWithServiceFactory<TModel> ResolveSliceWithServiceFactoryImpl<TModel>(string sliceName)
+    {
+        if (!_slicesByName.ContainsKey(sliceName))
+        {
+            throw new ArgumentException($"No Razor slice with name '{sliceName}' was found.", nameof(sliceName));
+        }
+
+        var sliceDefinition = _slicesByName[sliceName];
+
+        if (sliceDefinition.Factory is SliceWithServiceFactory<TModel> factory)
+        {
+            return factory;
+        }
+
+        if (sliceDefinition.Factory.GetType().IsGenericType && sliceDefinition.Factory.GetType().GetGenericTypeDefinition() == typeof(SliceWithServiceFactory<>))
         {
             var modelType = sliceDefinition.Factory.GetType().GenericTypeArguments[0];
             throw new InvalidOperationException($"Razor slice with name '{sliceName}' was found but it's model type is {modelType.Name}.");
