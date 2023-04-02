@@ -187,14 +187,7 @@ public abstract partial class RazorSlice
             var modelType = modelPropInfo.PropertyType;
             var razorOfModelType = typeof(RazorSlice<>).MakeGenericType(modelType);
 
-            if (injectableProperties.Any())
-            {
-                factoryDelegateType = typeof(SliceWithServiceFactory<>).MakeGenericType(modelType);
-            }
-            else
-            {
-                factoryDelegateType = typeof(SliceFactory<>).MakeGenericType(modelType);
-            }
+            factoryDelegateType = typeof(SliceWithServiceFactory<>).MakeGenericType(modelType);
 
             // Make a SliceWithServiceFactory<TModel> like:
             //
@@ -226,14 +219,7 @@ public abstract partial class RazorSlice
             //     // ...
             //     return slice;
             // }
-            if (injectableProperties.Any())
-            {
-                factoryDelegateType = typeof(SliceWithServiceFactory);
-            }
-            else
-            {
-                factoryDelegateType = typeof(SliceFactory);
-            }
+            factoryDelegateType = typeof(SliceWithServiceFactory);
             expressions.Add(Expression.Label(Expression.Label(typeof(RazorSlice)), sliceVariable));
         }
         
