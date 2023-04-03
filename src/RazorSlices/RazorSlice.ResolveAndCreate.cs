@@ -400,7 +400,7 @@ public abstract partial class RazorSlice
 
         var sliceDefinition = _slicesByName[sliceName];
 
-        if (sliceDefinition.InjectableProperties.Any())
+        if (sliceDefinition.HasInjectableProperties)
         {
             throw new InvalidOperationException($"{sliceName} has injectable properties but IServiceProvider is not provided");
         }
@@ -429,7 +429,7 @@ public abstract partial class RazorSlice
 
         var sliceDefinition = _slicesByName[sliceName];
 
-        if (sliceDefinition.InjectableProperties.Any())
+        if (sliceDefinition.HasInjectableProperties)
         {
             throw new InvalidOperationException($"{sliceName} has injectable properties but IServiceProvider is not provided");
         }
