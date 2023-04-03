@@ -10,7 +10,7 @@ public delegate RazorSlice SliceFactory();
 /// A delegate for creating instances of the types generated for .cshtml template files.
 /// </summary>
 /// <returns>A <see cref="RazorSlice" /> instance.</returns>
-public delegate RazorSlice SliceWithServiceFactory(IServiceProvider serviceProvider);
+public delegate RazorSlice SliceWithServicesFactory(IServiceProvider serviceProvider);
 
 /// <summary>
 /// A delegate for creating instances of the types generated for .cshtml template files with strongly-typed models.
@@ -22,4 +22,4 @@ public delegate RazorSlice<TModel> SliceFactory<TModel>(TModel model);
 /// A delegate for creating instances of the types generated for .cshtml template files with strongly-typed models.
 /// </summary>
 /// <returns>A <see cref="RazorSlice{TModel}" /> instance.</returns>
-public delegate RazorSlice<TModel> SliceWithServiceFactory<TModel>(TModel model, IServiceProvider serviceProvider);
+public delegate RazorSlice<TModel> SliceWithServicesFactory<TModel>(TModel model, IServiceProvider serviceProvider);

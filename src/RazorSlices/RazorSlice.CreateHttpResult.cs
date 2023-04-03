@@ -22,7 +22,7 @@ public abstract partial class RazorSlice
     /// Creates and returns a new instance of a <see cref="RazorSliceHttpResult" /> based on the provided name.
     /// </summary>
     /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
-    /// <param name="serviceProvider"></param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider" /> to use when setting the template's <c>@inject</c> properties.</param>
     /// <param name="statusCode">The HTTP status code to return. Defaults to <see cref="StatusCodes.Status200OK"/>.</param>
     /// <returns>The <see cref="RazorSliceHttpResult" /> instance.</returns>
     public static RazorSliceHttpResult CreateHttpResult(string sliceName, IServiceProvider serviceProvider, int statusCode = StatusCodes.Status200OK)
@@ -65,7 +65,7 @@ public abstract partial class RazorSlice
     /// </summary>
     /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
     /// <param name="model">The model to use for the template instance.</param>
-    /// <param name="serviceProvider"></param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider" /> to use when setting the template's <c>@inject</c> properties.</param>
     /// <param name="statusCode">The HTTP status code to return. Defaults to <see cref="StatusCodes.Status200OK"/>.</param>
     /// <typeparam name="TModel">The model type of the template.</typeparam>
     /// <returns>The <see cref="RazorSliceHttpResult{TModel}" /> instance.</returns>
