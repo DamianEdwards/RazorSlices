@@ -5,7 +5,6 @@ using RazorSlices.Samples.WebApp.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<LoremService>();
-builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 

@@ -1,7 +1,6 @@
 ﻿@using RazorSlices.Samples.WebApp.Services;
 @inherits RazorSliceHttpResult<LoremParams>
 @inject LoremService loremService
-@inject IHttpContextAccessor contextAccessor
 
 @{
     string title = "Lorem Ipsum (Dependency-injected properties)";
@@ -24,7 +23,6 @@
         <div class="container">
             <h1 class="mt-5">@title</h1>
             <p class="text-success">This Lorem Ipsum sentences was created using dependency-injected properties!</p>
-            <p>@contextAccessor.HttpContext!.Request.Path</p>
             @for (var i = 0; i < Model.ParagraphCount; i++)
             {
                 <p>@loremService.Sentences(Model.ParagraphSentenceCount)</p>
