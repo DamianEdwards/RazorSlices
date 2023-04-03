@@ -1,4 +1,5 @@
 ﻿using RazorSlices.Samples.WebApp.Slices;
+using System.Text;
 
 namespace RazorSlices.Samples.WebApp.Services;
 
@@ -6,11 +7,11 @@ public class LoremService
 {
     public string Sentences(int length)
     {
-        string sentences = "";
+        var sb = new StringBuilder();
         for (int i = 0; i < length; i++)
         {
-            sentences += PageContent.Sentence;
+            sb.Append(PageContent.Sentence);
         }
-        return sentences;
+        return sb.ToString();
     }
 }
