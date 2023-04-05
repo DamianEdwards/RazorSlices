@@ -7,7 +7,7 @@
 public delegate RazorSlice SliceFactory();
 
 /// <summary>
-/// A delegate for creating instances of the types generated for .cshtml template files with <c>@inject</c>.
+/// A delegate for creating instances of the types generated for .cshtml template files with <c>@inject</c> properties.
 /// </summary>
 /// <returns>A <see cref="RazorSlice" /> instance.</returns>
 public delegate RazorSlice SliceWithServicesFactory(IServiceProvider serviceProvider);
