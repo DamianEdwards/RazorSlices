@@ -3,9 +3,9 @@
 namespace RazorSlices;
 
 /// <summary>
-/// A class that contains relevant details about a slice
+/// A class that contains relevant details about a slice.
 /// </summary>
-public class SliceDefinition
+internal sealed class SliceDefinition
 {
     private readonly string _identifier;
     private readonly Type _sliceType;
@@ -19,7 +19,7 @@ public class SliceDefinition
     /// <param name="sliceType">The type of the slice.</param>
     /// <param name="factory">The factory delegate used to create instances of the slice.</param>
     /// <param name="injectableProperties">The properties of the slice that can be injected.</param>
-    public SliceDefinition(string identifier, Type sliceType, Delegate factory, IEnumerable<PropertyInfo> injectableProperties)
+    internal SliceDefinition(string identifier, Type sliceType, Delegate factory, IEnumerable<PropertyInfo> injectableProperties)
     {
         _identifier = identifier;
         _sliceType = sliceType;
@@ -31,25 +31,25 @@ public class SliceDefinition
     /// <summary>
     /// Gets the unique identifier of the slice.
     /// </summary>
-    public string Identifier => _identifier;
+    internal string Identifier => _identifier;
 
     /// <summary>
     /// Gets the type of the slice.
     /// </summary>
-    public Type SliceType => _sliceType;
+    internal Type SliceType => _sliceType;
 
     /// <summary>
     /// Gets the factory delegate used to create instances of the slice.
     /// </summary>
-    public Delegate Factory => _factory;
+    internal Delegate Factory => _factory;
 
     /// <summary>
     /// Gets the dependency-injected properties of the slice.
     /// </summary>
-    public IEnumerable<PropertyInfo> InjectableProperties => _injectableProperties;
+    internal IEnumerable<PropertyInfo> InjectableProperties => _injectableProperties;
 
     /// <summary>
     /// Gets a value indicating whether this slice definition has any dependency-injected properties
     /// </summary>
-    public bool HasInjectableProperties { get; private set; }
+    public bool HasInjectableProperties { get; }
 }
