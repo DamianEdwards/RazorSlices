@@ -1,7 +1,10 @@
 using RazorSlices;
 using RazorSlices.Samples.WebApp;
+using RazorSlices.Samples.WebApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton<LoremService>();
 
 var app = builder.Build();
 
@@ -23,6 +26,8 @@ app.MapGet("/lorem-stream", (HttpContext httpContext) =>
     httpContext.Response.ContentType = "text/html; charset=utf-8";
     return slice.RenderAsync(httpContext.Response.Body);
 });
+app.MapGet("/lorem-injectableproperties", (int? paraCount, int? paraLength, IServiceProvider serviceProvider) =>
+    Results.Extensions.RazorSlice("/Slices/LoremInjectableProperties.cshtml", new LoremParams(paraCount, paraLength), serviceProvider));
 app.MapGet("/unicode", () => Results.Extensions.RazorSlice("/Slices/Unicode.cshtml"));
 app.MapGet("/library", () => Results.Extensions.RazorSlice("/Slices/FromLibrary.cshtml"));
 
