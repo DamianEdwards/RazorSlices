@@ -339,7 +339,7 @@ public abstract partial class RazorSlice
     /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceFactory" /> delegate.
     /// </summary>
     /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate to create the template with.</param>
-    /// <param name="serviceProvider"></param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider" /> to use when setting the template's <c>@inject</c> properties.</param>
     /// <returns>A <see cref="RazorSlice" /> instance for the template.</returns>
     public static RazorSlice Create(SliceWithServicesFactory sliceFactory, IServiceProvider serviceProvider) => sliceFactory(serviceProvider);
 
@@ -366,7 +366,7 @@ public abstract partial class RazorSlice
     /// </summary>
     /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate to create the template with.</param>
     /// <param name="model">The model to use for the template instance.</param>
-    /// <param name="serviceProvider"></param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider" /> to use when setting the template's <c>@inject</c> properties.</param>
     /// <typeparam name="TModel">The model type of the template.</typeparam>
     /// <returns>A <see cref="RazorSlice{TModel}" /> instance for the template.</returns>
     public static RazorSlice<TModel> Create<TModel>(SliceWithServicesFactory<TModel> sliceFactory, TModel model, IServiceProvider serviceProvider) 
