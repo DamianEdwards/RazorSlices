@@ -277,7 +277,7 @@ public abstract partial class RazorSlice
     public static SliceFactory ResolveSliceFactory(string sliceName) => ResolveSliceFactoryImpl(sliceName);
 
     /// <summary>
-    /// Resolves a <see cref="SliceFactory" /> delegate for the provided template name.
+    /// Resolves a <see cref="SliceWithServicesFactory" /> delegate for the provided template name.
     /// </summary>
     /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
     /// <returns>The <see cref="SliceWithServicesFactory" /> delegate that can be used to create instances of the template.</returns>
@@ -292,7 +292,7 @@ public abstract partial class RazorSlice
     public static SliceFactory<TModel> ResolveSliceFactory<TModel>(string sliceName) => ResolveSliceFactoryImpl<TModel>(sliceName);
 
     /// <summary>
-    /// Resolves a <see cref="SliceFactory{TModel}" /> delegate for the provided template name with a typed model.
+    /// Resolves a <see cref="SliceWithServicesFactory{TModel}" /> delegate for the provided template name with a typed model.
     /// </summary>
     /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
     /// <typeparam name="TModel">The template model type.</typeparam>
@@ -336,9 +336,9 @@ public abstract partial class RazorSlice
     public static RazorSlice Create(SliceFactory sliceFactory) => sliceFactory();
 
     /// <summary>
-    /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceFactory" /> delegate.
+    /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceWithServicesFactory" /> delegate.
     /// </summary>
-    /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate to create the template with.</param>
+    /// <param name="sliceFactory">The <see cref="SliceWithServicesFactory" /> delegate to create the template with.</param>
     /// <param name="serviceProvider">The <see cref="IServiceProvider" /> to use when setting the template's <c>@inject</c> properties.</param>
     /// <returns>A <see cref="RazorSlice" /> instance for the template.</returns>
     public static RazorSlice Create(SliceWithServicesFactory sliceFactory, IServiceProvider serviceProvider) => sliceFactory(serviceProvider);
@@ -362,9 +362,9 @@ public abstract partial class RazorSlice
     public static RazorSlice<TModel> Create<TModel>(SliceFactory<TModel> sliceFactory, TModel model) => sliceFactory(model);
 
     /// <summary>
-    /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceFactory" /> delegate with a typed model.
+    /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceWithServicesFactory{TModel}" /> delegate with a typed model.
     /// </summary>
-    /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate to create the template with.</param>
+    /// <param name="sliceFactory">The <see cref="SliceWithServicesFactory{TModel}" /> delegate to create the template with.</param>
     /// <param name="model">The model to use for the template instance.</param>
     /// <param name="serviceProvider">The <see cref="IServiceProvider" /> to use when setting the template's <c>@inject</c> properties.</param>
     /// <typeparam name="TModel">The model type of the template.</typeparam>
