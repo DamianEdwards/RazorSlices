@@ -1,6 +1,6 @@
 ﻿namespace RazorSlices;
 
-internal class BufferSizes
+internal sealed class BufferSizes
 {
     public const int SmallNumericWriteByteSize = 32;
     public const int SmallNumericWriteCharSize = SmallNumericWriteByteSize / 2;

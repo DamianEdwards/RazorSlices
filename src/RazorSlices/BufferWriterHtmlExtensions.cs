@@ -103,6 +103,49 @@ internal static class BufferWriterHtmlExtensions
         return false;
     }
 
+#if NET8_0_OR_GREATER
+    public static void HtmlEncodeAndWriteUtf8SpanFormattable<T>(this IBufferWriter<byte> bufferWriter, T? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
+        where T : IUtf8SpanFormattable
+    {
+        if (formattable is null)
+        {
+            return;
+        }
+
+        if (TryHtmlEncodeAndWriteUtf8SpanFormattableSmall(bufferWriter, formattable, htmlEncoder, format, formatProvider))
+        {
+            return;
+        }
+
+        var bufferSize = BufferSizes.SmallFormattableWriteByteSize * 2;
+        var rentedBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+        int bytesWritten;
+
+        while (!formattable.TryFormat(rentedBuffer, out bytesWritten, format, formatProvider))
+        {
+            // Buffer was too small, return the current buffer and rent a new buffer twice the size
+            bufferSize = rentedBuffer.Length * 2;
+            ArrayPool<byte>.Shared.Return(rentedBuffer);
+            rentedBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+        }
+
+        HtmlEncodeAndWriteUtf8(bufferWriter, rentedBuffer.AsSpan()[..bytesWritten], htmlEncoder);
+        ArrayPool<byte>.Shared.Return(rentedBuffer);
+    }
+
+    private static bool TryHtmlEncodeAndWriteUtf8SpanFormattableSmall<T>(IBufferWriter<byte> bufferWriter, T formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
+        where T : IUtf8SpanFormattable
+    {
+        Span<byte> buffer = stackalloc byte[BufferSizes.SmallFormattableWriteByteSize];
+        if (formattable.TryFormat(buffer, out var bytesWritten, format, formatProvider))
+        {
+            HtmlEncodeAndWriteUtf8(bufferWriter, buffer[..bytesWritten], htmlEncoder);
+            return true;
+        }
+        return false;
+    }
+#endif
+
     public static void HtmlEncodeAndWrite(this IBufferWriter<byte> bufferWriter, ReadOnlySpan<char> textSpan, HtmlEncoder htmlEncoder)
     {
         if (textSpan.Length == 0)

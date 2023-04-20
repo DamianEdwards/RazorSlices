@@ -56,9 +56,8 @@ public abstract partial class RazorSlice : IDisposable
 
         var executeTask = ExecuteAsync();
 
-        if (executeTask.IsCompletedSuccessfully)
+        if (executeTask.HandleSynchronousCompletion())
         {
-            executeTask.GetAwaiter().GetResult();
             return ValueTask.CompletedTask;
         }
         return new ValueTask(executeTask);
@@ -125,11 +124,12 @@ public abstract partial class RazorSlice : IDisposable
             return ValueTask.FromResult(HtmlString.Empty);
         }
 
+#pragma warning disable CA2012 // Use ValueTasks correctly: The ValueTask is observed in code below
         var flushTask = _outputFlush(cancellationToken);
+#pragma warning restore CA2012
 
-        if (flushTask.IsCompletedSuccessfully)
+        if (flushTask.HandleSynchronousCompletion())
         {
-            flushTask.GetAwaiter().GetResult();
             return ValueTask.FromResult(HtmlString.Empty);
         }
 
@@ -432,13 +432,37 @@ public abstract partial class RazorSlice : IDisposable
         return HtmlString.Empty;
     }
 
+#if NET8_0_OR_GREATER
+    /// <summary>
+    /// Write the specified <see cref="IUtf8SpanFormattable"/> value to the output with the specified format and optional <see cref="IFormatProvider" />.
+    /// </summary>
+    /// <param name="formattable">The value to write to the output.</param>
+    /// <param name="format">The format to use when writing the value to the output. Defaults to the default format for the value's type if not provided.</param>
+    /// <param name="formatProvider">The <see cref="IFormatProvider" /> to use when writing the value to the output. Defaults to <see cref="CultureInfo.CurrentCulture"/> if <c>null</c>.</param>
+    /// <param name="htmlEncode">Whether to HTML encode the value or not. Defaults to <c>true</c>.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteUtf8SpanFormattable(item.DueBy, "d")</c></returns>
+    protected HtmlString WriteUtf8SpanFormattable<T>(T? formattable, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null, bool htmlEncode = true)
+        where T : IUtf8SpanFormattable
+    {
+        if (formattable is not null)
+        {
+            var htmlEncoder = htmlEncode ? _htmlEncoder : NullHtmlEncoder.Default;
+
+            _bufferWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
+            //_textWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
+        }
+
+        return HtmlString.Empty;
+    }
+#endif
+
     /// <summary>
     /// Writes the specified <see cref="IHtmlContent"/> value to the output.
     /// </summary>
     /// <param name="htmlContent">The <see cref="IHtmlContent"/> value to write to the output.</param>
     /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtmlContent(myCustomHtmlContent)</c></returns>
     protected HtmlString WriteHtml<T>(T htmlContent)
-        where T : IHtmlContent
+    where T : IHtmlContent
     {
         if (htmlContent is not null)
         {

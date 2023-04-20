@@ -31,7 +31,7 @@ public static class RazorSlicePipeWriterExtensions
         var pipe = PipeWriter.Create(stream, new(MemoryPool<byte>.Shared));
         await RenderToPipeWriterAsync(razorSlice, pipe, htmlEncoder);
         await pipe.FlushAsync();
-        pipe.Complete();
+        await pipe.CompleteAsync();
     }
 
     private static Func<CancellationToken, ValueTask> GetFlushWrapper(PipeWriter pipeWriter)

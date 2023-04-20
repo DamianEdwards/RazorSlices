@@ -42,11 +42,12 @@ public abstract class RazorSliceHttpResult<TModel> : RazorSlice<TModel>, IResult
         httpContext.Response.ContentType = ContentType;
         httpContext.Response.RegisterForDispose(this);
 
+#pragma warning disable CA2012 // Use ValueTasks correctly: The ValueTask is observed in code below
         var renderTask = this.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, HtmlEncoder);
+#pragma warning restore CA2012
 
-        if (renderTask.IsCompletedSuccessfully)
+        if (renderTask.HandleSynchronousCompletion())
         {
-            renderTask.GetAwaiter().GetResult();
             return httpContext.Response.BodyWriter.FlushAsync().AsTask();
         }
 
