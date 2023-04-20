@@ -7,26 +7,26 @@
 <#
     var typeDetails = new[]
     {
-        new { AnOrA = "a", IsStruct = true, Name = "char", SpecificMethodName = "WriteChar", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "'の'" },
-        new { AnOrA = "a", IsStruct = true, Name = "byte", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "rgb.Red, \"G\", CultureInfo.InvariantCulture" },
-        new { AnOrA = "a", IsStruct = true, Name = "short", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
-        new { AnOrA = "a", IsStruct = true, Name = "ushort", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
-        new { AnOrA = "an", IsStruct = true, Name = "int", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
-        new { AnOrA = "a", IsStruct = true, Name = "uint", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
-        new { AnOrA = "a", IsStruct = true, Name = "long", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "events.Count, \"E\", CultureInfo.InvariantCulture" },
-        new { AnOrA = "a", IsStruct = true, Name = "ulong", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "events.Count, \"E\", CultureInfo.InvariantCulture" },
-        new { AnOrA = "a", IsStruct = true, Name = "BigInteger", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "events.Count, \"E\", CultureInfo.InvariantCulture" },
-        new { AnOrA = "a", IsStruct = true, Name = "Half", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "matrix.A, \"C\"" },
-        new { AnOrA = "a", IsStruct = true, Name = "float", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Price, \"C\"" },
-        new { AnOrA = "a", IsStruct = true, Name = "double", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Price, \"C\"" },
-        new { AnOrA = "a", IsStruct = true, Name = "decimal", SpecificMethodName = "WriteNumber", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Price, \"C\"" },
-        new { AnOrA = "a", IsStruct = true, Name = "DateTime", SpecificMethodName = "WriteDate", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "todo.DueBy, \"yyyy-MM-dd\"" },
-        new { AnOrA = "a", IsStruct = true, Name = "DateTimeOffset", SpecificMethodName = "WriteDate", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "todo.DueBy, \"yyyy-MM-dd\"" },
-        new { AnOrA = "a", IsStruct = true, Name = "TimeSpan", SpecificMethodName = "WriteTimeSpan", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "appointment.Duration, \"HH:mm:ss\"" },
-        new { AnOrA = "a", IsStruct = true, Name = "DateOnly", SpecificMethodName = "WriteDate", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "todo.DueBy, \"yyyy-MM-dd\"" },
-        new { AnOrA = "a", IsStruct = true, Name = "TimeOnly", SpecificMethodName = "WriteTime", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "appointment.StartsAt, \"HH:mm\"" },
-        new { AnOrA = "a", IsStruct = true, Name = "Guid", SpecificMethodName = "WriteGuid", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "item.Id, \"D\"" },
-        new { AnOrA = "a", IsStruct = false, Name = "Version", SpecificMethodName = "WriteVersion", FordwardMethodName = "WriteSpanFormattable", ManualSampleValue = "assembly.Version" },
+        new { AnOrA = "a", IsStruct = true, Name = "char", SpecificMethodName = "WriteChar", IsUtf8Formattable = true, ManualSampleValue = "'の'" },
+        new { AnOrA = "a", IsStruct = true, Name = "byte", SpecificMethodName = "WriteNumber", IsUtf8Formattable = true, ManualSampleValue = "rgb.Red, \"G\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "short", SpecificMethodName = "WriteNumber", IsUtf8Formattable = true, ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "ushort", SpecificMethodName = "WriteNumber", IsUtf8Formattable = true, ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "an", IsStruct = true, Name = "int", SpecificMethodName = "WriteNumber", IsUtf8Formattable = true, ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "uint", SpecificMethodName = "WriteNumber", IsUtf8Formattable = true, ManualSampleValue = "item.Qty, \"G\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "long", SpecificMethodName = "WriteNumber", IsUtf8Formattable = true, ManualSampleValue = "events.Count, \"E\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "ulong", SpecificMethodName = "WriteNumber", IsUtf8Formattable = true, ManualSampleValue = "events.Count, \"E\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "BigInteger", SpecificMethodName = "WriteNumber", IsUtf8Formattable = false, ManualSampleValue = "events.Count, \"E\", CultureInfo.InvariantCulture" },
+        new { AnOrA = "a", IsStruct = true, Name = "Half", SpecificMethodName = "WriteNumber", IsUtf8Formattable = true, ManualSampleValue = "matrix.A, \"C\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "float", SpecificMethodName = "WriteNumber", IsUtf8Formattable = true, ManualSampleValue = "item.Price, \"C\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "double", SpecificMethodName = "WriteNumber", IsUtf8Formattable = true, ManualSampleValue = "item.Price, \"C\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "decimal", SpecificMethodName = "WriteNumber", IsUtf8Formattable = true, ManualSampleValue = "item.Price, \"C\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "DateTime", SpecificMethodName = "WriteDate", IsUtf8Formattable = true, ManualSampleValue = "todo.DueBy, \"yyyy-MM-dd\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "DateTimeOffset", SpecificMethodName = "WriteDate", IsUtf8Formattable = true, ManualSampleValue = "todo.DueBy, \"yyyy-MM-dd\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "TimeSpan", SpecificMethodName = "WriteTimeSpan", IsUtf8Formattable = true, ManualSampleValue = "appointment.Duration, \"HH:mm:ss\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "DateOnly", SpecificMethodName = "WriteDate", IsUtf8Formattable = true, ManualSampleValue = "todo.DueBy, \"yyyy-MM-dd\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "TimeOnly", SpecificMethodName = "WriteTime", IsUtf8Formattable = true, ManualSampleValue = "appointment.StartsAt, \"HH:mm\"" },
+        new { AnOrA = "a", IsStruct = true, Name = "Guid", SpecificMethodName = "WriteGuid", IsUtf8Formattable = true, ManualSampleValue = "item.Id, \"D\"" },
+        new { AnOrA = "a", IsStruct = false, Name = "Version", SpecificMethodName = "WriteVersion", IsUtf8Formattable = true, ManualSampleValue = "assembly.Version" },
     };
 #>
 using System.Globalization;
@@ -64,12 +64,30 @@ public abstract partial class RazorSlice
         if (value is not null)
 <#    } #>
         {
-<#    if (typeDetail.IsStruct) { #>
-            <#= typeDetail.FordwardMethodName #>(value.Value);
-<#    }
-      else { #>
-            <#= typeDetail.FordwardMethodName #>(value);
-<#    } #>
+<#    if (typeDetail.IsStruct) {
+          if (typeDetail.IsUtf8Formattable) { #>
+#if NET8_0_OR_GREATER
+            WriteUtf8SpanFormattable(value.Value);
+#else
+            WriteSpanFormattable(value.Value);
+#endif
+<#        }
+          else { #>
+            WriteSpanFormattable(value.Value);
+<#        }
+      }
+      else {
+          if (typeDetail.IsUtf8Formattable) { #>
+#if NET8_0_OR_GREATER
+            WriteUtf8SpanFormattable(value);
+#else
+            WriteSpanFormattable(value);
+#endif
+<#        }
+          else { #>
+            WriteSpanFormattable(value.Value);
+<#        }
+      } #>
         }
     }
 
@@ -90,7 +108,16 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(<#= typeDetail.Name #> value)
     {
-        <#= typeDetail.FordwardMethodName #>(value);
+<#    if (typeDetail.IsUtf8Formattable) { #>
+#if NET8_0_OR_GREATER
+            WriteUtf8SpanFormattable(value);
+#else
+            WriteSpanFormattable(value);
+#endif
+<#    }
+      else { #>
+            WriteSpanFormattable(value);
+<#    } #>
     }
 <# } #>
 
@@ -120,15 +147,23 @@ public abstract partial class RazorSlice
 <#    } #>
         {
 <#    if (typeDetail.IsStruct) { #>
-            <#= typeDetail.FordwardMethodName #>(value.Value, format, formatProvider, htmlEncode);
+<#        if (typeDetail.IsUtf8Formattable) { #>
+#if NET8_0_OR_GREATER
+            WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
+#else
+            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
+#endif
+<#        }
+          else { #>
+            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
+<#        } #>
 <#    }
       else { #>
-            <#= typeDetail.FordwardMethodName #>(value, format, formatProvider, htmlEncode);
+            WriteSpanFormattable(value, format, formatProvider, htmlEncode);
 <#    } #>
         }
         return HtmlString.Empty;
     }
-
 <#
     }
 #>
@@ -145,7 +180,16 @@ public abstract partial class RazorSlice
 #>
         if (value is <#= typeDetail.Name #>)
         {
-            <#= typeDetail.FordwardMethodName #>((<#= typeDetail.Name #>)(object)value, default, null);
+<#      if (typeDetail.IsUtf8Formattable) { #>
+#if NET8_0_OR_GREATER
+            WriteUtf8SpanFormattable((<#= typeDetail.Name #>)(object)value, default, null);
+#else
+            WriteSpanFormattable((<#= typeDetail.Name #>)(object)value, default, null);
+#endif
+<#      }
+        else { #>
+            WriteSpanFormattable((<#= typeDetail.Name #>)(object)value, default, null);
+<#      } #>
             return true;
         }
 <#

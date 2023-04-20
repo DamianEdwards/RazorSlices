@@ -483,13 +483,13 @@ public abstract partial class RazorSlice : IDisposable
     /// <summary>
     /// Writes the specified <see cref="HtmlString"/> value to the output.
     /// </summary>
-    /// <param name="htmlstring">The <see cref="HtmlString"/> value to write to the output.</param>
+    /// <param name="htmlString">The <see cref="HtmlString"/> value to write to the output.</param>
     /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtmlContent(myCustomHtmlContent)</c></returns>
-    protected HtmlString WriteHtml(HtmlString htmlstring)
+    protected HtmlString WriteHtml(HtmlString htmlString)
     {
-        if (htmlstring is not null && htmlstring != HtmlString.Empty)
+        if (htmlString is not null && htmlString != HtmlString.Empty)
         {
-            _bufferWriter?.WriteHtml(htmlstring.Value);
+            _bufferWriter?.WriteHtml(htmlString.Value);
         }
 
         return HtmlString.Empty;
