@@ -1,6 +1,7 @@
 using RazorSlices;
 using RazorSlices.Samples.WebApp;
 using RazorSlices.Samples.WebApp.Services;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,19 @@ app.MapGet("/lorem-injectableproperties", (int? paraCount, int? paraLength, ISer
     Results.Extensions.RazorSlice("/Slices/LoremInjectableProperties.cshtml", new LoremParams(paraCount, paraLength), serviceProvider));
 app.MapGet("/unicode", () => Results.Extensions.RazorSlice("/Slices/Unicode.cshtml"));
 app.MapGet("/library", () => Results.Extensions.RazorSlice("/Slices/FromLibrary.cshtml"));
+app.MapGet("/render-to-string", () =>
+{
+    var slice = RazorSlice.Create("/Slices/LoremFormattable.cshtml", new LoremParams(1, 4));
+    string template = slice.Render();
+    return Results.Ok(new { HtmlString = template });
+});
+app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) =>
+{
+    var stringBuilder = new StringBuilder();
+    var slice = RazorSlice.Create(RazorSlice.ResolveSliceWithServiceFactory<LoremParams>("/Slices/LoremInjectableProperties.cshtml"), new LoremParams(1, 4), serviceProvider);
+    await slice.RenderAsync(stringBuilder);
+    return Results.Ok(new { HtmlString = stringBuilder.ToString() });
+});
 
 app.MapGet("/", () => Results.Extensions.RazorSlice("/Slices/Todos.cshtml", Todos.AllTodos));
 app.MapGet("/{id:int}", (int id) =>
