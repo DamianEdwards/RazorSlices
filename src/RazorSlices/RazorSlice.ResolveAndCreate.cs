@@ -329,6 +329,18 @@ public abstract partial class RazorSlice
     public static RazorSlice Create(string sliceName) => Create(ResolveSliceFactory(sliceName));
 
     /// <summary>
+    /// Creates an instance of a <see cref="RazorSlice" /> template for the provided template name.
+    /// </summary>
+    /// <remarks>
+    /// Note that this method incurs a lookup cost each time it's invoked. If avoiding that cost is desirable consider using <see cref="ResolveSliceWithServiceFactory(string)" />
+    /// to resolve the template creation delegate once and then use <see cref="Create(SliceWithServicesFactory, IServiceProvider)" /> each time a template instance is required.
+    /// </remarks>
+    /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider" /> to use when setting the template's <c>@inject</c> properties.</param>
+    /// <returns>A <see cref="RazorSlice" /> instance for the template.</returns>
+    public static RazorSlice Create(string sliceName, IServiceProvider serviceProvider) => Create(ResolveSliceWithServiceFactory(sliceName), serviceProvider);
+
+    /// <summary>
     /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceFactory" /> delegate.
     /// </summary>
     /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate to create the template with.</param>
@@ -351,6 +363,20 @@ public abstract partial class RazorSlice
     /// <typeparam name="TModel">The model type of the template.</typeparam>
     /// <returns>A <see cref="RazorSlice{TModel}" /> instance for the template.</returns>
     public static RazorSlice<TModel> Create<TModel>(string sliceName, TModel model) => Create(ResolveSliceFactory<TModel>(sliceName), model);
+
+    /// <summary>
+    /// Creates an instance of a <see cref="RazorSlice" /> template for the provided template name with a typed model.
+    /// </summary>
+    /// <remarks>
+    /// Note that this method incurs a lookup cost each time it's invoked. If avoiding that cost is desirable consider using <see cref="ResolveSliceWithServiceFactory{TModel}(string)" />
+    /// to resolve the template creation delegate once and then use <see cref="Create{TModel}(SliceWithServicesFactory{TModel}, TModel, IServiceProvider)" /> each time a template instance is required.
+    /// </remarks>
+    /// <param name="sliceName">The project-relative path to the template .cshtml file, e.g. /Slices/MyTemplate.cshtml<c></c></param>
+    /// <param name="model">The model to use for the template instance.</param>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider" /> to use when setting the template's <c>@inject</c> properties.</param>
+    /// <typeparam name="TModel">The model type of the template.</typeparam>
+    /// <returns>A <see cref="RazorSlice{TModel}" /> instance for the template.</returns>
+    public static RazorSlice<TModel> Create<TModel>(string sliceName, TModel model, IServiceProvider serviceProvider) => Create(ResolveSliceWithServiceFactory<TModel>(sliceName), model, serviceProvider);
 
     /// <summary>
     /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceFactory" /> delegate with a typed model.

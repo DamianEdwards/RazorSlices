@@ -40,7 +40,7 @@ app.MapGet("/render-to-string", async () =>
 app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) =>
 {
     var stringBuilder = new StringBuilder();
-    var slice = RazorSlice.Create(RazorSlice.ResolveSliceWithServiceFactory<LoremParams>("/Slices/LoremInjectableProperties.cshtml"), new LoremParams(1, 4), serviceProvider);
+    var slice = RazorSlice.Create("/Slices/LoremInjectableProperties.cshtml", new LoremParams(1, 4), serviceProvider);
     await slice.RenderAsync(stringBuilder);
     return Results.Ok(new { HtmlString = stringBuilder.ToString() });
 });
