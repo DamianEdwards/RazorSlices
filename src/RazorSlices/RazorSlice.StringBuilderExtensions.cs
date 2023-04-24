@@ -34,6 +34,7 @@ public static class RazorSliceStringBuilderExtensions
 
         if (task.IsCompletedSuccessfully)
         {
+            task.GetAwaiter().GetResult();
             return ValueTask.FromResult(sb.ToString());
         }
 
