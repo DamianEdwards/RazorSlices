@@ -31,10 +31,10 @@ app.MapGet("/lorem-injectableproperties", (int? paraCount, int? paraLength, ISer
     Results.Extensions.RazorSlice("/Slices/LoremInjectableProperties.cshtml", new LoremParams(paraCount, paraLength), serviceProvider));
 app.MapGet("/unicode", () => Results.Extensions.RazorSlice("/Slices/Unicode.cshtml"));
 app.MapGet("/library", () => Results.Extensions.RazorSlice("/Slices/FromLibrary.cshtml"));
-app.MapGet("/render-to-string", () =>
+app.MapGet("/render-to-string", async () =>
 {
     var slice = RazorSlice.Create("/Slices/LoremFormattable.cshtml", new LoremParams(1, 4));
-    string template = slice.Render();
+    var template = await slice.RenderAsync();
     return Results.Ok(new { HtmlString = template });
 });
 app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) =>

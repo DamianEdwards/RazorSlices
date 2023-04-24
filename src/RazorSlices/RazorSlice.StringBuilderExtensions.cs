@@ -26,17 +26,23 @@ public static class RazorSliceStringBuilderExtensions
     /// </summary>
     /// <param name="slice">The <see cref="RazorSlice" /> instance.</param>
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
-    /// <returns>A string of the template.</returns>
-    public static string Render(this RazorSlice slice, HtmlEncoder? htmlEncoder = null)
+    /// <returns>The template rendered to a <see cref="string"/>.</returns>
+    public static ValueTask<string> RenderAsync(this RazorSlice slice, HtmlEncoder? htmlEncoder = null)
     {
         var sb = new StringBuilder();
         var task = slice.RenderAsync(sb, htmlEncoder);
 
         if (task.IsCompletedSuccessfully)
         {
-            task.GetAwaiter().GetResult();
+            return ValueTask.FromResult(sb.ToString());
         }
 
+        return AwaitRenderTask(task, sb);
+    }
+
+    private static async ValueTask<string> AwaitRenderTask(ValueTask task, StringBuilder sb)
+    {
+        await task;
         return sb.ToString();
     }
 }
