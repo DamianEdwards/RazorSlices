@@ -1,5 +1,6 @@
 ﻿using System.IO.Pipelines;
 using System.Text.Encodings.Web;
+using Microsoft.Extensions.DependencyInjection;
 using RazorSlices;
 
 namespace Microsoft.AspNetCore.Http.HttpResults;
@@ -38,12 +39,14 @@ public abstract class RazorSliceHttpResult<TModel> : RazorSlice<TModel>, IResult
     {
         ArgumentNullException.ThrowIfNull(httpContext);
 
+        var htmlEncoder = HtmlEncoder ?? httpContext.RequestServices.GetService<HtmlEncoder>();
+
         httpContext.Response.StatusCode = StatusCode;
         httpContext.Response.ContentType = ContentType;
         httpContext.Response.RegisterForDispose(this);
 
 #pragma warning disable CA2012 // Use ValueTasks correctly: The ValueTask is observed in code below
-        var renderTask = this.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, HtmlEncoder);
+        var renderTask = this.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, htmlEncoder);
 #pragma warning restore CA2012
 
         if (renderTask.HandleSynchronousCompletion())

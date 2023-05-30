@@ -279,7 +279,7 @@ internal static class BufferWriterHtmlExtensions
         var buffer = bufferWriter.GetSpan(value ? TrueStringLength : FalseStringLength);
         if (!Utf8Formatter.TryFormat(value, buffer, out var _))
         {
-            throw new FormatException("Unexpectedly insufficent space in buffer to format bool value.");
+            throw new FormatException("Unexpectedly insufficient space in buffer to format bool value.");
         }
     }
 }

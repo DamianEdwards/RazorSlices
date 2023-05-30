@@ -1,10 +1,7 @@
 ﻿using System.Buffers;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Internal;
@@ -81,9 +78,13 @@ public abstract partial class RazorSlice : IDisposable
 
         _bufferWriter = null;
         _textWriter = textWriter;
-        _outputFlush = (_) =>
+        _outputFlush = (ct) =>
         {
+#if NET8_0_OR_GREATER
+            var flushTask = textWriter.FlushAsync(ct);
+#else
             var flushTask = textWriter.FlushAsync();
+#endif
             if (flushTask.IsCompletedSuccessfully)
             {
                 return ValueTask.CompletedTask;
@@ -219,6 +220,13 @@ public abstract partial class RazorSlice : IDisposable
     /// <param name="value">The value to write to the output.</param>
     protected void WriteLiteral<T>(T? value)
     {
+#if NET8_0_OR_GREATER
+        if (value is IUtf8SpanFormattable)
+        {
+            WriteUtf8SpanFormattable((IUtf8SpanFormattable)(object)value, htmlEncode: false);
+            return;
+        }
+#endif
         if (value is ISpanFormattable)
         {
             WriteSpanFormattable((ISpanFormattable)(object)value, htmlEncode: false);
@@ -249,18 +257,7 @@ public abstract partial class RazorSlice : IDisposable
         }
 
         _bufferWriter?.Write(value);
-
-        if (_textWriter is not null)
-        {
-            var charCount = Encoding.Unicode.GetCharCount(value);
-            var buffer = ArrayPool<char>.Shared.Rent(charCount);
-            var bytesDecoded = Encoding.Unicode.GetChars(value, buffer);
-
-            Debug.Assert(bytesDecoded == value.Length, "Bad decoding when writing to TextWriter in WriteLiteral(ReadOnlySpan<byte>)");
-
-            _textWriter.Write(buffer, 0, charCount);
-            ArrayPool<char>.Shared.Return(buffer);
-        }
+        _textWriter?.WriteUtf8(value);
     }
 
     /// <summary>
@@ -304,18 +301,7 @@ public abstract partial class RazorSlice : IDisposable
         }
 
         _bufferWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
-
-        if (_textWriter is not null)
-        {
-            var charCount = Encoding.UTF8.GetCharCount(value);
-            var buffer = ArrayPool<char>.Shared.Rent(charCount);
-            var bytesDecoded = Encoding.UTF8.GetChars(value, buffer);
-
-            Debug.Assert(bytesDecoded == value.Length, "Bad decoding when writing to TextWriter in Write(ReadOnlySpan<byte>)");
-            
-            _htmlEncoder.Encode(_textWriter, buffer, 0, charCount);
-            ArrayPool<char>.Shared.Return(buffer);
-        }
+        _textWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
     }
 
     /// <summary>
@@ -328,7 +314,7 @@ public abstract partial class RazorSlice : IDisposable
     /// </para>
     /// <para>
     /// To manually write out a value, use <see cref="WriteHtml{T}(T)"/> instead,
-    /// e.g. <c>@WriteHtmlContent(myCustomHtmlString)</c>
+    /// e.g. <c>@WriteHtml(myCustomHtmlString)</c>
     /// </para>
     /// </remarks>
     /// <param name="htmlString">The <see cref="HtmlString"/> value to write to the output.</param>
@@ -373,13 +359,7 @@ public abstract partial class RazorSlice : IDisposable
         if (value.Length > 0)
         {
             _bufferWriter?.HtmlEncodeAndWrite(value, _htmlEncoder);
-            if (_textWriter is not null)
-            {
-                var buffer = ArrayPool<char>.Shared.Rent(value.Length);
-                value.CopyTo(buffer);
-                _htmlEncoder.Encode(_textWriter, buffer, 0, value.Length);
-                ArrayPool<char>.Shared.Return(buffer);
-            }
+            _textWriter?.HtmlEncodeAndWrite(value, _htmlEncoder);
         }
     }
 
@@ -447,9 +427,8 @@ public abstract partial class RazorSlice : IDisposable
         if (formattable is not null)
         {
             var htmlEncoder = htmlEncode ? _htmlEncoder : NullHtmlEncoder.Default;
-
             _bufferWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
-            //_textWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
+            _textWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
         }
 
         return HtmlString.Empty;
@@ -462,7 +441,7 @@ public abstract partial class RazorSlice : IDisposable
     /// <param name="htmlContent">The <see cref="IHtmlContent"/> value to write to the output.</param>
     /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtmlContent(myCustomHtmlContent)</c></returns>
     protected HtmlString WriteHtml<T>(T htmlContent)
-    where T : IHtmlContent
+        where T : IHtmlContent
     {
         if (htmlContent is not null)
         {
@@ -484,12 +463,13 @@ public abstract partial class RazorSlice : IDisposable
     /// Writes the specified <see cref="HtmlString"/> value to the output.
     /// </summary>
     /// <param name="htmlString">The <see cref="HtmlString"/> value to write to the output.</param>
-    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtmlContent(myCustomHtmlContent)</c></returns>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtml(myCustomHtmlContent)</c></returns>
     protected HtmlString WriteHtml(HtmlString htmlString)
     {
         if (htmlString is not null && htmlString != HtmlString.Empty)
         {
             _bufferWriter?.WriteHtml(htmlString.Value);
+            _textWriter?.Write(htmlString.Value);
         }
 
         return HtmlString.Empty;
@@ -517,6 +497,12 @@ public abstract partial class RazorSlice : IDisposable
             Write(((byte[])(object)value).AsSpan());
         }
         // Handle derived types (this currently results in value types being boxed)
+#if NET8_0_OR_GREATER
+        else if (value is IUtf8SpanFormattable)
+        {
+            WriteUtf8SpanFormattable((IUtf8SpanFormattable)(object)value, default, null);
+        }
+#endif
         else if (value is ISpanFormattable)
         {
             WriteSpanFormattable((ISpanFormattable)(object)value, default, null);
