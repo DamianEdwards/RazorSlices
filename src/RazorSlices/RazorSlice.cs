@@ -22,12 +22,17 @@ public abstract partial class RazorSlice : IDisposable
     private Dictionary<string, Func<Task>>? _sectionWriters;
 
     /// <summary>
+    /// A token to monitor for cancellation requests.
+    /// </summary>
+    public CancellationToken CancellationToken { get; private set; }
+
+    /// <summary>
     /// Implemented by the generated template class.
     /// </summary>
     /// <remarks>
     /// This method should not be called directly. Call
-    /// <see cref="RenderAsync(IBufferWriter{byte}, Func{CancellationToken, ValueTask}?, HtmlEncoder?)"/> or
-    /// <see cref="RenderAsync(TextWriter, HtmlEncoder?)"/> instead to render the template.
+    /// <see cref="RenderAsync(IBufferWriter{byte}, Func{CancellationToken, ValueTask}?, HtmlEncoder?, CancellationToken)"/> or
+    /// <see cref="RenderAsync(TextWriter, HtmlEncoder?, CancellationToken)"/> instead to render the template.
     /// </remarks>
     /// <returns>A <see cref="Task"/> representing the execution of the template.</returns>
     public abstract Task ExecuteAsync();
@@ -38,9 +43,10 @@ public abstract partial class RazorSlice : IDisposable
     /// <param name="bufferWriter">The <see cref="IBufferWriter{T}"/> to render the template to.</param>
     /// <param name="flushAsync">An optional delegate that flushes the <see cref="IBufferWriter{T}"/>.</param>
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
     [MemberNotNull(nameof(_bufferWriter))]
-    public ValueTask RenderAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync = null, HtmlEncoder? htmlEncoder = null)
+    public ValueTask RenderAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync = null, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(bufferWriter);
 
@@ -50,6 +56,8 @@ public abstract partial class RazorSlice : IDisposable
         _textWriter = null;
         _outputFlush = flushAsync;
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
+
+        CancellationToken = cancellationToken;
 
         var executeTask = ExecuteAsync();
 
@@ -67,10 +75,11 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     /// <param name="textWriter">The <see cref="TextWriter"/> to render the template to.</param>
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="textWriter"/> is <c>null</c>.</exception>
     [MemberNotNull(nameof(_textWriter), nameof(_outputFlush))]
-    public ValueTask RenderAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder = null)
+    public ValueTask RenderAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(textWriter);
 
@@ -93,6 +102,8 @@ public abstract partial class RazorSlice : IDisposable
         };
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
 
+        CancellationToken = cancellationToken;
+
         var executeTask = ExecuteAsync();
 
         if (executeTask.IsCompletedSuccessfully)
@@ -108,7 +119,7 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     /// <summary>
-    /// Indicates whether <see cref="FlushAsync(CancellationToken)"/> will actually flush the underlying output during rendering.
+    /// Indicates whether <see cref="FlushAsync"/> will actually flush the underlying output during rendering.
     /// </summary>
     protected bool CanFlush => _outputFlush is not null;
 
@@ -116,9 +127,8 @@ public abstract partial class RazorSlice : IDisposable
     /// Attempts to flush the underlying output the template is being rendered to. Check <see cref="CanFlush"/> to determine if
     /// the output will actually be flushed or not before calling this method.
     /// </summary>
-    /// <param name="cancellationToken"></param>
     /// <returns>A <see cref="ValueTask"/> representing the flush operation.</returns>
-    protected ValueTask<HtmlString> FlushAsync(CancellationToken cancellationToken = default)
+    protected ValueTask<HtmlString> FlushAsync()
     {
         if (!CanFlush || _outputFlush is null)
         {
@@ -126,7 +136,7 @@ public abstract partial class RazorSlice : IDisposable
         }
 
 #pragma warning disable CA2012 // Use ValueTasks correctly: The ValueTask is observed in code below
-        var flushTask = _outputFlush(cancellationToken);
+        var flushTask = _outputFlush(CancellationToken);
 #pragma warning restore CA2012
 
         if (flushTask.HandleSynchronousCompletion())

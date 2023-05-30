@@ -46,20 +46,20 @@ public abstract class RazorSliceHttpResult : RazorSlice, IResult
         httpContext.Response.RegisterForDispose(this);
 
 #pragma warning disable CA2012 // Use ValueTasks correctly: The ValueTask is observed in code below
-        var renderTask = this.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, htmlEncoder);
+        var renderTask = this.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, htmlEncoder, httpContext.RequestAborted);
 #pragma warning restore CA2012
 
         if (renderTask.HandleSynchronousCompletion())
         {
-            return httpContext.Response.BodyWriter.FlushAsync().AsTask();
+            return httpContext.Response.BodyWriter.FlushAsync(httpContext.RequestAborted).AsTask();
         }
 
-        return AwaitRenderTaskAndFlushResponse(renderTask, httpContext.Response.BodyWriter);
+        return AwaitRenderTaskAndFlushResponse(renderTask, httpContext.Response.BodyWriter, httpContext.RequestAborted);
     }
 
-    private static async Task AwaitRenderTaskAndFlushResponse(ValueTask renderTask, PipeWriter responseBodyWriter)
+    private static async Task AwaitRenderTaskAndFlushResponse(ValueTask renderTask, PipeWriter responseBodyWriter, CancellationToken cancellationToken)
     {
         await renderTask;
-        await responseBodyWriter.FlushAsync();
+        await responseBodyWriter.FlushAsync(cancellationToken);
     }
 }
