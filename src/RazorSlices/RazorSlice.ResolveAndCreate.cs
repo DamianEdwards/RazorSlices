@@ -32,7 +32,15 @@ public abstract partial class RazorSlice
         var referencedAssemblies = entryAssembly.GetReferencedAssemblies();
         foreach (var assemblyName in referencedAssemblies)
         {
-            AddSlicesFromAssembly(sliceDefinitions, Assembly.Load(assemblyName));
+            if (!IgnoreAssembly(assemblyName.Name))
+            {
+                try
+                {
+                    var assembly = Assembly.Load(assemblyName);
+                    AddSlicesFromAssembly(sliceDefinitions, assembly);
+                }
+                catch (Exception) { } // Ignore execptions when loading assemblies
+            }
         }
 
         // Load slices from bin-deployed assemblies
@@ -41,13 +49,17 @@ public abstract partial class RazorSlice
             var assembliesInBin = Directory.GetFiles(binDir, "*.dll");
             foreach (var assemblyPath in assembliesInBin)
             {
-                if (assemblyPath != entryAssembly.Location && File.Exists(assemblyPath))
+                if (assemblyPath != entryAssembly.Location && File.Exists(assemblyPath) && !IgnoreAssembly(Path.GetFileName(assemblyPath)))
                 {
-                    var peerAssembly = Assembly.LoadFrom(assemblyPath);
-                    if (referencedAssemblies.FirstOrDefault(ra => ra.FullName == peerAssembly.GetName().FullName) is null)
+                    try
                     {
-                        AddSlicesFromAssembly(sliceDefinitions, peerAssembly);
+                        var peerAssembly = Assembly.LoadFrom(assemblyPath);
+                        if (referencedAssemblies.FirstOrDefault(ra => ra.FullName == peerAssembly.GetName().FullName) is null)
+                        {
+                            AddSlicesFromAssembly(sliceDefinitions, peerAssembly);
+                        }
                     }
+                    catch (Exception) { } // Ignore execptions when loading assemblies
                 }
             }
         }
@@ -62,6 +74,13 @@ public abstract partial class RazorSlice
             .ToDictionary(entry => entry.Identifier, entry => entry)
             .AsReadOnly();
         _slicesByType = sliceDefinitions.ToDictionary(item => item.SliceType, item => item).AsReadOnly();
+
+        static bool IgnoreAssembly(string? assemblyName)
+        {
+            return assemblyName is null
+                || assemblyName.StartsWith("System.", StringComparison.OrdinalIgnoreCase)
+                || assemblyName.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase);
+        }
 
         static void AddSlicesFromAssembly(List<SliceDefinition> definitions, Assembly assembly)
         {
