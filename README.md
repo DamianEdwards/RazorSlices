@@ -127,7 +127,7 @@ The library is still new and features are being actively added.
 - DI-activated properties via `@inject`
 - Asynchronous rendering, i.e. the template can contain `await` statements, e.g. `@await WriteTheThing()`
 - Writing UTF8 `byte[]` values directly to the output
-- Rendering directly to `IBufferWriter<byte>`, `PipeWriter`, `Stream`, and `TextWriter` outputs including optimizations for not boxing struct values, zero-allocation rendering of primitives like numbers, etc. (rather than just calling `ToString()` on everything)
+- Rendering directly to `IBufferWriter<byte>`, `PipeWriter`, `Stream`, `TextWriter`, `StringBuilder`, and `string` outputs, including optimizations for not boxing struct values, zero-allocation rendering of primitives like numbers, etc. (rather than just calling `ToString()` on everything)
 - Return a slice instance directly as an `IResult` in minimal APIs via `@inherits RazorSliceHttpResult` and `Results.Extensions.RazorSlice("/Slices/Hello.cshtml")`
 - Avoiding slice lookup costs at render time via `RazorSlice.ResolveSliceFactory(string sliceName)` which returns a `SliceFactory` delegate that can be cached and then used to directly create an instance of the slice whenever needed. Use `SliceFactory<TModel> RazorSlice.ResolveSliceFactory<TModel>(string sliceName, TModel model)` for slices with strongly-typed models.
 
@@ -144,7 +144,6 @@ The library is still new and features are being actively added.
   - Don't mark the template's `ExecuteAsync` method as an `async` method unless the template contains `await` statements to save on the async state machine overhead
   - Support compiling static template elements to UTF8 string literals (`ReadOnlySpan<char>`) instead of string literals to save on the UTF16 to UTF8 conversion during rendering
   - Support disabling the default registered `@addtaghelper` and `@inject` directives which rely on MVC
-- Rendering directly to a string, `StringBuilder`, etc.
 
 ### No intention to support
 
