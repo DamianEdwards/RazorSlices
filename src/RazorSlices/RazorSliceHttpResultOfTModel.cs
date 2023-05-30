@@ -1,5 +1,6 @@
 ﻿using System.IO.Pipelines;
 using System.Text.Encodings.Web;
+using Microsoft.Extensions.DependencyInjection;
 using RazorSlices;
 
 namespace Microsoft.AspNetCore.Http.HttpResults;
@@ -38,24 +39,27 @@ public abstract class RazorSliceHttpResult<TModel> : RazorSlice<TModel>, IResult
     {
         ArgumentNullException.ThrowIfNull(httpContext);
 
+        var htmlEncoder = HtmlEncoder ?? httpContext.RequestServices.GetService<HtmlEncoder>();
+
         httpContext.Response.StatusCode = StatusCode;
         httpContext.Response.ContentType = ContentType;
         httpContext.Response.RegisterForDispose(this);
 
-        var renderTask = this.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, HtmlEncoder);
+#pragma warning disable CA2012 // Use ValueTasks correctly: The ValueTask is observed in code below
+        var renderTask = this.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, htmlEncoder, httpContext.RequestAborted);
+#pragma warning restore CA2012
 
-        if (renderTask.IsCompletedSuccessfully)
+        if (renderTask.HandleSynchronousCompletion())
         {
-            renderTask.GetAwaiter().GetResult();
-            return httpContext.Response.BodyWriter.FlushAsync().AsTask();
+            return httpContext.Response.BodyWriter.FlushAsync(httpContext.RequestAborted).AsTask();
         }
 
-        return AwaitRenderTaskAndFlushResponse(renderTask, httpContext.Response.BodyWriter);
+        return AwaitRenderTaskAndFlushResponse(renderTask, httpContext.Response.BodyWriter, httpContext.RequestAborted);
     }
 
-    private static async Task AwaitRenderTaskAndFlushResponse(ValueTask renderTask, PipeWriter responseBodyWriter)
+    private static async Task AwaitRenderTaskAndFlushResponse(ValueTask renderTask, PipeWriter responseBodyWriter, CancellationToken cancellationToken)
     {
         await renderTask;
-        await responseBodyWriter.FlushAsync();
+        await responseBodyWriter.FlushAsync(cancellationToken);
     }
 }

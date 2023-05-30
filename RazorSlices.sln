@@ -18,9 +18,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		global.json = global.json
+		nuget.config = nuget.config
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RazorSlices.Samples.RazorClassLibrary", "samples\RazorSlices.Samples.RazorClassLibrary\RazorSlices.Samples.RazorClassLibrary.csproj", "{765DAF9F-32BD-407E-A154-C6D5314CD8B1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.Samples.RazorClassLibrary", "samples\RazorSlices.Samples.RazorClassLibrary\RazorSlices.Samples.RazorClassLibrary.csproj", "{765DAF9F-32BD-407E-A154-C6D5314CD8B1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

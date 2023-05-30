@@ -14,11 +14,12 @@ public static class RazorSliceStringBuilderExtensions
     /// <param name="slice">The <see cref="RazorSlice" /> instance.</param>
     /// <param name="stringBuilder">The <see cref="StringBuilder"/> to render the template to.</param>
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
-    public static ValueTask RenderAsync(this RazorSlice slice, StringBuilder stringBuilder, HtmlEncoder? htmlEncoder = null)
+    public static ValueTask RenderAsync(this RazorSlice slice, StringBuilder stringBuilder, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
         using var stringWriter = new StringWriter(stringBuilder);
-        return slice.RenderAsync(stringWriter, htmlEncoder);
+        return slice.RenderAsync(stringWriter, htmlEncoder, cancellationToken);
     }
 
     /// <summary>
@@ -26,11 +27,12 @@ public static class RazorSliceStringBuilderExtensions
     /// </summary>
     /// <param name="slice">The <see cref="RazorSlice" /> instance.</param>
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
+    /// <param name="cancellationToken"></param>
     /// <returns>The template rendered to a <see cref="string"/>.</returns>
-    public static ValueTask<string> RenderAsync(this RazorSlice slice, HtmlEncoder? htmlEncoder = null)
+    public static ValueTask<string> RenderAsync(this RazorSlice slice, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
         var sb = new StringBuilder();
-        var task = slice.RenderAsync(sb, htmlEncoder);
+        var task = slice.RenderAsync(sb, htmlEncoder, cancellationToken);
 
         if (task.IsCompletedSuccessfully)
         {

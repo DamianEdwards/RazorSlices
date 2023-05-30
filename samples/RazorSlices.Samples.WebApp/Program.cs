@@ -5,6 +5,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddWebEncoders();
 builder.Services.AddSingleton<LoremService>();
 
 var app = builder.Build();
