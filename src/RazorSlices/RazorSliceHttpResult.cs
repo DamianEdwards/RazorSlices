@@ -26,7 +26,9 @@ public abstract class RazorSliceHttpResult : RazorSlice, IResult
     /// <summary>
     /// Gets the content type: <c>text/html; charset=utf-8</c>
     /// </summary>
+#pragma warning disable CA1822 // Mark members as static
     public string ContentType => "text/html; charset=utf-8";
+#pragma warning restore CA1822 // Mark members as static
 
     /// <summary>
     /// Gets or sets the <see cref="System.Text.Encodings.Web.HtmlEncoder" /> instance to use when rendering the template. If
