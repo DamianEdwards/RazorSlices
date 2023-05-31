@@ -37,16 +37,5 @@ public static class RazorSlicePipeWriterExtensions
     }
 
     private static Func<CancellationToken, ValueTask> GetFlushWrapper(PipeWriter pipeWriter)
-        => ct => AsValueTask(pipeWriter.FlushAsync(ct));
-
-    private static ValueTask AsValueTask<TResult>(ValueTask<TResult> valueTask)
-    {
-        if (valueTask.IsCompletedSuccessfully)
-        {
-            var _ = valueTask.GetAwaiter().GetResult();
-            return default;
-        }
-
-        return new ValueTask(valueTask.AsTask());
-    }
+        => ct => pipeWriter.FlushAsync(ct).GetAsValueTask();
 }
