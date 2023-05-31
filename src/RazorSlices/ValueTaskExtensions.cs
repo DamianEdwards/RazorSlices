@@ -14,7 +14,7 @@ internal static class ValueTaskExtensions
         if (valueTask.IsCompletedSuccessfully)
         {
             // Signal consumption to the IValueTaskSource
-            var _ =valueTask.GetAwaiter().GetResult();
+            var _ = valueTask.GetAwaiter().GetResult();
             return Task.CompletedTask;
         }
         else
