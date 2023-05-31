@@ -53,7 +53,7 @@ public abstract class RazorSliceHttpResult : RazorSlice, IResult
 
         if (renderTask.HandleSynchronousCompletion())
         {
-            return httpContext.Response.BodyWriter.FlushAsync(httpContext.RequestAborted).AsTask();
+            return httpContext.Response.BodyWriter.FlushAsync(httpContext.RequestAborted).GetAsTask();
         }
 
         return AwaitRenderTaskAndFlushResponse(renderTask, httpContext.Response.BodyWriter, httpContext.RequestAborted);
