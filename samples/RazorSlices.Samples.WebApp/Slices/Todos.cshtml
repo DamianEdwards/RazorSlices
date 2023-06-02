@@ -24,12 +24,7 @@
                 </tr>
                 @foreach (var todo in Model)
                 {
-                    <tr class="@(todo.IsComplete ? "complete" : null)">
-                        <td>@todo.Id</td>
-                        <td><a href="@todo.Id">@todo.Title</a></td>
-                        <td>@todo.DueBy</td>
-                        <td>@(todo.IsComplete ? "Completed" : "Incomplete")</td>
-                    </tr>
+                    @await RenderPartialAsync("/Slices/TodoRow.cshtml", todo)
                 }
             </table>
         </div>
