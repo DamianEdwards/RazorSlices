@@ -19,7 +19,7 @@ public partial class RazorSlice
         if (partialDefinition.ModelType is not null)
         {
             throw new InvalidOperationException($"""
-                The slice '{name}' requires a model of type '{partialDefinition.ModelType.Name}'.
+                The template '{name}' requires a model of type '{partialDefinition.ModelType.Name}'.
                 Call RenderPartialAsync<TModel>(string name, TModel model) to provide the model.
                 """);
         }
@@ -27,8 +27,8 @@ public partial class RazorSlice
         if (partialDefinition.HasInjectableProperties && ServiceProvider is null)
         {
             throw new InvalidOperationException($"""
-                The template '{name}' has @inject properties but the current slice was not provided an IServiceProvider.
-                You can only render partials with @inject properties from a slice that itself has @inject properties.
+                The template '{name}' has @inject properties but the current template was not provided an IServiceProvider.
+                You can only render partials with @inject properties from a template that itself has @inject properties.
                 """);
         }
 
