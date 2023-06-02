@@ -62,10 +62,10 @@ struct LoremParams
     public int ParagraphCount;
     public int ParagraphSentenceCount;
 
-    public LoremParams(int? paragraphCount, int? paragraphSenceCount)
+    public LoremParams(int? paragraphCount, int? paragraphSentenceCount)
     {
         ParagraphCount = paragraphCount ?? 3;
-        ParagraphSentenceCount = paragraphSenceCount ?? 5;
+        ParagraphSentenceCount = paragraphSentenceCount ?? 5;
     }
 }
 

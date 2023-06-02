@@ -22,6 +22,11 @@ public abstract partial class RazorSlice : IDisposable
     private Dictionary<string, Func<Task>>? _sectionWriters;
 
     /// <summary>
+    /// Gets or sets the <see cref="IServiceProvider"/> used to resolve services for injectable properties.
+    /// </summary>
+    public IServiceProvider? ServiceProvider { get; set; }
+
+    /// <summary>
     /// A token to monitor for cancellation requests.
     /// </summary>
     public CancellationToken CancellationToken { get; private set; }
@@ -45,18 +50,37 @@ public abstract partial class RazorSlice : IDisposable
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
-    [MemberNotNull(nameof(_bufferWriter))]
     public ValueTask RenderAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync = null, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(bufferWriter);
 
+        return RenderToBufferWriterAsync(bufferWriter, flushAsync, htmlEncoder, cancellationToken);
+    }
+
+    /// <summary>
+    /// Renders the template to the specified <see cref="TextWriter"/>.
+    /// </summary>
+    /// <param name="textWriter">The <see cref="TextWriter"/> to render the template to.</param>
+    /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="textWriter"/> is <c>null</c>.</exception>
+    public ValueTask RenderAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(textWriter);
+
+        return RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
+    }
+
+    [MemberNotNull(nameof(_bufferWriter))]
+    internal ValueTask RenderToBufferWriterAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+    {
         // TODO: Render via layout if LayoutAttribute is set
 
         _bufferWriter = bufferWriter;
         _textWriter = null;
         _outputFlush = flushAsync;
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
-
         CancellationToken = cancellationToken;
 
         var executeTask = ExecuteAsync();
@@ -70,19 +94,9 @@ public abstract partial class RazorSlice : IDisposable
         // TODO: Should we explicitly flush here if flushAsync is not null?
     }
 
-    /// <summary>
-    /// Renders the template to the specified <see cref="TextWriter"/>.
-    /// </summary>
-    /// <param name="textWriter">The <see cref="TextWriter"/> to render the template to.</param>
-    /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="textWriter"/> is <c>null</c>.</exception>
     [MemberNotNull(nameof(_textWriter), nameof(_outputFlush))]
-    public ValueTask RenderAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
+    internal ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(textWriter);
-
         // TODO: Render via layout if LayoutAttribute is set
 
         _bufferWriter = null;
@@ -100,8 +114,8 @@ public abstract partial class RazorSlice : IDisposable
             }
             return AwaitOutputFlushTask(flushTask);
         };
-        _htmlEncoder = htmlEncoder ?? _htmlEncoder;
 
+        _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
         var executeTask = ExecuteAsync();

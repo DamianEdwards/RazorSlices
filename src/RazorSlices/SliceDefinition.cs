@@ -9,6 +9,7 @@ internal sealed class SliceDefinition
 {
     private readonly string _identifier;
     private readonly Type _sliceType;
+    private readonly Type? _modelType;
     private readonly Delegate _factory;
     private readonly IEnumerable<PropertyInfo> _injectableProperties;
 
@@ -17,12 +18,14 @@ internal sealed class SliceDefinition
     /// </summary>
     /// <param name="identifier">The unique identifier of the slice.</param>
     /// <param name="sliceType">The type of the slice.</param>
+    /// <param name="modelType">The type of the slice model if it has one.</param>
     /// <param name="factory">The factory delegate used to create instances of the slice.</param>
     /// <param name="injectableProperties">The properties of the slice that can be injected.</param>
-    internal SliceDefinition(string identifier, Type sliceType, Delegate factory, IEnumerable<PropertyInfo> injectableProperties)
+    public SliceDefinition(string identifier, Type sliceType, Type? modelType, Delegate factory, IEnumerable<PropertyInfo> injectableProperties)
     {
         _identifier = identifier;
         _sliceType = sliceType;
+        _modelType = modelType;
         _factory = factory;
         _injectableProperties = injectableProperties;
         HasInjectableProperties = injectableProperties.Any();
@@ -31,22 +34,27 @@ internal sealed class SliceDefinition
     /// <summary>
     /// Gets the unique identifier of the slice.
     /// </summary>
-    internal string Identifier => _identifier;
+    public string Identifier => _identifier;
 
     /// <summary>
     /// Gets the type of the slice.
     /// </summary>
-    internal Type SliceType => _sliceType;
+    public Type SliceType => _sliceType;
+
+    /// <summary>
+    /// Gets the type of the slice model.
+    /// </summary>
+    public Type? ModelType => _modelType;
 
     /// <summary>
     /// Gets the factory delegate used to create instances of the slice.
     /// </summary>
-    internal Delegate Factory => _factory;
+    public Delegate Factory => _factory;
 
     /// <summary>
     /// Gets the dependency-injected properties of the slice.
     /// </summary>
-    internal IEnumerable<PropertyInfo> InjectableProperties => _injectableProperties;
+    public IEnumerable<PropertyInfo> InjectableProperties => _injectableProperties;
 
     /// <summary>
     /// Gets a value indicating whether this slice definition has any dependency-injected properties
