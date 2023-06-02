@@ -8,7 +8,6 @@ public partial class RazorSlice
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="slice"></param>
     /// <param name="name"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
