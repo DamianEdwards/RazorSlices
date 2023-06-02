@@ -6,14 +6,15 @@ namespace RazorSlices;
 public partial class RazorSlice
 {
     /// <summary>
-    /// 
+    /// Renders a template inline. Call this method from within a template to render another template, e.g.
+    /// <c>@await RenderPartialAsync("/_Footer.cshtml")</c>
     /// </summary>
-    /// <param name="name"></param>
-    /// <returns></returns>
+    /// <param name="name">The name of the partial template to render.</param>
+    /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
     /// <exception cref="InvalidOperationException"></exception>
     protected ValueTask<HtmlString> RenderPartialAsync(string name)
     {
-        var partialDefinition = RazorSlice.ResolveSliceDefinition(name);
+        var partialDefinition = ResolveSliceDefinition(name);
 
         if (partialDefinition.ModelType is not null)
         {
@@ -32,18 +33,24 @@ public partial class RazorSlice
         }
 
         var partialSlice = ((SliceFactory)partialDefinition.Factory)();
-        return RenderPartialAsync(partialSlice);
+
+        return RenderPartialAsyncImpl(partialSlice);
     }
 
     /// <summary>
-    /// 
+    /// Renders a template inline.
     /// </summary>
-    /// <param name="partial"></param>
-    /// <returns></returns>
+    /// <param name="partial">The template instance to render.</param>
+    /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
     protected internal ValueTask<HtmlString> RenderPartialAsync(RazorSlice partial)
     {
         ArgumentNullException.ThrowIfNull(partial);
 
+        return RenderPartialAsyncImpl(partial);
+    }
+
+    private ValueTask<HtmlString> RenderPartialAsyncImpl(RazorSlice partial)
+    {
         ValueTask renderPartialTask = default;
 
 #pragma warning disable CA2012 // Use ValueTasks correctly: Completion handled by HandleSynchronousCompletion
