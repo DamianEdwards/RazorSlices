@@ -71,7 +71,8 @@ public abstract partial class RazorSlice
             .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.ModelType, slice.Factory, slice.InjectableProperties)))
             // Add entries without leading slash and .cshtml suffix
             .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.ModelType, slice.Factory, slice.InjectableProperties)))
-            .ToDictionary(entry => entry.Identifier, entry => entry)
+            // Case-insensitive dictionary so lookup is case-insensitive
+            .ToDictionary(entry => entry.Identifier, entry => entry, StringComparer.OrdinalIgnoreCase)
             .AsReadOnly();
         _slicesByType = sliceDefinitions.ToDictionary(item => item.SliceType, item => item).AsReadOnly();
 
