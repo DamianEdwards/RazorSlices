@@ -11,7 +11,9 @@ public partial class RazorSlice
     /// </summary>
     /// <param name="name">The name of the partial template to render.</param>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the template requires a model or has @inject properties and <see cref="ServiceProvider"/> is <c>null</c>.
+    /// </exception>
     protected ValueTask<HtmlString> RenderPartialAsync(string name)
     {
         var partialDefinition = ResolveSliceDefinition(name);
@@ -46,7 +48,9 @@ public partial class RazorSlice
     /// <param name="name">The name of the partial template to render.</param>
     /// <param name="model">The model to use when rendering the partial template.</param>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the template does require a model of type <typeparamref name="TModel"/> or has @inject properties and <see cref="ServiceProvider"/> is <c>null</c>.
+    /// </exception>
     protected ValueTask<HtmlString> RenderPartialAsync<TModel>(string name, TModel model)
     {
         var partialDefinition = ResolveSliceDefinition(name);
@@ -88,6 +92,11 @@ public partial class RazorSlice
 
     private ValueTask<HtmlString> RenderPartialAsyncImpl(RazorSlice partial)
     {
+        partial.HttpContext = HttpContext;
+        // Avoid setting the service provider directly from our ServiceProvider property so it can be lazily initialized from HttpContext.RequestServices
+        // only if needed
+        partial.ServiceProvider = _serviceProvider;
+
         ValueTask renderPartialTask = default;
 
 #pragma warning disable CA2012 // Use ValueTasks correctly: Completion handled by HandleSynchronousCompletion

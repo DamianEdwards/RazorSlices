@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Html;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Internal;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 
@@ -14,6 +15,7 @@ namespace RazorSlices;
 /// </summary>
 public abstract partial class RazorSlice : IDisposable
 {
+    private IServiceProvider? _serviceProvider;
     private HtmlEncoder _htmlEncoder = HtmlEncoder.Default;
     private IBufferWriter<byte>? _bufferWriter;
     private TextWriter? _textWriter;
@@ -24,7 +26,18 @@ public abstract partial class RazorSlice : IDisposable
     /// <summary>
     /// Gets or sets the <see cref="IServiceProvider"/> used to resolve services for injectable properties.
     /// </summary>
-    public IServiceProvider? ServiceProvider { get; set; }
+    public IServiceProvider? ServiceProvider
+    {
+        // Ensure service provider can be lazily initialized from HttpContext.RequestServices so we don't pay the scope cost
+        // if it's not needed.
+        get => _serviceProvider ??= HttpContext?.RequestServices;
+        set => _serviceProvider = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the <see cref="HttpContext"/> associated with the current request.
+    /// </summary>
+    public HttpContext? HttpContext { get; set; }
 
     /// <summary>
     /// A token to monitor for cancellation requests.
