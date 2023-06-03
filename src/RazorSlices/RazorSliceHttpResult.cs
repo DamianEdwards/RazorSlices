@@ -41,7 +41,9 @@ public abstract class RazorSliceHttpResult : RazorSlice, IResult
     {
         ArgumentNullException.ThrowIfNull(httpContext);
 
-        var htmlEncoder = HtmlEncoder ?? httpContext.RequestServices.GetService<HtmlEncoder>();
+        ServiceProvider ??= httpContext.RequestServices;
+
+        var htmlEncoder = HtmlEncoder ?? ServiceProvider.GetService<HtmlEncoder>();
 
         httpContext.Response.StatusCode = StatusCode;
         httpContext.Response.ContentType = ContentType;

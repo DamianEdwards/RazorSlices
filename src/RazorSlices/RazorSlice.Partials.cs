@@ -19,16 +19,16 @@ public partial class RazorSlice
         if (partialDefinition.ModelType is not null)
         {
             throw new InvalidOperationException($"""
-                The slice '{name}' requires a model of type '{partialDefinition.ModelType.Name}'.
-                Call RenderPartialAsync<TModel>(string name, TModel model) to provide the model.
+                The template '{name}' requires a model of type '{partialDefinition.ModelType.Name}'.
+                Call {nameof(RenderPartialAsync)}<TModel>(string name, TModel model) to provide the model.
                 """);
         }
 
         if (partialDefinition.HasInjectableProperties && ServiceProvider is null)
         {
             throw new InvalidOperationException($"""
-                The template '{name}' has @inject properties but the current slice was not provided an IServiceProvider.
-                You can only render partials with @inject properties from a slice that itself has @inject properties.
+                The template '{name}' has @inject properties but the current template's {nameof(ServiceProvider)} property is null.
+                Ensure the {nameof(ServiceProvider)} property is set to a non-null value before calling {nameof(RenderPartialAsync)}.
                 """);
         }
 
@@ -54,16 +54,16 @@ public partial class RazorSlice
         if (partialDefinition.ModelType is null || !partialDefinition.ModelType.IsAssignableFrom(typeof(TModel)))
         {
             throw new InvalidOperationException($"""
-                The template '{name}' requires does not require a model of type '{typeof(TModel).Name}'.
-                Call RenderPartialAsync(string name) to render the template without a model.
+                The template '{name}' does not require a model of type '{typeof(TModel).Name}'.
+                Call {nameof(RenderPartialAsync)}(string name) to render the template without a model.
                 """);
         }
 
         if (partialDefinition.HasInjectableProperties && ServiceProvider is null)
         {
             throw new InvalidOperationException($"""
-                The template '{name}' has @inject properties but the current template was not provided an IServiceProvider.
-                You can only render partials with @inject properties from a template that itself has @inject properties.
+                The template '{name}' has @inject properties but the current template's {nameof(ServiceProvider)} property is null.
+                Ensure the {nameof(ServiceProvider)} property is set to a non-null value before calling {nameof(RenderPartialAsync)}.
                 """);
         }
 
