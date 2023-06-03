@@ -39,7 +39,7 @@ public abstract partial class RazorSlice
                     var assembly = Assembly.Load(assemblyName);
                     AddSlicesFromAssembly(sliceDefinitions, assembly);
                 }
-                catch (Exception) { } // Ignore execptions when loading assemblies
+                catch (Exception) { } // Ignore exceptions when loading assemblies
             }
         }
 
@@ -59,19 +59,20 @@ public abstract partial class RazorSlice
                             AddSlicesFromAssembly(sliceDefinitions, peerAssembly);
                         }
                     }
-                    catch (Exception) { } // Ignore execptions when loading assemblies
+                    catch (Exception) { } // Ignore exceptions when loading assemblies
                 }
             }
         }
 
         _slicesByName = sliceDefinitions
             // Add entries without leading slash
-            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..], slice.SliceType, slice.Factory, slice.InjectableProperties)))
+            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..], slice.SliceType, slice.ModelType, slice.Factory, slice.InjectableProperties)))
             // Add entries without .cshtml suffix
-            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.Factory, slice.InjectableProperties)))
+            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.ModelType, slice.Factory, slice.InjectableProperties)))
             // Add entries without leading slash and .cshtml suffix
-            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.Factory, slice.InjectableProperties)))
-            .ToDictionary(entry => entry.Identifier, entry => entry)
+            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.ModelType, slice.Factory, slice.InjectableProperties)))
+            // Case-insensitive dictionary so lookup is case-insensitive
+            .ToDictionary(entry => entry.Identifier, entry => entry, StringComparer.OrdinalIgnoreCase)
             .AsReadOnly();
         _slicesByType = sliceDefinitions.ToDictionary(item => item.SliceType, item => item).AsReadOnly();
 
@@ -119,7 +120,7 @@ public abstract partial class RazorSlice
             {
                 sliceFactory = GetSliceFactory(rci.Type);
             }
-            var sliceDefinition = new SliceDefinition(rci.Identifier, rci.Type, sliceFactory, injectableProperties);
+            var sliceDefinition = new SliceDefinition(rci.Identifier, rci.Type, GetSliceModel(rci.Type), sliceFactory, injectableProperties);
             allSlices.Add(sliceDefinition);
         }
 
@@ -186,6 +187,10 @@ public abstract partial class RazorSlice
         var sliceVariable = Expression.Variable(sliceType, "slice");
         var serviceProviderParam = Expression.Parameter(serviceProviderType, "serviceProvider");
 
+        // Create expression to set service provider property: slice.ServiceProvider = serviceProvider;
+        var serviceProviderPropertyInfo = sliceType.GetProperty(nameof(ServiceProvider))!;
+        expressions.Add(Expression.Assign(Expression.MakeMemberAccess(sliceVariable, serviceProviderPropertyInfo), serviceProviderParam));
+
         // Create expressions to set all the injectable properties
         foreach (PropertyInfo injectablePropertyInfo in injectableProperties)
         {
@@ -213,6 +218,7 @@ public abstract partial class RazorSlice
             // RazorSlice<TModel> CreateSlice<TModel>(TModel model, IServiceProvider serviceProvider)
             // {
             //     var slice = new SliceType();
+            //     slice.ServiceProvider = serviceProvider;
             //     slice.MyService = serviceProvider.GetRequiredServices<MyService>()
             //     // ...
             //     slice.Model = model
@@ -234,6 +240,7 @@ public abstract partial class RazorSlice
             // RazorSlice CreateSlice(IServiceProvider serviceProvider)
             // {
             //     var slice = new SliceType();
+            //     slice.ServiceProvider = serviceProvider;
             //     slice.MyService = serviceProvider.GetRequiredServices<MyService>()
             //     // ...
             //     return slice;
@@ -271,6 +278,13 @@ public abstract partial class RazorSlice
         }
 
         return false;
+    }
+
+    private static Type? GetSliceModel(Type sliceType)
+    {
+        var modelPropInfo = sliceType.GetProperty(nameof(RazorSlice<object>.Model));
+        var modelType = modelPropInfo?.PropertyType;
+        return modelType;
     }
 
     /// <summary>
@@ -431,6 +445,16 @@ public abstract partial class RazorSlice
         }
 
         return sliceType;
+    }
+
+    internal static SliceDefinition ResolveSliceDefinition(string sliceName)
+    {
+        if (!_slicesByName.TryGetValue(sliceName, out var sliceDefinition))
+        {
+            throw new ArgumentException($"No Razor slice with name '{sliceName}' was found.", nameof(sliceName));
+        }
+
+        return sliceDefinition;
     }
 
     private static SliceFactory ResolveSliceFactoryImpl(string sliceName)

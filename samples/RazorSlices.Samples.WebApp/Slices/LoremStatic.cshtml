@@ -278,11 +278,7 @@
         </div>
     </main>
 
-    <footer class="footer mt-auto py-3 bg-light">
-        <div class="container">
-            <a href="https://github.com/DamianEdwards/RazorSlices"><span class="text-muted">RazorSlices</span></a>
-        </div>
-    </footer>
+    @await RenderPartialAsync("/Slices/_Footer.cshtml")
 </body>
 </html>
 

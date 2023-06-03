@@ -24,21 +24,12 @@
                 </tr>
                 @foreach (var todo in Model)
                 {
-                    <tr class="@(todo.IsComplete ? "complete" : null)">
-                        <td>@todo.Id</td>
-                        <td><a href="@todo.Id">@todo.Title</a></td>
-                        <td>@todo.DueBy</td>
-                        <td>@(todo.IsComplete ? "Completed" : "Incomplete")</td>
-                    </tr>
+                    @await RenderPartialAsync("/Slices/TodoRow.cshtml", todo)
                 }
             </table>
         </div>
     </main>
 
-    <footer class="footer mt-auto py-3 bg-light">
-        <div class="container">
-            <a href="https://github.com/DamianEdwards/RazorSlices"><span class="text-muted">RazorSlices</span></a>
-        </div>
-    </footer>
+    @await RenderPartialAsync("/Slices/_Footer.cshtml")
 </body>
 </html>

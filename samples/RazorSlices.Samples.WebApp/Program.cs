@@ -46,7 +46,7 @@ app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) 
     return Results.Ok(new { HtmlString = stringBuilder.ToString() });
 });
 
-app.MapGet("/", () => Results.Extensions.RazorSlice("/Slices/Todos.cshtml", Todos.AllTodos));
+app.MapGet("/", () => Results.Extensions.RazorSlice("/slices/todos", Todos.AllTodos));
 app.MapGet("/{id:int}", (int id) =>
 {
     var todo = Todos.AllTodos.FirstOrDefault(t => t.Id == id);
@@ -62,10 +62,10 @@ struct LoremParams
     public int ParagraphCount;
     public int ParagraphSentenceCount;
 
-    public LoremParams(int? paragraphCount, int? paragraphSenceCount)
+    public LoremParams(int? paragraphCount, int? paragraphSentenceCount)
     {
         ParagraphCount = paragraphCount ?? 3;
-        ParagraphSentenceCount = paragraphSenceCount ?? 5;
+        ParagraphSentenceCount = paragraphSentenceCount ?? 5;
     }
 }
 
