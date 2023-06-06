@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc.Razor.Internal;
 using Microsoft.AspNetCore.Razor.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,38 +29,41 @@ public abstract partial class RazorSlice
         // TODO: This is likely problematic for testing, etc. Should almost certainly be doing this via IHostingEnvironment & DI.
         AddSlicesFromAssembly(sliceDefinitions, entryAssembly);
 
-        // Load slices from referenced assemblies
-        var referencedAssemblies = entryAssembly.GetReferencedAssemblies();
-        foreach (var assemblyName in referencedAssemblies)
+        if (RuntimeFeature.IsDynamicCodeSupported)
         {
-            if (!IgnoreAssembly(assemblyName.Name))
+            // Load slices from referenced assemblies
+            var referencedAssemblies = entryAssembly.GetReferencedAssemblies();
+            foreach (var assemblyName in referencedAssemblies)
             {
-                try
-                {
-                    var assembly = Assembly.Load(assemblyName);
-                    AddSlicesFromAssembly(sliceDefinitions, assembly);
-                }
-                catch (Exception) { } // Ignore exceptions when loading assemblies
-            }
-        }
-
-        // Load slices from bin-deployed assemblies
-        if (Path.GetDirectoryName(entryAssembly.Location) is { } binDir && Directory.Exists(binDir))
-        {
-            var assembliesInBin = Directory.GetFiles(binDir, "*.dll");
-            foreach (var assemblyPath in assembliesInBin)
-            {
-                if (assemblyPath != entryAssembly.Location && File.Exists(assemblyPath) && !IgnoreAssembly(Path.GetFileName(assemblyPath)))
+                if (!IgnoreAssembly(assemblyName.Name))
                 {
                     try
                     {
-                        var peerAssembly = Assembly.LoadFrom(assemblyPath);
-                        if (referencedAssemblies.FirstOrDefault(ra => ra.FullName == peerAssembly.GetName().FullName) is null)
-                        {
-                            AddSlicesFromAssembly(sliceDefinitions, peerAssembly);
-                        }
+                        var assembly = Assembly.Load(assemblyName);
+                        AddSlicesFromAssembly(sliceDefinitions, assembly);
                     }
                     catch (Exception) { } // Ignore exceptions when loading assemblies
+                }
+            }
+
+            // Load slices from bin-deployed assemblies
+            if (Path.GetDirectoryName(entryAssembly.Location) is { } binDir && Directory.Exists(binDir))
+            {
+                var assembliesInBin = Directory.GetFiles(binDir, "*.dll");
+                foreach (var assemblyPath in assembliesInBin)
+                {
+                    if (assemblyPath != entryAssembly.Location && File.Exists(assemblyPath) && !IgnoreAssembly(Path.GetFileName(assemblyPath)))
+                    {
+                        try
+                        {
+                            var peerAssembly = Assembly.LoadFrom(assemblyPath);
+                            if (referencedAssemblies.FirstOrDefault(ra => ra.FullName == peerAssembly.GetName().FullName) is null)
+                            {
+                                AddSlicesFromAssembly(sliceDefinitions, peerAssembly);
+                            }
+                        }
+                        catch (Exception) { } // Ignore exceptions when loading assemblies
+                    }
                 }
             }
         }
@@ -133,7 +137,7 @@ public abstract partial class RazorSlice
         {
             if (sliceType.GetConstructor(Array.Empty<Type>()) == null)
             {
-                throw new InvalidOperationException("Slice must have a parameterless constructor.");
+                throw new InvalidOperationException($"Slice type {sliceType.Name} must have a parameterless constructor.");
             }
 
             // Strongly-typed model slice
@@ -346,6 +350,21 @@ public abstract partial class RazorSlice
         }
 
         return (SliceFactory)sliceDefinition.Factory;
+    }
+
+    /// <summary>
+    /// Resolves a <see cref="SliceFactory" /> delegate for the provided template <see cref="Type" />.
+    /// </summary>
+    /// <param name="sliceType"></param>
+    /// <returns></returns>
+    public static SliceFactory<TModel> ResolveSliceFactory<TModel>(Type sliceType)
+    {
+        if (!_slicesByType.TryGetValue(sliceType, out var sliceDefinition))
+        {
+            throw new ArgumentException($"No Razor slice of type {sliceType.Name} was found.", nameof(sliceType));
+        }
+
+        return (SliceFactory<TModel>)sliceDefinition.Factory;
     }
 
     /// <summary>

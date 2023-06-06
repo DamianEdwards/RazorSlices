@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using RazorSlices;
 using RazorSlices.Samples.WebApp;
 using RazorSlices.Samples.WebApp.Services;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -46,7 +48,9 @@ app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) 
     return Results.Ok(new { HtmlString = stringBuilder.ToString() });
 });
 
-app.MapGet("/", () => Results.Extensions.RazorSlice("/slices/todos", Todos.AllTodos));
+var todosSliceFactory = RazorSlicesContext.GetTodosSliceFactory("");
+//app.MapGet("/", () => Results.Extensions.RazorSlice("/slices/todos", Todos.AllTodos));
+app.MapGet("/", () => (RazorSliceHttpResult<Todo[]>)todosSliceFactory(Todos.AllTodos));
 app.MapGet("/{id:int}", (int id) =>
 {
     var todo = Todos.AllTodos.FirstOrDefault(t => t.Id == id);
@@ -76,5 +80,26 @@ struct HtmlContentParams
     public HtmlContentParams(bool? encode)
     {
         Encode = encode ?? false;
+    }
+}
+
+public class RazorSlicesContext
+{
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices__Footer", "RazorSlices.Samples.WebApp")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices__ViewImports", "RazorSlices.Samples.WebApp")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_LoremDynamic", "RazorSlices.Samples.WebApp")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_LoremFormattable", "RazorSlices.Samples.WebApp")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_LoremHtmlContent", "RazorSlices.Samples.WebApp")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_LoremInjectableProperties", "RazorSlices.Samples.WebApp")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_LoremStatic", "RazorSlices.Samples.WebApp")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_Todo", "RazorSlices.Samples.WebApp")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_TodoRow", "RazorSlices.Samples.WebApp")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_Todos", "RazorSlices.Samples.WebApp")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_Unicode", "RazorSlices.Samples.WebApp")]
+    public static SliceFactory<Todo[]> GetTodosSliceFactory(string path)
+    {
+        var sliceType = Type.GetType("AspNetCoreGeneratedDocument.Slices_Todos");
+        var sliceFactory = RazorSlice.ResolveSliceFactory<Todo[]>(sliceType);
+        return sliceFactory;
     }
 }
