@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc.Razor.Internal;
 using RazorSlices;
 using RazorSlices.Samples.WebApp;
 using RazorSlices.Samples.WebApp.Services;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,9 +50,12 @@ app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) 
     return Results.Ok(new { HtmlString = stringBuilder.ToString() });
 });
 
-var todosSliceFactory = RazorSlicesContext.GetTodosSliceFactory("");
-//app.MapGet("/", () => Results.Extensions.RazorSlice("/slices/todos", Todos.AllTodos));
-app.MapGet("/", () => (RazorSliceHttpResult<Todo[]>)todosSliceFactory(Todos.AllTodos));
+
+
+
+//var todosSliceFactory = RazorSlicesContext.GetTodosSliceFactory("");
+app.MapGet("/", () => Results.Extensions.RazorSlice("/slices/todos", Todos.AllTodos));
+//app.MapGet("/", () => (RazorSliceHttpResult<Todo[]>)todosSliceFactory(Todos.AllTodos));
 app.MapGet("/{id:int}", (int id) =>
 {
     var todo = Todos.AllTodos.FirstOrDefault(t => t.Id == id);
@@ -58,6 +63,10 @@ app.MapGet("/{id:int}", (int id) =>
         ? Results.Extensions.RazorSlice("/Slices/Todo.cshtml", todo)
         : Results.NotFound();
 });
+
+
+
+
 
 app.Run();
 
@@ -83,8 +92,44 @@ struct HtmlContentParams
     }
 }
 
+
+[RazorSlicesGenerated]
+public partial class RazorSlicesThing
+{
+    
+}
+
+public static class InterceptingStuff
+{
+    private static readonly Type slice_0 = Type.GetType("Slices__Footer");
+    private static readonly PropertyInfo[] slice_0_props = slice_0.GetProperties().Where(pi => pi.GetCustomAttribute<RazorInjectAttribute>() is not null).ToArray();
+    private static readonly Action<RazorSlice, IServiceProvider> slice_0_init = (slice, sp) =>
+    {
+        foreach (var prop in slice_0_props)
+        {
+            prop.SetValue(slice, sp.GetService(prop.PropertyType));
+        }
+    };
+
+    // CoreCLR version
+    private static readonly Delegate slice_1 = 
+
+    [Intercepts()]
+    public static IResult RazorSlice_slice0<TModel>(this IResultExtensions extensions, string _, TModel model)
+    {
+        var slice = Activator.CreateInstance(slice_0) as RazorSliceHttpResult<TModel>;
+        slice.Model = model;
+        slice.Initialize = slice_0_init;
+
+        return slice;
+    }
+}
+
+
 public class RazorSlicesContext
 {
+
+
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices__Footer", "RazorSlices.Samples.WebApp")]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices__ViewImports", "RazorSlices.Samples.WebApp")]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_LoremDynamic", "RazorSlices.Samples.WebApp")]

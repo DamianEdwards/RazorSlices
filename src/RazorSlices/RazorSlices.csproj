@@ -11,6 +11,7 @@
     <AnalysisModeReliability>All</AnalysisModeReliability>
     <AnalysisModePerformance>All</AnalysisModePerformance>
     <AnalysisModeSecurity>All</AnalysisModeSecurity>
+    <IsAotCompatible Condition=" '$(TargetFramework)' == 'net8.0' ">true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

@@ -45,27 +45,6 @@ public abstract partial class RazorSlice
                     catch (Exception) { } // Ignore exceptions when loading assemblies
                 }
             }
-
-            // Load slices from bin-deployed assemblies
-            if (Path.GetDirectoryName(entryAssembly.Location) is { } binDir && Directory.Exists(binDir))
-            {
-                var assembliesInBin = Directory.GetFiles(binDir, "*.dll");
-                foreach (var assemblyPath in assembliesInBin)
-                {
-                    if (assemblyPath != entryAssembly.Location && File.Exists(assemblyPath) && !IgnoreAssembly(Path.GetFileName(assemblyPath)))
-                    {
-                        try
-                        {
-                            var peerAssembly = Assembly.LoadFrom(assemblyPath);
-                            if (referencedAssemblies.FirstOrDefault(ra => ra.FullName == peerAssembly.GetName().FullName) is null)
-                            {
-                                AddSlicesFromAssembly(sliceDefinitions, peerAssembly);
-                            }
-                        }
-                        catch (Exception) { } // Ignore exceptions when loading assemblies
-                    }
-                }
-            }
         }
 
         _slicesByName = sliceDefinitions
