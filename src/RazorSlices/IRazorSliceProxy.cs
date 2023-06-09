@@ -1,78 +1,34 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using RazorSlices;
+﻿namespace RazorSlices;
 
-namespace RazorSlices
+/// <summary>
+/// Represents a source-generated proxy type for a Razor slice.
+/// </summary>
+public interface IRazorSliceProxy<TSlice> where TSlice : RazorSlice
 {
+#if NET7_0_OR_GREATER
     /// <summary>
     /// 
     /// </summary>
-    /// <typeparam name="TSlice"></typeparam>
-    public interface IRazorSliceProxy<TSlice> where TSlice : RazorSlice
-    {
-#if NET7_0_OR_GREATER
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
+    /// <returns></returns>
 #pragma warning disable CA1000 // Do not declare static members on generic types: static abstract
-        abstract static TSlice Create();
+    abstract static TSlice Create();
 #pragma warning restore CA1000
 #endif
-    }
+}
 
+/// <summary>
+/// Represents a source-generated proxy type for a strongly-typed Razor slice.
+/// </summary>
+public interface IRazorSliceProxy<TSlice, TModel> where TSlice : RazorSlice<TModel>
+{
+#if NET7_0_OR_GREATER
     /// <summary>
     /// 
     /// </summary>
-    /// <typeparam name="TSlice"></typeparam>
-    /// <typeparam name="TModel"></typeparam>
-    public interface IRazorSliceProxy<TSlice, TModel> where TSlice : RazorSlice<TModel>
-    {
-#if NET7_0_OR_GREATER
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="model"></param>
-        /// <returns></returns>
+    /// <param name="model"></param>
+    /// <returns></returns>
 #pragma warning disable CA1000 // Do not declare static members on generic types: static abstract
-        abstract static TSlice Create(TModel model);
+    abstract static TSlice Create(TModel model);
 #pragma warning restore CA1000
 #endif
-    }
 }
-
-#if NET7_0_OR_GREATER
-namespace Microsoft.AspNetCore.Http
-{
-    /// <summary>
-    /// 
-    /// </summary>
-    public static class RazorSlicesExtensions
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="TSlice"></typeparam>
-        /// <param name="_"></param>
-        /// <returns></returns>
-        public static RazorSliceHttpResult RazorSlice<TSlice>(this IResultExtensions _)
-            where TSlice : IRazorSliceProxy<RazorSliceHttpResult>
-        {
-            return TSlice.Create();
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="TSlice"></typeparam>
-        /// <typeparam name="TModel"></typeparam>
-        /// <param name="_"></param>
-        /// <param name="model"></param>
-        /// <returns></returns>
-        public static RazorSliceHttpResult<TModel> RazorSlice<TSlice, TModel>(this IResultExtensions _, TModel model)
-            where TSlice : IRazorSliceProxy<RazorSliceHttpResult<TModel>, TModel>
-        {
-            return TSlice.Create(model);
-        }
-    }
-}
-#endif

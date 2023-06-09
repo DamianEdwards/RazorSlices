@@ -47,6 +47,7 @@ public abstract class RazorSliceHttpResult : RazorSlice, IResult
 
         HttpContext = httpContext;
 
+        // The HtmlEncoder property can be set on the instance to avoid the overhead of RequestServices if desired
         var htmlEncoder = HtmlEncoder ?? httpContext.RequestServices.GetService<HtmlEncoder>();
 
         httpContext.Response.StatusCode = StatusCode;

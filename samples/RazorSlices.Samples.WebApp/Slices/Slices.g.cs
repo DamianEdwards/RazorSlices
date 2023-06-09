@@ -21,7 +21,7 @@ public sealed class Todo : IRazorSliceProxy<RazorSliceHttpResult<RazorSlices.Sam
         };
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_Todo", "RazorSlices.Samples.WebApp")]
-    public static RazorSliceHttpResult<RazorSlices.Samples.WebApp.Todo> Create(RazorSlices.Samples.WebApp.Todo model) => RazorSlice.CreateHttpResult(_factory, model);
+    public static RazorSliceHttpResult<RazorSlices.Samples.WebApp.Todo> Create(RazorSlices.Samples.WebApp.Todo model) => RazorSliceFactory.CreateHttpResult(_factory, model);
 }
 
 public sealed class Todos : IRazorSliceProxy<RazorSliceHttpResult<RazorSlices.Samples.WebApp.Todo[]>, RazorSlices.Samples.WebApp.Todo[]>
@@ -38,7 +38,7 @@ public sealed class Todos : IRazorSliceProxy<RazorSliceHttpResult<RazorSlices.Sa
         };
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_Todos", "RazorSlices.Samples.WebApp")]
-    public static RazorSliceHttpResult<RazorSlices.Samples.WebApp.Todo[]> Create(RazorSlices.Samples.WebApp.Todo[] model) => RazorSlice.CreateHttpResult(_factory, model);
+    public static RazorSliceHttpResult<RazorSlices.Samples.WebApp.Todo[]> Create(RazorSlices.Samples.WebApp.Todo[] model) => RazorSliceFactory.CreateHttpResult(_factory, model);
 }
 
 public sealed class TodoRow : IRazorSliceProxy<RazorSlice<RazorSlices.Samples.WebApp.Todo>, RazorSlices.Samples.WebApp.Todo>
@@ -84,7 +84,7 @@ public sealed class LoremDynamic : IRazorSliceProxy<RazorSliceHttpResult<LoremPa
         };
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_LoremDynamic", "RazorSlices.Samples.WebApp")]
-    public static RazorSliceHttpResult<LoremParams> Create(LoremParams model) => RazorSlice.CreateHttpResult(_factory, model);
+    public static RazorSliceHttpResult<LoremParams> Create(LoremParams model) => RazorSliceFactory.CreateHttpResult(_factory, model);
 }
 
 public sealed class LoremFormattable : IRazorSliceProxy<RazorSliceHttpResult<LoremParams>, LoremParams>
@@ -101,7 +101,7 @@ public sealed class LoremFormattable : IRazorSliceProxy<RazorSliceHttpResult<Lor
         };
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_LoremFormattable", "RazorSlices.Samples.WebApp")]
-    public static RazorSliceHttpResult<LoremParams> Create(LoremParams model) => RazorSlice.CreateHttpResult(_factory, model);
+    public static RazorSliceHttpResult<LoremParams> Create(LoremParams model) => RazorSliceFactory.CreateHttpResult(_factory, model);
 }
 
 public sealed class LoremHtmlContent : IRazorSliceProxy<RazorSliceHttpResult<HtmlContentParams>, HtmlContentParams>
@@ -118,7 +118,7 @@ public sealed class LoremHtmlContent : IRazorSliceProxy<RazorSliceHttpResult<Htm
         };
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_LoremHtmlContent", "RazorSlices.Samples.WebApp")]
-    public static RazorSliceHttpResult<HtmlContentParams> Create(HtmlContentParams model) => RazorSlice.CreateHttpResult(_factory, model);
+    public static RazorSliceHttpResult<HtmlContentParams> Create(HtmlContentParams model) => RazorSliceFactory.CreateHttpResult(_factory, model);
 }
 
 public sealed class LoremInjectableProperties : IRazorSliceProxy<RazorSliceHttpResult<LoremParams>, LoremParams>
@@ -139,7 +139,7 @@ public sealed class LoremInjectableProperties : IRazorSliceProxy<RazorSliceHttpR
         };
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_LoremInjectableProperties", "RazorSlices.Samples.WebApp")]
-    public static RazorSliceHttpResult<LoremParams> Create(LoremParams model) => RazorSlice.CreateHttpResult(_factory, model);
+    public static RazorSliceHttpResult<LoremParams> Create(LoremParams model) => RazorSliceFactory.CreateHttpResult(_factory, model);
 }
 
 public sealed class LoremStatic : IRazorSliceProxy<RazorSliceHttpResult>
@@ -151,7 +151,7 @@ public sealed class LoremStatic : IRazorSliceProxy<RazorSliceHttpResult>
         : static () => (RazorSlice)Activator.CreateInstance(_type);
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_LoremStatic", "RazorSlices.Samples.WebApp")]
-    public static RazorSliceHttpResult Create() => RazorSlice.CreateHttpResult(_factory);
+    public static RazorSliceHttpResult Create() => RazorSliceFactory.CreateHttpResult(_factory);
 }
 
 public sealed class Unicode : IRazorSliceProxy<RazorSliceHttpResult>
@@ -163,5 +163,5 @@ public sealed class Unicode : IRazorSliceProxy<RazorSliceHttpResult>
         : static () => (RazorSlice)Activator.CreateInstance(_type);
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_Unicode", "RazorSlices.Samples.WebApp")]
-    public static RazorSliceHttpResult Create() => RazorSlice.CreateHttpResult(_factory);
+    public static RazorSliceHttpResult Create() => RazorSliceFactory.CreateHttpResult(_factory);
 }

@@ -15,7 +15,7 @@ public sealed class FromLibrary : IRazorSliceProxy<RazorSliceHttpResult>
         : static () => (RazorSlice)Activator.CreateInstance(_type);
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_FromLibrary", "RazorSlices.Samples.RazorClassLibrary")]
-    public static RazorSliceHttpResult Create() => RazorSlice.CreateHttpResult(_factory);
+    public static RazorSliceHttpResult Create() => RazorSliceFactory.CreateHttpResult(_factory);
 }
 
 public sealed class Todos : IRazorSliceProxy<RazorSliceHttpResult>
@@ -27,5 +27,5 @@ public sealed class Todos : IRazorSliceProxy<RazorSliceHttpResult>
         : static () => (RazorSlice)Activator.CreateInstance(_type);
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_Todos", "RazorSlices.Samples.RazorClassLibrary")]
-    public static RazorSliceHttpResult Create() => RazorSlice.CreateHttpResult(_factory);
+    public static RazorSliceHttpResult Create() => RazorSliceFactory.CreateHttpResult(_factory);
 }

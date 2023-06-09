@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace RazorSlices;
@@ -33,11 +35,10 @@ public static class RazorSliceFactory
     private static readonly NullabilityInfoContext _nullabilityContext = new();
 
     /// <summary>
-    /// 
+    /// Creates a <see cref="SliceFactory"/> that can be used to create a <see cref="RazorSlice"/> of the specified <see cref="Type"/>.
     /// </summary>
-    /// <typeparam name="TModel"></typeparam>
-    /// <param name="sliceType"></param>
-    /// <returns></returns>
+    /// <param name="sliceType">The slice type.</param>
+    /// <returns>A <see cref="SliceFactory"/> that can be used to create an instance of the slice.</returns>
 #if NET7_0_OR_GREATER
     [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for creating slices")]
 #endif
@@ -45,9 +46,11 @@ public static class RazorSliceFactory
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
         Type sliceType)
     {
+        ArgumentNullException.ThrowIfNull(sliceType);
+
         if (sliceType.GetConstructor(Type.EmptyTypes) == null)
         {
-            throw new InvalidOperationException($"Slice type {sliceType.Name} must have a parameterless constructor.");
+            throw new ArgumentException($"Slice type {sliceType.Name} must have a parameterless constructor.", nameof(sliceType));
         }
 
         // Strongly-typed model slice
@@ -80,11 +83,10 @@ public static class RazorSliceFactory
     }
 
     /// <summary>
-    /// 
+    /// Creates a <see cref="SliceFactory"/> that can be used to create a <see cref="RazorSlice"/> of the specified <see cref="Type"/>.
     /// </summary>
-    /// <param name="sliceType"></param>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <param name="sliceType">The slice type.</param>
+    /// <returns>A <see cref="SliceFactory"/> that can be used to create an instance of the slice.</returns>
 #if NET7_0_OR_GREATER
     [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for creating slices")]
 #endif
@@ -92,16 +94,23 @@ public static class RazorSliceFactory
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
         Type sliceType)
     {
+        ArgumentNullException.ThrowIfNull(sliceType);
+
+        if (sliceType.GetConstructor(Type.EmptyTypes) == null)
+        {
+            throw new ArgumentException($"Slice type {sliceType.Name} must have a parameterless constructor.", nameof(sliceType));
+        }
+
         return Expression.Lambda<SliceFactory>(Expression.New(sliceType)).Compile();
     }
 
     /// <summary>
-    /// 
+    /// Creates a <see cref="SliceFactory{TModel}"/> that can be used to create a <see cref="RazorSlice"/> of the specified <see cref="Type"/>.
     /// </summary>
-    /// <typeparam name="TModel"></typeparam>
-    /// <param name="sliceType"></param>
-    /// <param name="injectableProperties"></param>
-    /// <returns></returns>
+    /// <typeparam name="TModel">The slice model.</typeparam>
+    /// <param name="sliceType">The slice type.</param>
+    /// <param name="injectableProperties">The properties to have their values injected from the DI container.</param>
+    /// <returns>A <see cref="SliceFactory{TModel}"/> that can be used to create an instance of the slice.</returns>
 #if NET7_0_OR_GREATER
     [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for creating slices")]
 #endif
@@ -110,9 +119,11 @@ public static class RazorSliceFactory
         Type sliceType,
         IEnumerable<PropertyInfo> injectableProperties)
     {
+        ArgumentNullException.ThrowIfNull(sliceType);
+
         if (sliceType.GetConstructor(Type.EmptyTypes) == null)
         {
-            throw new InvalidOperationException("Slice must have a parameterless constructor.");
+            throw new ArgumentException($"Slice type {sliceType.Name} must have a parameterless constructor.", nameof(sliceType));
         }
 
         List<ParameterExpression> parameters = new();
@@ -190,12 +201,11 @@ public static class RazorSliceFactory
     }
 
     /// <summary>
-    /// Creates a <see cref="Delegate"/> that can be used to create a <see cref="RazorSlice"/> of the specified <see cref="Type"/>.
+    /// Creates a <see cref="SliceFactory"/> that can be used to create a <see cref="RazorSlice"/> of the specified <see cref="Type"/>.
     /// </summary>
     /// <param name="sliceType">The slice type.</param>
-    /// <param name="injectableProperties"></param>
-    /// <returns>A <see cref="Delegate"/> that can be used to create an instance of the slice.</returns>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <param name="injectableProperties">The properties to have their values injected from the DI container.</param>
+    /// <returns>A <see cref="SliceFactory"/> that can be used to create an instance of the slice.</returns>
 #if NET7_0_OR_GREATER
     [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for creating slices")]
 #endif
@@ -204,9 +214,11 @@ public static class RazorSliceFactory
         Type sliceType,
         IEnumerable<PropertyInfo> injectableProperties)
     {
+        ArgumentNullException.ThrowIfNull(sliceType);
+
         if (sliceType.GetConstructor(Type.EmptyTypes) == null)
         {
-            throw new InvalidOperationException("Slice must have a parameterless constructor.");
+            throw new ArgumentException($"Slice type {sliceType.Name} must have a parameterless constructor.", nameof(sliceType));
         }
 
         List<ParameterExpression> parameters = new();
@@ -250,8 +262,8 @@ public static class RazorSliceFactory
         // {
         //     var slice = new SliceType();
         //     slice.Initialize = (s, sp) => {
-        //         ((SliceType)s).SomeNotNullProperty = sp.GetRequiredService<MyService>()
-        //         ((SliceType)s).SomeOtherProperty = sp.GetService<MyService>()
+        //         ((SliceType)s).SomeNotNullProperty = (MyService)sp.GetRequiredService(typeof(MyService))
+        //         ((SliceType)s).SomeOtherProperty = (MyOtherService)sp.GetService(typeof(MyOtherService))
         //     };
         //     return slice;
         // }
@@ -288,4 +300,32 @@ public static class RazorSliceFactory
     /// <typeparam name="TModel">The model type of the template.</typeparam>
     /// <returns>A <see cref="RazorSlice{TModel}" /> instance for the template.</returns>
     public static RazorSlice<TModel> Create<TModel>(SliceFactory<TModel> sliceFactory, TModel model) => sliceFactory(model);
+
+    /// <summary>
+    /// Creates and returns a new instance of a <see cref="RazorSliceHttpResult" /> using the provided <see cref="SliceFactory" /> delegate.
+    /// </summary>
+    /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate.</param>
+    /// <param name="statusCode">The HTTP status code to return. Defaults to <see cref="StatusCodes.Status200OK"/>.</param>
+    /// <returns>The <see cref="RazorSliceHttpResult" /> instance.</returns>
+    public static RazorSliceHttpResult CreateHttpResult(SliceFactory sliceFactory, int statusCode = StatusCodes.Status200OK)
+    {
+        var result = (RazorSliceHttpResult)sliceFactory();
+        result.StatusCode = statusCode;
+        return result;
+    }
+
+    /// <summary>
+    /// Creates and returns a new instance of a <see cref="RazorSliceHttpResult{TModel}" /> based on the provided name.
+    /// </summary>
+    /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate.</param>
+    /// <param name="model">The model to use for the template instance.</param>
+    /// <param name="statusCode">The HTTP status code to return. Defaults to <see cref="StatusCodes.Status200OK"/>.</param>
+    /// <typeparam name="TModel">The model type of the template.</typeparam>
+    /// <returns>The <see cref="RazorSliceHttpResult{TModel}" /> instance.</returns>
+    public static RazorSliceHttpResult<TModel> CreateHttpResult<TModel>(SliceFactory<TModel> sliceFactory, TModel model, int statusCode = StatusCodes.Status200OK)
+    {
+        var result = (RazorSliceHttpResult<TModel>)RazorSliceFactory.Create(sliceFactory, model);
+        result.StatusCode = statusCode;
+        return result;
+    }
 }
