@@ -45,6 +45,9 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     public CancellationToken CancellationToken { get; private set; }
 
+    /// <summary>
+    /// Gets or sets a delegate used to initialize the template class before <see cref="ExecuteAsync"/> is called.
+    /// </summary>
     public Action<RazorSlice, IServiceProvider?>? Initialize { get; set; }
 
     /// <summary>

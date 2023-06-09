@@ -17,7 +17,7 @@ app.UseStaticFiles();
 
 app.MapGet("/lorem", () => Results.Redirect("/lorem-static"));
 //app.MapGet("/lorem-static", () => Results.Extensions.RazorSlice("/Slices/LoremStatic.cshtml"));
-app.MapGet("/lorem-static", () => Slices.LoremStatic.Create());
+app.MapGet("/lorem-static", () => (IResult)Slices.LoremStatic.Create());
 app.MapGet("/lorem-dynamic", (int? paraCount, int? paraLength) =>
     //Results.Extensions.RazorSlice("/Slices/LoremDynamic.cshtml", new LoremParams(paraCount, paraLength)));
     Slices.LoremDynamic.Create(new LoremParams(paraCount, paraLength)));
@@ -43,7 +43,8 @@ app.MapGet("/unicode", () =>
     Slices.Unicode.Create());
 app.MapGet("/library", () =>
     //Results.Extensions.RazorSlice("/Slices/FromLibrary.cshtml"));
-    LibrarySlices.FromLibrary.Create());
+    //LibrarySlices.FromLibrary.Create());
+    Results.Extensions.Slice<LibrarySlices.FromLibrary>());
 app.MapGet("/render-to-string", async () =>
 {
     //var slice = RazorSlice.Create("/Slices/LoremFormattable.cshtml", new LoremParams(1, 4));
@@ -63,13 +64,14 @@ app.MapGet("/render-to-stringbuilder", async () =>
 //var todosSliceFactory = RazorSlicesContext.GetTodosSliceFactory("");
 //app.MapGet("/", () => Results.Extensions.RazorSlice("/slices/todos", Todos.AllTodos));
 //app.MapGet("/", () => (RazorSliceHttpResult<Todo[]>)todosSliceFactory(Todos.AllTodos));
-app.MapGet("/", () => Slices.Todos.Create(Todos.AllTodos));
+//app.MapGet("/", () => Slices.Todos.Create(Todos.AllTodos));
+app.MapGet("/", () => Results.Extensions.Slice<Slices.Todos, Todo[]>(Todos.AllTodos));
 app.MapGet("/{id:int}", (int id) =>
 {
     var todo = Todos.AllTodos.FirstOrDefault(t => t.Id == id);
     return todo is not null
         //? Results.Extensions.RazorSlice("/Slices/Todo.cshtml", todo)
-        ? (IResult)Slices.Todo.Create(todo)
+        ? Slices.Todo.Create(todo)
         : Results.NotFound();
 });
 

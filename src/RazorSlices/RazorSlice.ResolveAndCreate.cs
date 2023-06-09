@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -12,257 +13,387 @@ public abstract partial class RazorSlice
 {
     //private static readonly HashSet<string> ExcludedSliceNames =
     //    new(StringComparer.OrdinalIgnoreCase) { "_ViewImports.cshtml", "_ViewStart.cshtml", "_PageImports.cshtml", "_PageStart.cshtml" };
-    //private static readonly HashSet<string> ExcludedServiceNames =
-    //    new(StringComparer.OrdinalIgnoreCase) { "IModelExpressionProvider", "IUrlHelper", "IViewComponentHelper", "IJsonHelper", "IHtmlHelper`1" };
+    private static readonly HashSet<string> ExcludedServiceNames =
+        new(StringComparer.OrdinalIgnoreCase) { "IModelExpressionProvider", "IUrlHelper", "IViewComponentHelper", "IJsonHelper", "IHtmlHelper`1" };
     //private static readonly ReadOnlyDictionary<string, SliceDefinition> _slicesByName;
     //private static readonly ReadOnlyDictionary<Type, SliceDefinition> _slicesByType;
 
 #pragma warning disable CA1810 // Initialize reference type static fields inline
-//    static RazorSlice()
-//#pragma warning restore CA1810 // Initialize reference type static fields inline
-//    {
-//        var entryAssembly = Assembly.GetEntryAssembly() ?? throw new NotSupportedException("Application entry assembly could not be determined.");
+    //    static RazorSlice()
+    //#pragma warning restore CA1810 // Initialize reference type static fields inline
+    //    {
+    //        var entryAssembly = Assembly.GetEntryAssembly() ?? throw new NotSupportedException("Application entry assembly could not be determined.");
 
-//        var sliceDefinitions = new List<SliceDefinition>();
+    //        var sliceDefinitions = new List<SliceDefinition>();
 
-//        // Load slices from app/entry assembly
-//        // TODO: This is likely problematic for testing, etc. Should almost certainly be doing this via IHostingEnvironment & DI.
-//        AddSlicesFromAssembly(sliceDefinitions, entryAssembly);
+    //        // Load slices from app/entry assembly
+    //        // TODO: This is likely problematic for testing, etc. Should almost certainly be doing this via IHostingEnvironment & DI.
+    //        AddSlicesFromAssembly(sliceDefinitions, entryAssembly);
 
-//        if (RuntimeFeature.IsDynamicCodeSupported)
-//        {
-//            // Load slices from referenced assemblies
-//            var referencedAssemblies = entryAssembly.GetReferencedAssemblies();
-//            foreach (var assemblyName in referencedAssemblies)
-//            {
-//                if (!IgnoreAssembly(assemblyName.Name))
-//                {
-//                    try
-//                    {
-//                        var assembly = Assembly.Load(assemblyName);
-//                        AddSlicesFromAssembly(sliceDefinitions, assembly);
-//                    }
-//                    catch (Exception) { } // Ignore exceptions when loading assemblies
-//                }
-//            }
-//        }
+    //        if (RuntimeFeature.IsDynamicCodeSupported)
+    //        {
+    //            // Load slices from referenced assemblies
+    //            var referencedAssemblies = entryAssembly.GetReferencedAssemblies();
+    //            foreach (var assemblyName in referencedAssemblies)
+    //            {
+    //                if (!IgnoreAssembly(assemblyName.Name))
+    //                {
+    //                    try
+    //                    {
+    //                        var assembly = Assembly.Load(assemblyName);
+    //                        AddSlicesFromAssembly(sliceDefinitions, assembly);
+    //                    }
+    //                    catch (Exception) { } // Ignore exceptions when loading assemblies
+    //                }
+    //            }
+    //        }
 
-//        _slicesByName = sliceDefinitions
-//            // Add entries without leading slash
-//            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..], slice.SliceType, slice.ModelType, slice.Factory, slice.InjectableProperties)))
-//            // Add entries without .cshtml suffix
-//            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.ModelType, slice.Factory, slice.InjectableProperties)))
-//            // Add entries without leading slash and .cshtml suffix
-//            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.ModelType, slice.Factory, slice.InjectableProperties)))
-//            // Case-insensitive dictionary so lookup is case-insensitive
-//            .ToDictionary(entry => entry.Identifier, entry => entry, StringComparer.OrdinalIgnoreCase)
-//            .AsReadOnly();
-//        _slicesByType = sliceDefinitions.ToDictionary(item => item.SliceType, item => item).AsReadOnly();
+    //        _slicesByName = sliceDefinitions
+    //            // Add entries without leading slash
+    //            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..], slice.SliceType, slice.ModelType, slice.Factory, slice.InjectableProperties)))
+    //            // Add entries without .cshtml suffix
+    //            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.ModelType, slice.Factory, slice.InjectableProperties)))
+    //            // Add entries without leading slash and .cshtml suffix
+    //            .Concat(sliceDefinitions.Select(slice => new SliceDefinition(slice.Identifier[1..slice.Identifier.LastIndexOf('.')], slice.SliceType, slice.ModelType, slice.Factory, slice.InjectableProperties)))
+    //            // Case-insensitive dictionary so lookup is case-insensitive
+    //            .ToDictionary(entry => entry.Identifier, entry => entry, StringComparer.OrdinalIgnoreCase)
+    //            .AsReadOnly();
+    //        _slicesByType = sliceDefinitions.ToDictionary(item => item.SliceType, item => item).AsReadOnly();
 
-//        static bool IgnoreAssembly(string? assemblyName)
-//        {
-//            return assemblyName is null
-//                || assemblyName.StartsWith("System.", StringComparison.OrdinalIgnoreCase)
-//                || assemblyName.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase);
-//        }
+    //        static bool IgnoreAssembly(string? assemblyName)
+    //        {
+    //            return assemblyName is null
+    //                || assemblyName.StartsWith("System.", StringComparison.OrdinalIgnoreCase)
+    //                || assemblyName.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase);
+    //        }
 
-//        static void AddSlicesFromAssembly(List<SliceDefinition> definitions, Assembly assembly)
-//        {
-//            foreach (var slice in LoadSlices(assembly))
-//            {
-//                if (!ExcludedSliceNames.Contains(slice.Identifier)
-//                    && !definitions.Exists(sd => string.Equals(sd.Identifier, slice.Identifier, StringComparison.Ordinal)))
-//                {
-//                    // Slice with same identifier isn't already in the list so add it
-//                    definitions.Add(slice);
-//                }
-//            }
-//        }
-//    }
+    //        static void AddSlicesFromAssembly(List<SliceDefinition> definitions, Assembly assembly)
+    //        {
+    //            foreach (var slice in LoadSlices(assembly))
+    //            {
+    //                if (!ExcludedSliceNames.Contains(slice.Identifier)
+    //                    && !definitions.Exists(sd => string.Equals(sd.Identifier, slice.Identifier, StringComparison.Ordinal)))
+    //                {
+    //                    // Slice with same identifier isn't already in the list so add it
+    //                    definitions.Add(slice);
+    //                }
+    //            }
+    //        }
+    //    }
 
-//    private static List<SliceDefinition> LoadSlices(Assembly assembly)
-//    {
-//        ArgumentNullException.ThrowIfNull(assembly);
+    //    private static List<SliceDefinition> LoadSlices(Assembly assembly)
+    //    {
+    //        ArgumentNullException.ThrowIfNull(assembly);
 
-//        IEnumerable<RazorCompiledItemAttribute> rcis = assembly.GetCustomAttributes<RazorCompiledItemAttribute>()
-//            .Where(rci => rci.Kind == "mvc.1.0.view" && rci.Type.IsAssignableTo(typeof(RazorSlice)));
+    //        IEnumerable<RazorCompiledItemAttribute> rcis = assembly.GetCustomAttributes<RazorCompiledItemAttribute>()
+    //            .Where(rci => rci.Kind == "mvc.1.0.view" && rci.Type.IsAssignableTo(typeof(RazorSlice)));
 
-//        List<SliceDefinition> allSlices = new();
+    //        List<SliceDefinition> allSlices = new();
 
-//        foreach (var rci in rcis)
-//        {
-//            IEnumerable<PropertyInfo> injectableProperties = rci.Type.GetProperties()
-//                .Where(property => property.IsDefined(typeof(RazorInjectAttribute)) && !ExcludedServiceNames.Contains(property.PropertyType.Name));
-//            Delegate sliceFactory;
-//            if (injectableProperties.Any())
-//            {
-//                // if rci has injectable properties then create a SliceWithServicesFactory
-//                sliceFactory = GetSliceFactory(rci.Type, injectableProperties);
-//            }
-//            else
-//            {
-//                sliceFactory = GetSliceFactory(rci.Type);
-//            }
-//            var sliceDefinition = new SliceDefinition(rci.Identifier, rci.Type, GetSliceModel(rci.Type), sliceFactory, injectableProperties);
-//            allSlices.Add(sliceDefinition);
-//        }
+    //        foreach (var rci in rcis)
+    //        {
+    //            IEnumerable<PropertyInfo> injectableProperties = rci.Type.GetProperties()
+    //                .Where(property => property.IsDefined(typeof(RazorInjectAttribute)) && !ExcludedServiceNames.Contains(property.PropertyType.Name));
+    //            Delegate sliceFactory;
+    //            if (injectableProperties.Any())
+    //            {
+    //                // if rci has injectable properties then create a SliceWithServicesFactory
+    //                sliceFactory = GetSliceFactory(rci.Type, injectableProperties);
+    //            }
+    //            else
+    //            {
+    //                sliceFactory = GetSliceFactory(rci.Type);
+    //            }
+    //            var sliceDefinition = new SliceDefinition(rci.Identifier, rci.Type, GetSliceModel(rci.Type), sliceFactory, injectableProperties);
+    //            allSlices.Add(sliceDefinition);
+    //        }
 
-//        return allSlices;
-//    }
+    //        return allSlices;
+    //    }
 
-    public static Delegate GetSliceFactory(Type sliceType)
+    private static readonly Type _serviceProviderType = typeof(IServiceProvider);
+    private static readonly Type _serviceProviderExtensionsType = typeof(ServiceProviderServiceExtensions);
+    private static readonly Type[] _serviceProviderTypeArray = new[] { typeof(IServiceProvider) };
+    private static readonly MethodInfo _getServiceMethodInfo = _serviceProviderExtensionsType
+        .GetMethod(nameof(ServiceProviderServiceExtensions.GetService), 1, _serviceProviderTypeArray)!;
+    private static readonly MethodInfo _getRequiredServiceMethodInfo = _serviceProviderExtensionsType
+        .GetMethod(nameof(ServiceProviderServiceExtensions.GetRequiredService), 1, _serviceProviderTypeArray)!;
+    private static readonly Type _razorSliceType = typeof(RazorSlice);
+    private static readonly PropertyInfo _razorSliceInitializeProperty = _razorSliceType.GetProperty(nameof(Initialize))!;
+    private static readonly Type _initializeDelegateType = _razorSliceInitializeProperty.PropertyType;
+    private static readonly NullabilityInfoContext _nullabilityContext = new();
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <typeparam name="TModel"></typeparam>
+    /// <param name="sliceType"></param>
+    /// <returns></returns>
+    public static SliceFactory<TModel> GetSliceFactory<TModel>(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)]
+        Type sliceType)
     {
-        if (IsModelSlice(sliceType))
+        // TODO: Just use straight-up reflection if we're running in native AOT
+
+        if (sliceType.GetConstructor(Type.EmptyTypes) == null)
         {
-            if (sliceType.GetConstructor(Array.Empty<Type>()) == null)
-            {
-                throw new InvalidOperationException($"Slice type {sliceType.Name} must have a parameterless constructor.");
-            }
-
-            // Strongly-typed model slice
-            var modelPropInfo = sliceType.GetProperty(nameof(RazorSlice<object>.Model))!;
-            var modelType = modelPropInfo.PropertyType;
-            var razorOfModelType = typeof(RazorSlice<>).MakeGenericType(modelType);
-
-            var factoryDelegateType = typeof(SliceFactory<>).MakeGenericType(modelType);
-
-            // Make a SliceFactory<TModel> like:
-            //
-            // RazorSlice<TModel> CreateSlice<TModel>(TModel model)
-            // {
-            //     var slice = new SliceType();
-            //     slice.Model = model
-            //     return slice;
-            // }
-
-            var sliceVariable = Expression.Variable(sliceType, "slice");
-            var modelParam = Expression.Parameter(modelType, "model");
-            var returnTarget = Expression.Label(razorOfModelType);
-
-            return Expression.Lambda(
-                delegateType: factoryDelegateType,
-                body: Expression.Block(
-                    variables: new[] { sliceVariable },
-                    Expression.Assign(sliceVariable, Expression.New(sliceType)),
-                    Expression.Assign(Expression.MakeMemberAccess(sliceVariable, modelPropInfo), modelParam),
-                    Expression.Label(returnTarget, sliceVariable)
-                ),
-                name: "CreateSlice",
-                parameters: new[] { modelParam })
-            .Compile();
+            throw new InvalidOperationException($"Slice type {sliceType.Name} must have a parameterless constructor.");
         }
+
+        // Strongly-typed model slice
+        var modelType = typeof(TModel);
+        var modelPropInfo = sliceType.GetProperty(nameof(RazorSlice<object>.Model))!;
+        //var modelType = modelPropInfo.PropertyType;
+        //var razorOfModelType = MakeGenericType(_razorSliceOfTModelType, modelType);
+        //var factoryDelegateType = MakeGenericType(_sliceFactoryOfTModelType, modelType);
+
+        // Make a SliceFactory<TModel> like:
+        //
+        // RazorSlice<TModel> CreateSlice<TModel>(TModel model)
+        // {
+        //     var slice = new SliceType();
+        //     slice.Model = model
+        //     return slice;
+        // }
+
+        var sliceVariable = Expression.Variable(sliceType, "slice");
+        var modelParam = Expression.Parameter(modelType, "model");
+        var returnTarget = Expression.Label(typeof(RazorSlice<TModel>));
+
+        return Expression.Lambda<SliceFactory<TModel>>(
+            body: Expression.Block(
+                variables: new[] { sliceVariable },
+                Expression.Assign(sliceVariable, Expression.New(sliceType)),
+                Expression.Assign(Expression.MakeMemberAccess(sliceVariable, modelPropInfo), modelParam),
+                Expression.Label(returnTarget, sliceVariable)
+            ),
+            name: "CreateSlice",
+            parameters: new[] { modelParam })
+        .Compile();
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="sliceType"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    public static SliceFactory GetSliceFactory(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)]
+        Type sliceType)
+    {
+        // TODO: Just use straight-up reflection if we're running in native AOT
 
         return Expression.Lambda<SliceFactory>(Expression.New(sliceType)).Compile();
     }
 
-    public static Delegate GetSliceFactory(Type sliceType, IEnumerable<PropertyInfo> injectableProperties)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <typeparam name="TModel"></typeparam>
+    /// <param name="sliceType"></param>
+    /// <param name="injectableProperties"></param>
+    /// <returns></returns>
+    public static SliceFactory<TModel> GetSliceFactory<TModel>(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)]
+        Type sliceType,
+        IEnumerable<PropertyInfo> injectableProperties)
     {
-        Type serviceProviderType = typeof(IServiceProvider);
-        Type serviceProviderExtensionsType = typeof(ServiceProviderServiceExtensions);
-        MethodInfo getRequiredServiceMethod = serviceProviderExtensionsType.GetMethods()
-            .Where(method => method.Name == "GetRequiredService" && method.IsGenericMethod)
-            .First();
+        // TODO: Just use straight-up reflection if we're running in native AOT
 
-        Type factoryDelegateType;
+        //Type factoryDelegateType;
         List<ParameterExpression> parameters = new();
-        List<Expression> expressions = new();
+        List<Expression> factoryBody = new();
 
-        var sliceVariable = Expression.Variable(sliceType, "slice");
-        var serviceProviderParam = Expression.Parameter(serviceProviderType, "serviceProvider");
+        // Create expression in a lambda that's set on the RazorSlice.Initialize property:
+        //     slice.Initialize = (s, sp) => {
+        //         ((SliceType)s).SomeNotNullProperty = sp.GetRequiredService<MyService>()
+        //         ((SliceType)s).SomeOtherProperty = sp.GetService<MyService>()
+        //     };
+        var initializeBody = new List<Expression>();
+        var sliceParameter = Expression.Parameter(_razorSliceType, "s");
+        var sliceParameterCast = Expression.Convert(sliceParameter, sliceType);
+        var serviceProviderParam = Expression.Parameter(_serviceProviderType, "sp");
 
-        // Create expression to set service provider property: slice.ServiceProvider = serviceProvider;
-        var serviceProviderPropertyInfo = sliceType.GetProperty(nameof(ServiceProvider))!;
-        expressions.Add(Expression.Assign(Expression.MakeMemberAccess(sliceVariable, serviceProviderPropertyInfo), serviceProviderParam));
-
-        // TODO: set this expression in an lambda that's set on the RazorSlice.Initialize property
-        // Create expressions to set all the injectable properties
         foreach (PropertyInfo injectablePropertyInfo in injectableProperties)
         {
-            var memberAccess = Expression.MakeMemberAccess(sliceVariable, injectablePropertyInfo);
-            var getRequiredServiceCall = Expression.Call(getRequiredServiceMethod.MakeGenericMethod(injectablePropertyInfo.PropertyType), serviceProviderParam);
-            expressions.Add(Expression.Assign(memberAccess, getRequiredServiceCall));
-        }
-
-        if (IsModelSlice(sliceType))
-        {
-            if (sliceType.GetConstructor(Array.Empty<Type>()) == null)
+            if (ExcludedServiceNames.Contains(injectablePropertyInfo.PropertyType.Name))
             {
-                throw new InvalidOperationException("Slice must have a parameterless constructor.");
+                continue;
             }
 
-            // Strongly-typed model slice
-            var modelPropInfo = sliceType.GetProperty(nameof(RazorSlice<object>.Model))!;
-            var modelType = modelPropInfo.PropertyType;
-            var razorOfModelType = typeof(RazorSlice<>).MakeGenericType(modelType);
-
-            factoryDelegateType = typeof(SliceFactory<>).MakeGenericType(modelType);
-
-            // Make a SliceFactory<TModel> like:
-            //
-            // RazorSlice<TModel> CreateSlice<TModel>(TModel model)
-            // {
-            //     var slice = new SliceType();
-            //     slice.Initialize = (s, sp) => {
-            //         s.MyService = sp.GetRequiredServices<MyService>()
-            //     };
-            //     slice.Model = model
-            //     return slice;
-            // }
-
-            var modelParam = Expression.Parameter(modelType, "model");
-            var returnTarget = Expression.Label(razorOfModelType);
-
-            expressions.Add(Expression.Assign(Expression.MakeMemberAccess(sliceVariable, modelPropInfo), modelParam));
-            expressions.Add(Expression.Label(returnTarget, sliceVariable));
-
-            parameters.Add(modelParam);
+            var propertyAccess = Expression.MakeMemberAccess(sliceParameterCast, injectablePropertyInfo);
+            // Check if property type is nullable and call GetService<T> instead of GetRequiredService<T> appropriaately
+            var getRequiredServiceCall = Expression.Call(
+                MakeGenericMethod(
+                    IsNullable(injectablePropertyInfo) ? _getServiceMethodInfo : _getRequiredServiceMethodInfo,
+                    injectablePropertyInfo.PropertyType),
+                serviceProviderParam);
+            initializeBody.Add(Expression.Assign(propertyAccess, getRequiredServiceCall));
         }
-        else
+        var initializeLambda = Expression.Lambda(
+            delegateType: _initializeDelegateType,
+            body: Expression.Block(initializeBody),
+            name: "InitializeSlice",
+            parameters: new[] { sliceParameter, serviceProviderParam });
+
+        var sliceVariable = Expression.Variable(sliceType, "slice");
+
+        if (sliceType.GetConstructor(Type.EmptyTypes) == null)
         {
-            // Make a SliceFactory like:
-            //
-            // RazorSlice CreateSlice()
-            // {
-            //     var slice = new SliceType();
-            //     slice.Initialize = (s, sp) => {
-            //         s.MyService = sp.GetRequiredServices<MyService>()
-            //     };
-            //     return slice;
-            // }
-            factoryDelegateType = typeof(SliceFactory);
-            expressions.Add(Expression.Label(Expression.Label(typeof(RazorSlice)), sliceVariable));
+            throw new InvalidOperationException("Slice must have a parameterless constructor.");
         }
-        
-        parameters.Add(serviceProviderParam);
 
-        return Expression.Lambda(
-            delegateType: factoryDelegateType,
+        // Strongly-typed model slice
+        var modelType = typeof(TModel);
+        var modelPropInfo = sliceType.GetProperty(nameof(RazorSlice<object>.Model))!;
+        //var modelType = modelPropInfo.PropertyType;
+        //var razorOfModelType = MakeGenericType(_razorSliceOfTModelType, modelType);
+
+
+        // Make a SliceFactory<TModel> like:
+        //
+        // RazorSlice<TModel> CreateSlice<TModel>(TModel model)
+        // {
+        //     var slice = new SliceType<TModel>();
+        //     slice.Initialize = (s, sp) => {
+        //         ((SliceType)s).SomeNotNullProperty = sp.GetRequiredService<MyService>()
+        //         ((SliceType)s).SomeOtherProperty = sp.GetService<MyService>()
+        //     };
+        //     slice.Model = model
+        //     return slice;
+        // }
+
+        factoryBody.Add(Expression.Assign(Expression.MakeMemberAccess(sliceVariable, _razorSliceInitializeProperty), initializeLambda));
+
+        var modelParam = Expression.Parameter(modelType, "model");
+        factoryBody.Add(Expression.Assign(Expression.MakeMemberAccess(sliceVariable, modelPropInfo), modelParam));
+        var returnTarget = Expression.Label(typeof(RazorSlice<TModel>));
+
+        factoryBody.Add(Expression.Label(returnTarget, sliceVariable));
+
+        parameters.Add(modelParam);
+
+        return Expression.Lambda<SliceFactory<TModel>>(
             body: Expression.Block(
                 variables: new[] { sliceVariable },
                 Expression.Assign(sliceVariable, Expression.New(sliceType)),
-                Expression.Block(expressions)
+                Expression.Block(factoryBody)
             ),
             name: "CreateSlice",
             parameters: parameters
         ).Compile();
     }
 
-    private static bool IsModelSlice(Type sliceType)
+    /// <summary>
+    /// Creates a <see cref="Delegate"/> that can be used to create a <see cref="RazorSlice"/> of the specified <see cref="Type"/>.
+    /// </summary>
+    /// <param name="sliceType">The slice type.</param>
+    /// <param name="modelType"></param>
+    /// <param name="injectableProperties"></param>
+    /// <returns>A <see cref="Delegate"/> that can be used to create an instance of the slice.</returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    public static SliceFactory GetSliceFactory(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] 
+        Type sliceType,
+        Type? modelType,
+        IEnumerable<PropertyInfo> injectableProperties)
     {
-        var baseType = sliceType.BaseType;
+        // TODO: Just use straight-up reflection if we're running in native AOT
 
-        while (baseType is not null)
+        //Type factoryDelegateType;
+        List<ParameterExpression> parameters = new();
+        List<Expression> factoryBody = new();
+
+        // Create expression in a lambda that's set on the RazorSlice.Initialize property:
+        //     slice.Initialize = (s, sp) => {
+        //         ((SliceType)s).SomeNotNullProperty = sp.GetRequiredService<MyService>()
+        //         ((SliceType)s).SomeOtherProperty = sp.GetService<MyService>()
+        //     };
+        var initializeBody = new List<Expression>();
+        var sliceParameter = Expression.Parameter(_razorSliceType, "s");
+        var sliceParameterCast = Expression.Convert(sliceParameter, sliceType);
+        var serviceProviderParam = Expression.Parameter(_serviceProviderType, "sp");
+
+        foreach (PropertyInfo injectablePropertyInfo in injectableProperties)
         {
-            if (baseType.IsGenericType && baseType.GetGenericTypeDefinition() == typeof(RazorSlice<>))
+            if (ExcludedServiceNames.Contains(injectablePropertyInfo.PropertyType.Name))
             {
-                return true;
+                continue;
             }
 
-            baseType = baseType.BaseType;
+            var propertyAccess = Expression.MakeMemberAccess(sliceParameterCast, injectablePropertyInfo);
+            // Check if property type is nullable and call GetService<T> instead of GetRequiredService<T> appropriaately
+            var getRequiredServiceCall = Expression.Call(
+                MakeGenericMethod(
+                    IsNullable(injectablePropertyInfo) ? _getServiceMethodInfo : _getRequiredServiceMethodInfo,
+                    injectablePropertyInfo.PropertyType),
+                serviceProviderParam);
+            initializeBody.Add(Expression.Assign(propertyAccess, getRequiredServiceCall));
         }
+        var initializeLambda = Expression.Lambda(
+            delegateType: _initializeDelegateType,
+            body: Expression.Block(initializeBody),
+            name: "InitializeSlice",
+            parameters: new[] { sliceParameter, serviceProviderParam });
 
-        return false;
+        var sliceVariable = Expression.Variable(sliceType, "slice");
+
+        // Make a SliceFactory like:
+        //
+        // RazorSlice CreateSlice()
+        // {
+        //     var slice = new SliceType();
+        //     slice.Initialize = (s, sp) => {
+        //         ((SliceType)s).SomeNotNullProperty = sp.GetRequiredService<MyService>()
+        //         ((SliceType)s).SomeOtherProperty = sp.GetService<MyService>()
+        //     };
+        //     return slice;
+        // }
+        factoryBody.Add(Expression.Assign(Expression.MakeMemberAccess(sliceVariable, _razorSliceInitializeProperty), initializeLambda));
+        factoryBody.Add(Expression.Label(Expression.Label(typeof(RazorSlice)), sliceVariable));
+
+        return Expression.Lambda<SliceFactory>(
+            body: Expression.Block(
+                variables: new[] { sliceVariable },
+                Expression.Assign(sliceVariable, Expression.New(sliceType)),
+                Expression.Block(factoryBody)
+            ),
+            name: "CreateSlice",
+            parameters: parameters
+        ).Compile();
     }
+
+    [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "This method is only called for types that have been preserved.")]
+#pragma warning disable IL2055 // Either the type on which the MakeGenericType is called can't be statically determined, or the type parameters to be used for generic arguments can't be statically determined.
+    private static Type MakeGenericType(Type openGeneric, Type typeArg) => openGeneric.MakeGenericType(typeArg);
+#pragma warning restore IL2055
+
+    [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "This method is only called for types that have been preserved.")]
+    private static MethodInfo MakeGenericMethod(MethodInfo method, Type typeArg) => method.MakeGenericMethod(typeArg);
+
+    private static bool IsNullable(PropertyInfo info) =>
+        Nullable.GetUnderlyingType(info.PropertyType) is not null
+            || _nullabilityContext.Create(info).WriteState is not NullabilityState.NotNull;
+
+    //private static bool IsModelSlice(Type sliceType)
+    //{
+    //    var baseType = sliceType.BaseType;
+
+    //    while (baseType is not null)
+    //    {
+    //        if (baseType.IsGenericType && baseType.GetGenericTypeDefinition() == typeof(RazorSlice<>))
+    //        {
+    //            return true;
+    //        }
+
+    //        baseType = baseType.BaseType;
+    //    }
+
+    //    return false;
+    //}
 
     //private static Type? GetSliceModel(Type sliceType)
     //{
