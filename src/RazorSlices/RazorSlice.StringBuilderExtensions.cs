@@ -36,9 +36,13 @@ public static class RazorSliceStringBuilderExtensions
 
         if (task.IsCompletedSuccessfully)
         {
+#if NET7_0_OR_GREATER
 #pragma warning disable CA1849 // Call async methods when in an async method: task is already completed
             task.GetAwaiter().GetResult();
 #pragma warning restore CA1849
+#else
+            task.GetAwaiter().GetResult();
+#endif
             return ValueTask.FromResult(sb.ToString());
         }
 

@@ -24,14 +24,12 @@
                 </tr>
                 @foreach (var todo in Model)
                 {
-                    @* @await RenderPartialAsync("/Slices/TodoRow.cshtml", todo) *@
                     @(await RenderPartialAsync<TodoRow, RazorSlices.Samples.WebApp.Todo>(todo))
                 }
             </table>
         </div>
     </main>
 
-    @* @await RenderPartialAsync("/Slices/_Footer.cshtml") *@
     @(await RenderPartialAsync<_Footer>())
 </body>
 </html>

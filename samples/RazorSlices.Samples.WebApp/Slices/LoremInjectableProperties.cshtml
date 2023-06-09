@@ -3,7 +3,7 @@
 @inject LoremService LoremService
 
 @{
-    string title = "Lorem Ipsum (Dependency-injected properties)";
+    var title = "Lorem Ipsum (Dependency-injected properties)";
 }
 
 <!DOCTYPE html>
@@ -30,7 +30,6 @@
         </div>
     </main>
 
-    @* @await RenderPartialAsync("/Slices/_Footer.cshtml") *@
     @(await RenderPartialAsync<_Footer>())
 </body>
 </html>

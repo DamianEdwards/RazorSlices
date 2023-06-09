@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using RazorSlices;
 
-#if NET7_0_OR_GREATER
 namespace RazorSlices
 {
     /// <summary>
@@ -10,6 +9,7 @@ namespace RazorSlices
     /// <typeparam name="TSlice"></typeparam>
     public interface IRazorSliceProxy<TSlice> where TSlice : RazorSlice
     {
+#if NET7_0_OR_GREATER
         /// <summary>
         /// 
         /// </summary>
@@ -17,6 +17,7 @@ namespace RazorSlices
 #pragma warning disable CA1000 // Do not declare static members on generic types: static abstract
         abstract static TSlice Create();
 #pragma warning restore CA1000
+#endif
     }
 
     /// <summary>
@@ -26,6 +27,7 @@ namespace RazorSlices
     /// <typeparam name="TModel"></typeparam>
     public interface IRazorSliceProxy<TSlice, TModel> where TSlice : RazorSlice<TModel>
     {
+#if NET7_0_OR_GREATER
         /// <summary>
         /// 
         /// </summary>
@@ -34,9 +36,11 @@ namespace RazorSlices
 #pragma warning disable CA1000 // Do not declare static members on generic types: static abstract
         abstract static TSlice Create(TModel model);
 #pragma warning restore CA1000
+#endif
     }
 }
 
+#if NET7_0_OR_GREATER
 namespace Microsoft.AspNetCore.Http
 {
     /// <summary>
