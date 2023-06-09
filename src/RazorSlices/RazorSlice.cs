@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -44,6 +45,8 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     public CancellationToken CancellationToken { get; private set; }
 
+    public Action<RazorSlice, IServiceProvider?>? Initialize { get; set; }
+
     /// <summary>
     /// Implemented by the generated template class.
     /// </summary>
@@ -53,7 +56,18 @@ public abstract partial class RazorSlice : IDisposable
     /// <see cref="RenderAsync(TextWriter, HtmlEncoder?, CancellationToken)"/> instead to render the template.
     /// </remarks>
     /// <returns>A <see cref="Task"/> representing the execution of the template.</returns>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public abstract Task ExecuteAsync();
+
+    internal Task ExecuteAsyncImpl()
+    {
+        if (Initialize is not null)
+        {
+            Initialize(this, ServiceProvider);
+        }
+
+        return ExecuteAsync();
+    }
 
     /// <summary>
     /// Renders the template to the specified <see cref="IBufferWriter{T}"/>.
@@ -96,7 +110,7 @@ public abstract partial class RazorSlice : IDisposable
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        var executeTask = ExecuteAsync();
+        var executeTask = ExecuteAsyncImpl();
 
         if (executeTask.HandleSynchronousCompletion())
         {
@@ -131,7 +145,7 @@ public abstract partial class RazorSlice : IDisposable
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        var executeTask = ExecuteAsync();
+        var executeTask = ExecuteAsyncImpl();
 
         if (executeTask.IsCompletedSuccessfully)
         {

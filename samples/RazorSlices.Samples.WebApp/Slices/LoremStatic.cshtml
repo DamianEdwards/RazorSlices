@@ -278,7 +278,8 @@
         </div>
     </main>
 
-    @await RenderPartialAsync("/Slices/_Footer.cshtml")
+    @* @await RenderPartialAsync("/Slices/_Footer.cshtml") *@
+    @await RenderPartialAsync(_Footer.Create())
 </body>
 </html>
 
