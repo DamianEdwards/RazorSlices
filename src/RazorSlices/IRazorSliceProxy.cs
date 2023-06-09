@@ -50,7 +50,7 @@ namespace Microsoft.AspNetCore.Http
         /// <typeparam name="TSlice"></typeparam>
         /// <param name="_"></param>
         /// <returns></returns>
-        public static RazorSliceHttpResult Slice<TSlice>(this IResultExtensions _)
+        public static RazorSliceHttpResult RazorSlice<TSlice>(this IResultExtensions _)
             where TSlice : IRazorSliceProxy<RazorSliceHttpResult>
         {
             return TSlice.Create();
@@ -64,7 +64,7 @@ namespace Microsoft.AspNetCore.Http
         /// <param name="_"></param>
         /// <param name="model"></param>
         /// <returns></returns>
-        public static RazorSliceHttpResult<TModel> Slice<TSlice, TModel>(this IResultExtensions _, TModel model)
+        public static RazorSliceHttpResult<TModel> RazorSlice<TSlice, TModel>(this IResultExtensions _, TModel model)
             where TSlice : IRazorSliceProxy<RazorSliceHttpResult<TModel>, TModel>
         {
             return TSlice.Create(model);

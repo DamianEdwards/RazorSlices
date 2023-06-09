@@ -138,7 +138,7 @@ public static class RazorSliceFactory
     [RequiresDynamicCode("")]
 #endif
     public static SliceFactory<TModel> GetSliceFactory<TModel>(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
         Type sliceType)
     {
         // TODO: Just use straight-up reflection if we're running in native AOT
@@ -190,7 +190,7 @@ public static class RazorSliceFactory
     [RequiresDynamicCode("")]
 #endif
     public static SliceFactory GetSliceFactory(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
         Type sliceType)
     {
         return Expression.Lambda<SliceFactory>(Expression.New(sliceType)).Compile();
@@ -207,7 +207,7 @@ public static class RazorSliceFactory
     [RequiresDynamicCode("")]
 #endif
     public static SliceFactory<TModel> GetSliceFactory<TModel>(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
         Type sliceType,
         IEnumerable<PropertyInfo> injectableProperties)
     {
@@ -304,7 +304,7 @@ public static class RazorSliceFactory
     [RequiresDynamicCode("")]
 #endif
     public static SliceFactory GetSliceFactory(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] 
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] 
         Type sliceType,
         IEnumerable<PropertyInfo> injectableProperties)
     {

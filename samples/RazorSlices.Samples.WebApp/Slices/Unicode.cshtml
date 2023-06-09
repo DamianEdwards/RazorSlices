@@ -75,7 +75,7 @@
     </main>
 
     @* @await RenderPartialAsync("/Slices/_Footer.cshtml") *@
-    @await RenderPartialAsync(_Footer.Create())
+    @(await RenderPartialAsync<_Footer>())
 </body>
 </html>
 

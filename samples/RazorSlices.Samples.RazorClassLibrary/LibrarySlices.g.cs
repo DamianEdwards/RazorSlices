@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -12,16 +11,16 @@ public sealed class FromLibrary
     : IRazorSliceProxy<RazorSliceHttpResult>
 #endif
 {
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)]
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
     private static readonly Type _type = Type.GetType("AspNetCoreGeneratedDocument.Slices_FromLibrary, RazorSlices.Samples.RazorClassLibrary");
-    private static readonly ConstructorInfo _ctor = _type.GetConstructor(Type.EmptyTypes)!;
+    //private static readonly ConstructorInfo _ctor = _type.GetConstructor(Type.EmptyTypes)!;
     private static readonly SliceFactory _factory = RuntimeFeature.IsDynamicCodeCompiled
         ? RazorSliceFactory.GetSliceFactory(_type)
-        : static () => (RazorSlice)_ctor.Invoke(null);
+        : static () =>
+            //(RazorSlice)_ctor.Invoke(null);
+            (RazorSlice)Activator.CreateInstance(_type);
 
-    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
-        | DynamicallyAccessedMemberTypes.PublicProperties
-        | DynamicallyAccessedMemberTypes.PublicMethods, "AspNetCoreGeneratedDocument.Slices_FromLibrary", "RazorSlices.Samples.RazorClassLibrary")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_FromLibrary", "RazorSlices.Samples.RazorClassLibrary")]
     public static RazorSliceHttpResult Create() => RazorSlice.CreateHttpResult(_factory);
 }
 
@@ -30,15 +29,15 @@ public sealed class Todos
     : IRazorSliceProxy<RazorSliceHttpResult>
 #endif
 {
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)]
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
     private static readonly Type _type = Type.GetType("AspNetCoreGeneratedDocument.Slices_Todos, RazorSlices.Samples.RazorClassLibrary");
-    private static readonly ConstructorInfo _ctor = _type.GetConstructor(Type.EmptyTypes)!;
+    //private static readonly ConstructorInfo _ctor = _type.GetConstructor(Type.EmptyTypes)!;
     private static SliceFactory _factory = RuntimeFeature.IsDynamicCodeCompiled
         ? RazorSliceFactory.GetSliceFactory(_type)
-        : static () => (RazorSlice) _ctor.Invoke(null);
+        : static () =>
+            //(RazorSlice) _ctor.Invoke(null);
+            (RazorSlice)Activator.CreateInstance(_type);
 
-    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor
-        | DynamicallyAccessedMemberTypes.PublicProperties
-        | DynamicallyAccessedMemberTypes.PublicMethods, "AspNetCoreGeneratedDocument.Slices_Todos", "RazorSlices.Samples.RazorClassLibrary")]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_Todos", "RazorSlices.Samples.RazorClassLibrary")]
     public static RazorSliceHttpResult Create() => RazorSlice.CreateHttpResult(_factory);
 }
