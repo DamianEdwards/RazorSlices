@@ -174,6 +174,7 @@ public abstract partial class RazorSlice
         var serviceProviderPropertyInfo = sliceType.GetProperty(nameof(ServiceProvider))!;
         expressions.Add(Expression.Assign(Expression.MakeMemberAccess(sliceVariable, serviceProviderPropertyInfo), serviceProviderParam));
 
+        // TODO: set this expression in an lambda that's set on the RazorSlice.Initialize property
         // Create expressions to set all the injectable properties
         foreach (PropertyInfo injectablePropertyInfo in injectableProperties)
         {
@@ -194,16 +195,16 @@ public abstract partial class RazorSlice
             var modelType = modelPropInfo.PropertyType;
             var razorOfModelType = typeof(RazorSlice<>).MakeGenericType(modelType);
 
-            factoryDelegateType = typeof(SliceWithServicesFactory<>).MakeGenericType(modelType);
+            factoryDelegateType = typeof(SliceFactory<>).MakeGenericType(modelType);
 
-            // Make a SliceWithServicesFactory<TModel> like:
+            // Make a SliceFactory<TModel> like:
             //
-            // RazorSlice<TModel> CreateSlice<TModel>(TModel model, IServiceProvider serviceProvider)
+            // RazorSlice<TModel> CreateSlice<TModel>(TModel model)
             // {
             //     var slice = new SliceType();
-            //     slice.ServiceProvider = serviceProvider;
-            //     slice.MyService = serviceProvider.GetRequiredServices<MyService>()
-            //     // ...
+            //     slice.Initialize = (s, sp) => {
+            //         s.MyService = sp.GetRequiredServices<MyService>()
+            //     };
             //     slice.Model = model
             //     return slice;
             // }
@@ -218,17 +219,17 @@ public abstract partial class RazorSlice
         }
         else
         {
-            // Make a SliceWithServicesFactory like:
+            // Make a SliceFactory like:
             //
-            // RazorSlice CreateSlice(IServiceProvider serviceProvider)
+            // RazorSlice CreateSlice()
             // {
             //     var slice = new SliceType();
-            //     slice.ServiceProvider = serviceProvider;
-            //     slice.MyService = serviceProvider.GetRequiredServices<MyService>()
-            //     // ...
+            //     slice.Initialize = (s, sp) => {
+            //         s.MyService = sp.GetRequiredServices<MyService>()
+            //     };
             //     return slice;
             // }
-            factoryDelegateType = typeof(SliceWithServicesFactory);
+            factoryDelegateType = typeof(SliceFactory);
             expressions.Add(Expression.Label(Expression.Label(typeof(RazorSlice)), sliceVariable));
         }
         
