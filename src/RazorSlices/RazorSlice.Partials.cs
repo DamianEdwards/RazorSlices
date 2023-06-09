@@ -90,6 +90,33 @@ public partial class RazorSlice
         return RenderPartialAsyncImpl(partial);
     }
 
+#if NET7_0_OR_GREATER
+    /// <summary>
+    /// Renders a template inline.
+    /// </summary>
+    /// <typeparam name="TSlice"></typeparam>
+    /// <returns></returns>
+    protected internal ValueTask<HtmlString> RenderPartialAsync<TSlice>()
+        where TSlice : IRazorSliceProxy<RazorSlice>
+    {
+        var slice = TSlice.Create();
+        return RenderPartialAsyncImpl(slice);
+    }
+
+    /// <summary>
+    /// Renders a template inline.
+    /// </summary>
+    /// <typeparam name="TSlice"></typeparam>
+    /// <typeparam name="TModel"></typeparam>
+    /// <returns></returns>
+    protected internal ValueTask<HtmlString> RenderPartialAsync<TSlice, TModel>(TModel model)
+        where TSlice : IRazorSliceProxy<RazorSlice<TModel>, TModel>
+    {
+        var slice = TSlice.Create(model);
+        return RenderPartialAsyncImpl(slice);
+    }
+#endif
+
     private ValueTask<HtmlString> RenderPartialAsyncImpl(RazorSlice partial)
     {
         partial.HttpContext = HttpContext;
@@ -121,15 +148,17 @@ public partial class RazorSlice
 
         if (renderPartialTask.HandleSynchronousCompletion())
         {
+            partial.Dispose();
             return ValueTask.FromResult(HtmlString.Empty);
         }
 
-        return AwaitPartialTask(renderPartialTask);
+        return AwaitPartialTask(partial, renderPartialTask);
     }
 
-    private static async ValueTask<HtmlString> AwaitPartialTask(ValueTask partialTask)
+    private static async ValueTask<HtmlString> AwaitPartialTask(RazorSlice partial, ValueTask partialTask)
     {
         await partialTask;
+        partial.Dispose();
         return HtmlString.Empty;
     }
 }

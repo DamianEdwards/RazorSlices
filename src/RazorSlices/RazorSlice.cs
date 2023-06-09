@@ -117,9 +117,10 @@ public abstract partial class RazorSlice : IDisposable
 
         if (executeTask.HandleSynchronousCompletion())
         {
+            Dispose();
             return ValueTask.CompletedTask;
         }
-        return new ValueTask(executeTask);
+        return AwaitExecuteTask(this, executeTask);
 
         // TODO: Should we explicitly flush here if flushAsync is not null?
     }
@@ -152,14 +153,21 @@ public abstract partial class RazorSlice : IDisposable
 
         if (executeTask.IsCompletedSuccessfully)
         {
+            Dispose();
             return ValueTask.CompletedTask;
         }
-        return new ValueTask(executeTask);
+        return AwaitExecuteTask(this, executeTask);
     }
 
     private static async ValueTask AwaitOutputFlushTask(Task flushTask)
     {
         await flushTask;
+    }
+
+    private static async ValueTask AwaitExecuteTask(RazorSlice slice, Task task)
+    {
+        await task;
+        slice.Dispose();
     }
 
     /// <summary>

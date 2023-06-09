@@ -9,7 +9,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace RazorSlices;
 
-public abstract partial class RazorSlice
+/// <summary>
+/// 
+/// </summary>
+public static class RazorSliceFactory
 {
     //private static readonly HashSet<string> ExcludedSliceNames =
     //    new(StringComparer.OrdinalIgnoreCase) { "_ViewImports.cshtml", "_ViewStart.cshtml", "_PageImports.cshtml", "_PageStart.cshtml" };
@@ -18,7 +21,7 @@ public abstract partial class RazorSlice
     //private static readonly ReadOnlyDictionary<string, SliceDefinition> _slicesByName;
     //private static readonly ReadOnlyDictionary<Type, SliceDefinition> _slicesByType;
 
-#pragma warning disable CA1810 // Initialize reference type static fields inline
+    //#pragma warning disable CA1810 // Initialize reference type static fields inline
     //    static RazorSlice()
     //#pragma warning restore CA1810 // Initialize reference type static fields inline
     //    {
@@ -111,15 +114,17 @@ public abstract partial class RazorSlice
     //        return allSlices;
     //    }
 
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
     private static readonly Type _serviceProviderType = typeof(IServiceProvider);
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
     private static readonly Type _serviceProviderExtensionsType = typeof(ServiceProviderServiceExtensions);
-    private static readonly Type[] _serviceProviderTypeArray = new[] { typeof(IServiceProvider) };
-    private static readonly MethodInfo _getServiceMethodInfo = _serviceProviderExtensionsType
-        .GetMethod(nameof(ServiceProviderServiceExtensions.GetService), 1, _serviceProviderTypeArray)!;
+    private static readonly MethodInfo _getServiceMethodInfo = _serviceProviderType
+        .GetMethod(nameof(IServiceProvider.GetService), new[] { typeof(Type) })!;
     private static readonly MethodInfo _getRequiredServiceMethodInfo = _serviceProviderExtensionsType
-        .GetMethod(nameof(ServiceProviderServiceExtensions.GetRequiredService), 1, _serviceProviderTypeArray)!;
+        .GetMethod(nameof(ServiceProviderServiceExtensions.GetRequiredService), new[] { typeof(IServiceProvider), typeof(Type) })!;
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)]
     private static readonly Type _razorSliceType = typeof(RazorSlice);
-    private static readonly PropertyInfo _razorSliceInitializeProperty = _razorSliceType.GetProperty(nameof(Initialize))!;
+    private static readonly PropertyInfo _razorSliceInitializeProperty = _razorSliceType.GetProperty(nameof(RazorSlice.Initialize))!;
     private static readonly Type _initializeDelegateType = _razorSliceInitializeProperty.PropertyType;
     private static readonly NullabilityInfoContext _nullabilityContext = new();
 
@@ -129,6 +134,9 @@ public abstract partial class RazorSlice
     /// <typeparam name="TModel"></typeparam>
     /// <param name="sliceType"></param>
     /// <returns></returns>
+#if NET7_0_OR_GREATER
+    [RequiresDynamicCode("")]
+#endif
     public static SliceFactory<TModel> GetSliceFactory<TModel>(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)]
         Type sliceType)
@@ -178,12 +186,13 @@ public abstract partial class RazorSlice
     /// <param name="sliceType"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
+#if NET7_0_OR_GREATER
+    [RequiresDynamicCode("")]
+#endif
     public static SliceFactory GetSliceFactory(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)]
         Type sliceType)
     {
-        // TODO: Just use straight-up reflection if we're running in native AOT
-
         return Expression.Lambda<SliceFactory>(Expression.New(sliceType)).Compile();
     }
 
@@ -194,21 +203,22 @@ public abstract partial class RazorSlice
     /// <param name="sliceType"></param>
     /// <param name="injectableProperties"></param>
     /// <returns></returns>
+#if NET7_0_OR_GREATER
+    [RequiresDynamicCode("")]
+#endif
     public static SliceFactory<TModel> GetSliceFactory<TModel>(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)]
         Type sliceType,
         IEnumerable<PropertyInfo> injectableProperties)
     {
-        // TODO: Just use straight-up reflection if we're running in native AOT
-
         //Type factoryDelegateType;
         List<ParameterExpression> parameters = new();
         List<Expression> factoryBody = new();
 
         // Create expression in a lambda that's set on the RazorSlice.Initialize property:
         //     slice.Initialize = (s, sp) => {
-        //         ((SliceType)s).SomeNotNullProperty = sp.GetRequiredService<MyService>()
-        //         ((SliceType)s).SomeOtherProperty = sp.GetService<MyService>()
+        //         ((SliceType)s).SomeNotNullProperty = (MyService)sp.GetRequiredService(typeof(MyService))
+        //         ((SliceType)s).SomeOtherProperty = (MyOtherService)sp.GetService(typeof(MyOtherService))
         //     };
         var initializeBody = new List<Expression>();
         var sliceParameter = Expression.Parameter(_razorSliceType, "s");
@@ -223,13 +233,11 @@ public abstract partial class RazorSlice
             }
 
             var propertyAccess = Expression.MakeMemberAccess(sliceParameterCast, injectablePropertyInfo);
-            // Check if property type is nullable and call GetService<T> instead of GetRequiredService<T> appropriaately
-            var getRequiredServiceCall = Expression.Call(
-                MakeGenericMethod(
-                    IsNullable(injectablePropertyInfo) ? _getServiceMethodInfo : _getRequiredServiceMethodInfo,
-                    injectablePropertyInfo.PropertyType),
-                serviceProviderParam);
-            initializeBody.Add(Expression.Assign(propertyAccess, getRequiredServiceCall));
+            // Check if property type is nullable and call GetService instead of GetRequiredService appropriaately
+            var getServiceCall = !IsNullable(injectablePropertyInfo)
+                ? Expression.Call(serviceProviderParam, _getServiceMethodInfo, Expression.Constant(injectablePropertyInfo.PropertyType))
+                : Expression.Call(_getRequiredServiceMethodInfo, serviceProviderParam, Expression.Constant(injectablePropertyInfo.PropertyType));
+            initializeBody.Add(Expression.Assign(propertyAccess, Expression.Convert(getServiceCall, injectablePropertyInfo.PropertyType)));
         }
         var initializeLambda = Expression.Lambda(
             delegateType: _initializeDelegateType,
@@ -289,14 +297,15 @@ public abstract partial class RazorSlice
     /// Creates a <see cref="Delegate"/> that can be used to create a <see cref="RazorSlice"/> of the specified <see cref="Type"/>.
     /// </summary>
     /// <param name="sliceType">The slice type.</param>
-    /// <param name="modelType"></param>
     /// <param name="injectableProperties"></param>
     /// <returns>A <see cref="Delegate"/> that can be used to create an instance of the slice.</returns>
     /// <exception cref="InvalidOperationException"></exception>
+#if NET7_0_OR_GREATER
+    [RequiresDynamicCode("")]
+#endif
     public static SliceFactory GetSliceFactory(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] 
         Type sliceType,
-        Type? modelType,
         IEnumerable<PropertyInfo> injectableProperties)
     {
         // TODO: Just use straight-up reflection if we're running in native AOT
@@ -324,12 +333,10 @@ public abstract partial class RazorSlice
 
             var propertyAccess = Expression.MakeMemberAccess(sliceParameterCast, injectablePropertyInfo);
             // Check if property type is nullable and call GetService<T> instead of GetRequiredService<T> appropriaately
-            var getRequiredServiceCall = Expression.Call(
-                MakeGenericMethod(
-                    IsNullable(injectablePropertyInfo) ? _getServiceMethodInfo : _getRequiredServiceMethodInfo,
-                    injectablePropertyInfo.PropertyType),
-                serviceProviderParam);
-            initializeBody.Add(Expression.Assign(propertyAccess, getRequiredServiceCall));
+            var getServiceCall = !IsNullable(injectablePropertyInfo)
+                ? Expression.Call(serviceProviderParam, _getServiceMethodInfo, Expression.Constant(injectablePropertyInfo.PropertyType))
+                : Expression.Call(_getRequiredServiceMethodInfo, serviceProviderParam, Expression.Constant(injectablePropertyInfo.PropertyType));
+            initializeBody.Add(Expression.Assign(propertyAccess, Expression.Convert(getServiceCall, injectablePropertyInfo.PropertyType)));
         }
         var initializeLambda = Expression.Lambda(
             delegateType: _initializeDelegateType,
@@ -363,16 +370,6 @@ public abstract partial class RazorSlice
             parameters: parameters
         ).Compile();
     }
-
-    [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "This method is only called for types that have been preserved.")]
-#pragma warning disable IL2055 // Either the type on which the MakeGenericType is called can't be statically determined, or the type parameters to be used for generic arguments can't be statically determined.
-    private static Type MakeGenericType(Type openGeneric, Type typeArg) => openGeneric.MakeGenericType(typeArg);
-#pragma warning restore IL2055
-
-    [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "This method is only called for types that have been preserved.")]
-    private static MethodInfo MakeGenericMethod(MethodInfo method, Type typeArg) => method.MakeGenericMethod(typeArg);
 
     private static bool IsNullable(PropertyInfo info) =>
         Nullable.GetUnderlyingType(info.PropertyType) is not null

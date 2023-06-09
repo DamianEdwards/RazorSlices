@@ -77,7 +77,7 @@ app.MapGet("/{id:int}", (int id) =>
 
 app.Run();
 
-struct LoremParams
+public struct LoremParams
 {
     public int ParagraphCount;
     public int ParagraphSentenceCount;
@@ -89,7 +89,7 @@ struct LoremParams
     }
 }
 
-struct HtmlContentParams
+public struct HtmlContentParams
 {
     public bool Encode;
 
@@ -98,30 +98,3 @@ struct HtmlContentParams
         Encode = encode ?? false;
     }
 }
-
-
-//public static class InterceptingStuff
-//{
-//    private static readonly Type slice_0 = Type.GetType("Slices__Footer");
-//    private static readonly PropertyInfo[] slice_0_props = slice_0.GetProperties().Where(pi => pi.GetCustomAttribute<RazorInjectAttribute>() is not null).ToArray();
-//    private static readonly Action<RazorSlice, IServiceProvider> slice_0_init = (slice, sp) =>
-//    {
-//        foreach (var prop in slice_0_props)
-//        {
-//            prop.SetValue(slice, sp.GetService(prop.PropertyType));
-//        }
-//    };
-
-//    // CoreCLR version
-//    private static readonly Delegate slice_1 = 
-
-//    [Intercepts()]
-//    public static IResult RazorSlice_slice0<TModel>(this IResultExtensions extensions, string _, TModel model)
-//    {
-//        var slice = Activator.CreateInstance(slice_0) as RazorSliceHttpResult<TModel>;
-//        slice.Model = model;
-//        slice.Initialize = slice_0_init;
-
-//        return slice;
-//    }
-//}

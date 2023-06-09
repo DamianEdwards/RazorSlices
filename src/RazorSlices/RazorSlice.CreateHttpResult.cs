@@ -86,7 +86,7 @@ public abstract partial class RazorSlice
     /// <returns>The <see cref="RazorSliceHttpResult{TModel}" /> instance.</returns>
     public static RazorSliceHttpResult<TModel> CreateHttpResult<TModel>(SliceFactory<TModel> sliceFactory, TModel model, int statusCode = StatusCodes.Status200OK)
     {
-        var result = (RazorSliceHttpResult<TModel>)Create(sliceFactory, model);
+        var result = (RazorSliceHttpResult<TModel>)RazorSliceFactory.Create(sliceFactory, model);
         result.StatusCode = statusCode;
         return result;
     }
