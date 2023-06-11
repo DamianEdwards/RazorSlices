@@ -41,10 +41,11 @@ app.MapGet("/render-to-string", async () =>
     var template = await slice.RenderAsync();
     return Results.Ok(new { HtmlString = template });
 });
-app.MapGet("/render-to-stringbuilder", async () =>
+app.MapGet("/render-to-stringbuilder", async (HttpContext httpContext) =>
 {
     var stringBuilder = new StringBuilder();
     var slice = Slices.LoremInjectableProperties.Create(new LoremParams(1, 4));
+    slice.HttpContext = httpContext;
     await slice.RenderAsync(stringBuilder);
     return Results.Ok(new { HtmlString = stringBuilder.ToString() });
 });

@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>11</LangVersion>
-    <!--<PublishAot Condition=" '$(TargetFramework)' == 'net8.0' ">true</PublishAot>-->
+    <PublishAot Condition=" '$(TargetFramework)' == 'net8.0' ">true</PublishAot>
     <!--<PublishTrimmed Condition=" '$(TargetFramework)' == 'net8.0' ">true</PublishTrimmed>
     <PublishSingleFile Condition=" '$(TargetFramework)' == 'net8.0' ">true</PublishSingleFile>
     <TrimMode>full</TrimMode>

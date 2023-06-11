@@ -37,7 +37,7 @@ public partial class RazorSlice
     /// <typeparam name="TModel"></typeparam>
     /// <returns></returns>
     protected internal ValueTask<HtmlString> RenderPartialAsync<TSlice, TModel>(TModel model)
-        where TSlice : IRazorSliceProxy<TModel>
+        where TSlice : IRazorSliceProxy
     {
         var slice = TSlice.Create(model);
         return RenderPartialAsyncImpl(slice);
@@ -78,10 +78,10 @@ public partial class RazorSlice
             return ValueTask.FromResult(HtmlString.Empty);
         }
 
-        return AwaitPartialTask(partial, renderPartialTask);
+        return AwaitPartialTask(renderPartialTask);
     }
 
-    private static async ValueTask<HtmlString> AwaitPartialTask(RazorSlice partial, ValueTask partialTask)
+    private static async ValueTask<HtmlString> AwaitPartialTask(ValueTask partialTask)
     {
         await partialTask;
         return HtmlString.Empty;
