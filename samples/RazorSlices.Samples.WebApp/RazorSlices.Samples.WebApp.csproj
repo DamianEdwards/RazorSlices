@@ -4,15 +4,17 @@
     <TargetFrameworks>net7.0;net8.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>11</LangVersion>
-    <PublishAot Condition=" '$(TargetFramework)' == 'net8.0' ">true</PublishAot>
-    <!--<PublishTrimmed Condition=" '$(TargetFramework)' == 'net8.0' ">true</PublishTrimmed>
-    <PublishSingleFile Condition=" '$(TargetFramework)' == 'net8.0' ">true</PublishSingleFile>
-    <TrimMode>full</TrimMode>
-    <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>-->
-    <!--<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>-->
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
+    <PublishAot>true</PublishAot>
+    <!--<PublishTrimmed>true</PublishTrimmed>
+    <PublishSingleFile>true</PublishSingleFile>
+    <TrimMode>full</TrimMode>
+    <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>-->
+  </PropertyGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\..\src\RazorSlices\RazorSlices.csproj" />
     <ProjectReference Include="..\RazorSlices.Samples.RazorClassLibrary\RazorSlices.Samples.RazorClassLibrary.csproj" />

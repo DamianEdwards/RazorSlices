@@ -41,11 +41,11 @@ app.MapGet("/render-to-string", async () =>
     var template = await slice.RenderAsync();
     return Results.Ok(new { HtmlString = template });
 });
-app.MapGet("/render-to-stringbuilder", async (HttpContext httpContext) =>
+app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) =>
 {
     var stringBuilder = new StringBuilder();
     var slice = Slices.LoremInjectableProperties.Create(new LoremParams(1, 4));
-    slice.HttpContext = httpContext;
+    slice.ServiceProvider = serviceProvider;
     await slice.RenderAsync(stringBuilder);
     return Results.Ok(new { HtmlString = stringBuilder.ToString() });
 });
@@ -63,25 +63,3 @@ Console.WriteLine($"RuntimeFeature.IsDynamicCodeSupported = {RuntimeFeature.IsDy
 Console.WriteLine($"RuntimeFeature.IsDynamicCodeCompiled = {RuntimeFeature.IsDynamicCodeCompiled}");
 
 app.Run();
-
-public struct LoremParams
-{
-    public int ParagraphCount;
-    public int ParagraphSentenceCount;
-
-    public LoremParams(int? paragraphCount, int? paragraphSentenceCount)
-    {
-        ParagraphCount = paragraphCount ?? 3;
-        ParagraphSentenceCount = paragraphSentenceCount ?? 5;
-    }
-}
-
-public struct HtmlContentParams
-{
-    public bool Encode;
-
-    public HtmlContentParams(bool? encode)
-    {
-        Encode = encode ?? false;
-    }
-}
