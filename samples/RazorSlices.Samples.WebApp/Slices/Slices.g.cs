@@ -1,27 +1,60 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Http.HttpResults;
 using RazorSlices.Samples.WebApp.Services;
 
-// TODO: Source generate this
+#nullable enable
+
+// TODO: Source generate this assuming only knowing the .cshtml file names in the project
 
 namespace RazorSlices.Samples.WebApp.Slices;
 
-public sealed class Todo : IRazorSliceProxy<RazorSliceHttpResult<RazorSlices.Samples.WebApp.Todo>, RazorSlices.Samples.WebApp.Todo>
+file static class __Shared
 {
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
-    private static readonly Type _type = Type.GetType("AspNetCoreGeneratedDocument.Slices_Todo");
-    private static readonly SliceFactory<RazorSlices.Samples.WebApp.Todo> _factory = RuntimeFeature.IsDynamicCodeCompiled
-        ? RazorSliceFactory.GetSliceFactory<RazorSlices.Samples.WebApp.Todo>(_type)
-        : static (model) =>
-        {
-            var slice = (RazorSlice<RazorSlices.Samples.WebApp.Todo>)Activator.CreateInstance(_type);
-            slice.Model = model;
-            return slice;
-        };
+    public const string AssemblyName = "RazorSlices.Samples.WebApp";
+    public static readonly Action<RazorSlice, IServiceProvider?> EmptyInit = (_, __) => { };
+}
 
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, "AspNetCoreGeneratedDocument.Slices_Todo", "RazorSlices.Samples.WebApp")]
-    public static RazorSliceHttpResult<RazorSlices.Samples.WebApp.Todo> Create(RazorSlices.Samples.WebApp.Todo model) => RazorSliceFactory.CreateHttpResult(_factory, model);
+public class Todo : IRazorSliceProxy
+{
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, TypeName, __Shared.AssemblyName)]
+    private const string TypeName = "AspNetCoreGeneratedDocument.Slices_Todo";
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
+    private static readonly Type _type = Type.GetType(TypeName)!;
+    private static readonly bool _hasModel = RazorSliceFactory.IsModelSlice(_type);
+    private static readonly PropertyInfo? _modelProperty = _type.GetProperty("Model");
+    private static readonly Type? _modelType = _hasModel ? _modelProperty!.PropertyType : null;
+    private static readonly (bool Any, PropertyInfo[] Nullable, PropertyInfo[] NonNullable) _injectableProperties
+        = RazorSliceFactory.GetInjectableProperties(_type);
+    private static readonly Action<RazorSlice, IServiceProvider?> _init = RazorSliceFactory.GetReflectionInitAction(_type, _injectableProperties);
+    private static readonly Delegate _factory = RuntimeFeature.IsDynamicCodeCompiled
+        ? RazorSliceFactory.GetSliceFactory(_type, _modelType, _injectableProperties)
+        : _hasModel
+            ? static (object model) =>
+            {
+                var slice = (RazorSlice)Activator.CreateInstance(_type)!;
+                _modelProperty!.SetValue(slice, model);
+                slice.Initialize = _init;
+                return slice;
+            }
+            : static () =>
+            {
+                var slice = (RazorSlice)Activator.CreateInstance(_type)!;
+                slice.Initialize = _init;
+                return slice;
+            };
+
+    public static RazorSlice Create() => _hasModel
+        ? throw new InvalidOperationException($"Slice {_type.Name} requires a model of type {_modelType?.Name}. Call Create<TModel>(TModel model) instead.")
+        : ((Func<RazorSlice>)_factory)();
+
+    public static RazorSlice<TModel> Create<TModel>(TModel model) => !_hasModel || !typeof(TModel).IsAssignableTo(_modelType)
+        ? throw new InvalidOperationException($"""
+            Cannot use model of type {typeof(TModel).Name} with slice {_type.Name}.
+            {(_hasModel ? $"Ensure the model is assignable to {_modelType!.Name}" : "It is not a strongly-typed slice.")}
+            """)
+        : (RazorSlice<TModel>)((Func<TModel, RazorSlice>)_factory)(model);
 }
 
 public sealed class Todos : IRazorSliceProxy<RazorSliceHttpResult<RazorSlices.Samples.WebApp.Todo[]>, RazorSlices.Samples.WebApp.Todo[]>

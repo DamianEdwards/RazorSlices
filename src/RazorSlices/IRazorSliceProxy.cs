@@ -1,34 +1,26 @@
 ﻿namespace RazorSlices;
 
 /// <summary>
-/// Represents a source-generated proxy type for a Razor slice.
+/// 
 /// </summary>
-public interface IRazorSliceProxy<TSlice> where TSlice : RazorSlice
+public interface IRazorSliceProxy
 {
-#if NET7_0_OR_GREATER
     /// <summary>
     /// 
     /// </summary>
     /// <returns></returns>
-#pragma warning disable CA1000 // Do not declare static members on generic types: static abstract
-    abstract static TSlice Create();
-#pragma warning restore CA1000
-#endif
+    abstract static RazorSlice Create();
 }
 
 /// <summary>
-/// Represents a source-generated proxy type for a strongly-typed Razor slice.
+/// Represents a source-generated proxy type for a Razor slice.
 /// </summary>
-public interface IRazorSliceProxy<TSlice, TModel> where TSlice : RazorSlice<TModel>
+public interface IRazorSliceProxy<TModel> : IRazorSliceProxy
 {
-#if NET7_0_OR_GREATER
     /// <summary>
     /// 
     /// </summary>
     /// <param name="model"></param>
     /// <returns></returns>
-#pragma warning disable CA1000 // Do not declare static members on generic types: static abstract
-    abstract static TSlice Create(TModel model);
-#pragma warning restore CA1000
-#endif
+    abstract static RazorSlice<TModel> Create(TModel model);
 }

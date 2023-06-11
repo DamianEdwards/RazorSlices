@@ -54,7 +54,6 @@ app.MapGet("/{id:int}", (int id) =>
 {
     var todo = Todos.AllTodos.FirstOrDefault(t => t.Id == id);
     return todo is not null
-        //? Results.Extensions.RazorSlice("/Slices/Todo.cshtml", todo)
         ? Results.Extensions.RazorSlice<Slices.Todo, Todo>(todo)
         : Results.NotFound();
 });
