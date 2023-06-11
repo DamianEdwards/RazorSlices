@@ -119,6 +119,7 @@ public static class RazorSliceFactory
             : _emptyInit;
     }
 
+    [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for initializing slices")]
     private static Expression<Action<RazorSlice, IServiceProvider?>> GetExpressionInitAction(
         Type sliceType,
         (bool Any, PropertyInfo[] Nullable, PropertyInfo[] NonNullable) injectableProperties)

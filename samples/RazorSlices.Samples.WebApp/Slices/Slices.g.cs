@@ -10,15 +10,9 @@ using RazorSlices.Samples.WebApp.Services;
 
 namespace RazorSlices.Samples.WebApp.Slices;
 
-file static class __Shared
-{
-    public const string AssemblyName = "RazorSlices.Samples.WebApp";
-    public static readonly Action<RazorSlice, IServiceProvider?> EmptyInit = (_, __) => { };
-}
-
 public class Todo : IRazorSliceProxy
 {
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, TypeName, __Shared.AssemblyName)]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, TypeName, "RazorSlices.Samples.WebApp")]
     private const string TypeName = "AspNetCoreGeneratedDocument.Slices_Todo";
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
     private static readonly Type _type = Type.GetType(TypeName)!;
