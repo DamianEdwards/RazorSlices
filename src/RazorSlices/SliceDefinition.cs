@@ -11,11 +11,15 @@ public class SliceDefinition
     /// <summary>
     /// Creates a new instance of <see cref="SliceDefinition"/>.
     /// </summary>
-    /// <param name="sliceTypeName">The type name of the slice.</param>
+    /// <param name="sliceType">The type of the slice.</param>
     /// <exception cref="ArgumentException">Thrown if the specified slice type cannot be loaded.</exception>
-    public SliceDefinition(string sliceTypeName)
+    public SliceDefinition(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
+        Type sliceType)
     {
-        SliceType = Type.GetType(sliceTypeName) ?? throw new ArgumentException($"Slice type {sliceTypeName} could not be loaded.", nameof(sliceTypeName));
+        ArgumentNullException.ThrowIfNull(sliceType);
+
+        SliceType = sliceType;
         HasModel = RazorSliceFactory.IsModelSlice(SliceType);
         ModelProperty = SliceType.GetProperty("Model");
         ModelType = ModelProperty?.PropertyType;
@@ -75,5 +79,5 @@ public class SliceDefinition
             Cannot use model of type {typeof(TModel).Name} with slice {SliceType.Name}.
             {(HasModel ? $"Ensure the model is assignable to {ModelType!.Name}" : "It is not a strongly-typed slice.")}
             """)
-        : (RazorSlice<TModel>)((Func<TModel, RazorSlice>)Factory)(model);
+        : (RazorSlice<TModel>)((Func<object, RazorSlice>)Factory)(model!);
 }

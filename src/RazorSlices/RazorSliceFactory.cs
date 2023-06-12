@@ -62,7 +62,9 @@ public static class RazorSliceFactory
     /// </summary>
     /// <param name="sliceType"></param>
     /// <returns></returns>
-    internal static (bool Any, PropertyInfo[] Nullable, PropertyInfo[] NonNullable) GetInjectableProperties(Type sliceType)
+    internal static (bool Any, PropertyInfo[] Nullable, PropertyInfo[] NonNullable) GetInjectableProperties(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
+        Type sliceType)
     {
         List<PropertyInfo>? nullable = null;
         List<PropertyInfo>? nonNullable = null;
@@ -159,6 +161,8 @@ public static class RazorSliceFactory
             parameters: new[] { sliceParam, spParam });
     }
 
+    [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "Guarded by check of RuntimeFeature.IsDynamicCodeCompiled")]
     internal static Delegate GetSliceFactory(SliceDefinition sliceDefinition)
     {
         return RuntimeFeature.IsDynamicCodeCompiled
@@ -213,11 +217,11 @@ public static class RazorSliceFactory
         //     return slice;
         // }
         // or
-        // RazorSlice<TModel> CreateSlice(MyModel model)
+        // RazorSlice<TModel> CreateSlice(object model)
         // {
         //     var slice = new SliceType<MyModel>();
         //     slice.Init = ...;
-        //     slice.Model = model
+        //     slice.Model = (MyModel)model
         //     return slice;
         // }
 
@@ -235,12 +239,14 @@ public static class RazorSliceFactory
 
         if (sliceDefinition.ModelType is not null)
         {
-            // Func<MyModel, RazorSlice<MyModel>>
+            // Func<object, RazorSlice<MyModel>>
             var modelPropInfo = sliceType.GetProperty("Model")!;
-            factoryType = typeof(Func<,>).MakeGenericType(sliceDefinition.ModelType, sliceType);
+            factoryType = typeof(Func<,>).MakeGenericType(typeof(object), sliceType);
             var modelParam = Expression.Parameter(sliceDefinition.ModelType, "model");
             parameters = new[] { modelParam };
-            body.Add(Expression.Assign(Expression.MakeMemberAccess(sliceVariable, modelPropInfo), modelParam));
+            body.Add(Expression.Assign(
+                Expression.MakeMemberAccess(sliceVariable, modelPropInfo),
+                Expression.Convert(modelParam, typeof(object))));
         }
 
         var returnTarget = Expression.Label(sliceType);
