@@ -259,48 +259,4 @@ public static class RazorSliceFactory
     private static bool IsNullable(PropertyInfo info) =>
         Nullable.GetUnderlyingType(info.PropertyType) is not null
             || _nullabilityContext.Create(info).WriteState is not NullabilityState.NotNull;
-
-    /// <summary>
-    /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceFactory" /> delegate.
-    /// </summary>
-    /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate to create the template with.</param>
-    /// <returns>A <see cref="RazorSlice" /> instance for the template.</returns>
-    public static RazorSlice Create(SliceFactory sliceFactory) => sliceFactory();
-
-    /// <summary>
-    /// Creates an instance of a <see cref="RazorSlice" /> template using the provided <see cref="SliceFactory" /> delegate with a typed model.
-    /// </summary>
-    /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate to create the template with.</param>
-    /// <param name="model">The model to use for the template instance.</param>
-    /// <typeparam name="TModel">The model type of the template.</typeparam>
-    /// <returns>A <see cref="RazorSlice{TModel}" /> instance for the template.</returns>
-    public static RazorSlice<TModel> Create<TModel>(SliceFactory<TModel> sliceFactory, TModel model) => sliceFactory(model);
-
-    /// <summary>
-    /// Creates and returns a new instance of a <see cref="RazorSliceHttpResult" /> using the provided <see cref="SliceFactory" /> delegate.
-    /// </summary>
-    /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate.</param>
-    /// <param name="statusCode">The HTTP status code to return. Defaults to <see cref="StatusCodes.Status200OK"/>.</param>
-    /// <returns>The <see cref="RazorSliceHttpResult" /> instance.</returns>
-    public static RazorSliceHttpResult CreateHttpResult(SliceFactory sliceFactory, int statusCode = StatusCodes.Status200OK)
-    {
-        var result = (RazorSliceHttpResult)sliceFactory();
-        result.StatusCode = statusCode;
-        return result;
-    }
-
-    /// <summary>
-    /// Creates and returns a new instance of a <see cref="RazorSliceHttpResult{TModel}" /> based on the provided name.
-    /// </summary>
-    /// <param name="sliceFactory">The <see cref="SliceFactory" /> delegate.</param>
-    /// <param name="model">The model to use for the template instance.</param>
-    /// <param name="statusCode">The HTTP status code to return. Defaults to <see cref="StatusCodes.Status200OK"/>.</param>
-    /// <typeparam name="TModel">The model type of the template.</typeparam>
-    /// <returns>The <see cref="RazorSliceHttpResult{TModel}" /> instance.</returns>
-    public static RazorSliceHttpResult<TModel> CreateHttpResult<TModel>(SliceFactory<TModel> sliceFactory, TModel model, int statusCode = StatusCodes.Status200OK)
-    {
-        var result = (RazorSliceHttpResult<TModel>)RazorSliceFactory.Create(sliceFactory, model);
-        result.StatusCode = statusCode;
-        return result;
-    }
 }
