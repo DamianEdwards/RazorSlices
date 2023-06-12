@@ -8,11 +8,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
-    <PublishAot>true</PublishAot>
-    <!--<PublishTrimmed>true</PublishTrimmed>
+    <!--<PublishAot>true</PublishAot>-->
+    <PublishTrimmed>true</PublishTrimmed>
     <PublishSingleFile>true</PublishSingleFile>
     <TrimMode>full</TrimMode>
-    <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>-->
+    <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
   </PropertyGroup>
   
   <ItemGroup>

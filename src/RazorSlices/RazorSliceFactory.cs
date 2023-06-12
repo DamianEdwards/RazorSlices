@@ -20,14 +20,12 @@ public static class RazorSliceFactory
     private static readonly HashSet<string> ExcludedServiceNames =
         new(StringComparer.OrdinalIgnoreCase) { "IModelExpressionProvider", "IUrlHelper", "IViewComponentHelper", "IJsonHelper", "IHtmlHelper`1" };
 
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
-    private static readonly Type _serviceProviderType = typeof(IServiceProvider);
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
-    private static readonly Type _serviceProviderExtensionsType = typeof(ServiceProviderServiceExtensions);
-    private static readonly MethodInfo _getServiceMethodInfo = _serviceProviderType
-        .GetMethod(nameof(IServiceProvider.GetService), new[] { typeof(Type) })!;
-    private static readonly MethodInfo _getRequiredServiceMethodInfo = _serviceProviderExtensionsType
-        .GetMethod(nameof(ServiceProviderServiceExtensions.GetRequiredService), new[] { _serviceProviderType, typeof(Type) })!;
+    //private static readonly Type _serviceProviderType = typeof(IServiceProvider);
+    //private static readonly Type _serviceProviderExtensionsType = typeof(ServiceProviderServiceExtensions);
+    //private static readonly MethodInfo _getServiceMethodInfo = _serviceProviderType
+    //    .GetMethod(nameof(IServiceProvider.GetService), new[] { typeof(Type) })!;
+    //private static readonly MethodInfo _getRequiredServiceMethodInfo = _serviceProviderExtensionsType
+    //    .GetMethod(nameof(ServiceProviderServiceExtensions.GetRequiredService), new[] { _serviceProviderType, typeof(Type) })!;
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)]
     private static readonly Type _razorSliceType = typeof(RazorSlice);
     private static readonly PropertyInfo _razorSliceInitializeProperty = _razorSliceType.GetProperty(nameof(RazorSlice.Initialize))!;
@@ -129,7 +127,7 @@ public static class RazorSliceFactory
         // }
 
         var sliceParam = Expression.Parameter(_razorSliceType, "slice");
-        var spParam = Expression.Parameter(_serviceProviderType, "sp");
+        var spParam = Expression.Parameter(typeof(IServiceProvider), "sp");
         var castSliceVar = Expression.Variable(sliceDefinition.SliceType, "s");
 
         var body = new List<Expression>
@@ -140,17 +138,19 @@ public static class RazorSliceFactory
             Expression.Assign(castSliceVar, Expression.Convert(sliceParam, sliceDefinition.SliceType))
         };
 
+        var getServiceMethod = typeof(IServiceProvider).GetMethod("GetService")!;
         foreach (var ip in sliceDefinition.InjectableProperties.Nullable)
         {
             var propertyAccess = Expression.MakeMemberAccess(castSliceVar, ip);
-            var getServiceCall = Expression.Call(spParam, _getServiceMethodInfo, Expression.Constant(ip.PropertyType));
+            var getServiceCall = Expression.Call(spParam, getServiceMethod, Expression.Constant(ip.PropertyType));
             body.Add(Expression.Assign(propertyAccess, Expression.Convert(getServiceCall, ip.PropertyType)));
         }
 
+        var getRequiredServiceMethod = typeof(ServiceProviderServiceExtensions).GetMethod("GetRequiredService", new[] { typeof(IServiceProvider), typeof(Type) })!;
         foreach (var ip in sliceDefinition.InjectableProperties.NonNullable)
         {
             var propertyAccess = Expression.MakeMemberAccess(castSliceVar, ip);
-            var getServiceCall = Expression.Call(null, _getRequiredServiceMethodInfo, spParam, Expression.Constant(ip.PropertyType));
+            var getServiceCall = Expression.Call(null, getRequiredServiceMethod, spParam, Expression.Constant(ip.PropertyType));
             body.Add(Expression.Assign(propertyAccess, Expression.Convert(getServiceCall, ip.PropertyType)));
         }
 
@@ -210,14 +210,14 @@ public static class RazorSliceFactory
 
         // Make a delegate like:
         //
-        // RazorSlice CreateSlice()
+        // MySlice CreateSlice()
         // {
         //     var slice = new SliceType();
         //     slice.Init = ...;
         //     return slice;
         // }
         // or
-        // RazorSlice<TModel> CreateSlice(object model)
+        // MySlice CreateSlice(object model)
         // {
         //     var slice = new SliceType<MyModel>();
         //     slice.Init = ...;
@@ -242,11 +242,11 @@ public static class RazorSliceFactory
             // Func<object, RazorSlice<MyModel>>
             var modelPropInfo = sliceType.GetProperty("Model")!;
             factoryType = typeof(Func<,>).MakeGenericType(typeof(object), sliceType);
-            var modelParam = Expression.Parameter(sliceDefinition.ModelType, "model");
+            var modelParam = Expression.Parameter(typeof(object), "model");
             parameters = new[] { modelParam };
             body.Add(Expression.Assign(
                 Expression.MakeMemberAccess(sliceVariable, modelPropInfo),
-                Expression.Convert(modelParam, typeof(object))));
+                Expression.Convert(modelParam, sliceDefinition.ModelType)));
         }
 
         var returnTarget = Expression.Label(sliceType);
