@@ -5,11 +5,18 @@ using RazorSlices.Samples.WebApp;
 using RazorSlices.Samples.WebApp.Services;
 using Slices = RazorSlices.Samples.WebApp.Slices;
 using LibrarySlices = RazorSlices.Samples.RazorClassLibrary.Slices;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddWebEncoders();
 builder.Services.AddSingleton<LoremService>();
+#if NET8_0_OR_GREATER
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default);
+});
+#endif
 
 var app = builder.Build();
 
@@ -39,7 +46,7 @@ app.MapGet("/render-to-string", async () =>
 {
     var slice = Slices.LoremFormattable.Create(new LoremParams(1, 4));
     var template = await slice.RenderAsync();
-    return Results.Ok(new { HtmlString = template });
+    return Results.Ok(new ResultDto(template));
 });
 app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) =>
 {
@@ -47,7 +54,7 @@ app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) 
     var slice = Slices.LoremInjectableProperties.Create(new LoremParams(1, 4));
     slice.ServiceProvider = serviceProvider;
     await slice.RenderAsync(stringBuilder);
-    return Results.Ok(new { HtmlString = stringBuilder.ToString() });
+    return Results.Ok(new ResultDto(stringBuilder.ToString()));
 });
 
 app.MapGet("/", () => Results.Extensions.RazorSlice<Slices.Todos, Todo[]>(Todos.AllTodos));
