@@ -27,7 +27,7 @@ public static class RazorSliceFactory
     private static readonly MethodInfo _getServiceMethodInfo = _serviceProviderType
         .GetMethod(nameof(IServiceProvider.GetService), new[] { typeof(Type) })!;
     private static readonly MethodInfo _getRequiredServiceMethodInfo = _serviceProviderExtensionsType
-        .GetMethod(nameof(ServiceProviderServiceExtensions.GetRequiredService), new[] { typeof(IServiceProvider), typeof(Type) })!;
+        .GetMethod(nameof(ServiceProviderServiceExtensions.GetRequiredService), new[] { _serviceProviderType, typeof(Type) })!;
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)]
     private static readonly Type _razorSliceType = typeof(RazorSlice);
     private static readonly PropertyInfo _razorSliceInitializeProperty = _razorSliceType.GetProperty(nameof(RazorSlice.Initialize))!;
