@@ -136,6 +136,7 @@ The library is still new and features are being actively added.
 - Layouts and sections
 - Rendering slices from slices (aka partials)
 - Support for Hot Reload
+- Support for .NET native AOT
 
 ### Interested in supporting but not sure yet
 
