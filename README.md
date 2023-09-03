@@ -125,6 +125,7 @@ The library is still new and features are being actively added.
     ```
 
 - DI-activated properties via `@inject`
+- Rendering slices from slices (aka partials)
 - Asynchronous rendering, i.e. the template can contain `await` statements, e.g. `@await WriteTheThing()`
 - Writing UTF8 `byte[]` values directly to the output
 - Rendering directly to `IBufferWriter<byte>`, `PipeWriter`, `Stream`, `TextWriter`, `StringBuilder`, and `string` outputs, including optimizations for not boxing struct values, zero-allocation rendering of primitives like numbers, etc. (rather than just calling `ToString()` on everything)
@@ -134,8 +135,8 @@ The library is still new and features are being actively added.
 ### Not yet supported but planned
 
 - Layouts and sections
-- Rendering slices from slices (aka partials)
 - Support for Hot Reload
+- Support for native AOT
 
 ### Interested in supporting but not sure yet
 
