@@ -48,13 +48,7 @@ jobs:
 
     - name: Publish samples
       run: |
-        for projectPath in ./samples/**/*.csproj ; do
-          for tfm in "net6.0" "net7.0"; do
-            projectFileName=${projectPath##*/}
-            projectName=${projectFileName%.*}
-            dotnet publish "$projectPath" --output "./artifacts/$projectName" --framework $tfm --configuration Release --no-build --verbosity normal
-          done;
-        done;
+        dotnet build -c Release /t:PublishSamples --no-build --verbosity normal
       
     - name: Pack (ci)
       run: dotnet pack --configuration Release --output ./artifacts/ci --verbosity normal -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
