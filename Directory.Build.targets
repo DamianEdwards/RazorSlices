@@ -1,0 +1,31 @@
+<Project>
+    <Target
+            Name="PublishSamples"
+            Condition="'$(IsSample)' == 'true'">
+        <PropertyGroup>
+            <ArtifactsRoot>$(MSBuildThisFileDirectory)/artifacts/</ArtifactsRoot>
+            <_IsMultiTargetTfm Condition="'$(TargetFrameworks)' != ''and '$(TargetFramework)' == ''">true</_IsMultiTargetTfm>
+            <_IsSingleTargetTfmNoRids Condition="'$(TargetFramework)' != '' and '$(RuntimeIdentifiers)' == ''">true</_IsSingleTargetTfmNoRids>
+            <_IsSingleTargetAndMultiRid Condition="'$(TargetFramework)' != '' and '$(RuntimeIdentifiers)' != ''">true</_IsSingleTargetAndMultiRid>
+        </PropertyGroup>
+        <!-- TFMs but no TF -> multitarget, making samples for each TFM -->
+        <ItemGroup Condition="'$(_IsMultiTargetTfm)' == 'true'">
+            <_TFMItems Include="$(TargetFrameworks)" />
+            <_SingleSamplePublish
+                    Include="$(MSBuildProjectFullPath)"
+                    AdditionalProperties="TargetFramework=%(_TFMItems.Identity);PublishDir=$(ArtifactsRoot)$(MSBuildProjectName)/%(_TFMItems.Identity)" />
+        </ItemGroup>
+
+        <!-- TF but no TFMs -> single sample (aka the default pathway) up until now -->
+        <ItemGroup Condition="'$(_IsSingleTargetTfm)' == 'true'">
+            <_SingleSamplePublish
+                    Include="$(MSBuildProjectFullPath)"
+                    AdditionalProperties="PublishDir=$(ArtifactsRoot)$(MSBuildProjectName)/$(TargetFramework)" />
+        </ItemGroup>
+
+        <MSBuild
+                Projects="@(_SingleSamplePublish)"
+                Targets="Publish"
+                BuildInParallel="true" />
+    </Target>
+</Project>
