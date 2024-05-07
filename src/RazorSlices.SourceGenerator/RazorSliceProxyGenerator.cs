@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -34,6 +35,8 @@ public class RazorSliceProxyGenerator : IIncrementalGenerator
 
     private static void Execute(SourceProductionContext context, string assemblyName, ImmutableArray<AdditionalText> texts)
     {
+        HashSet<string> generatedClasses = [];
+
         var codeBuilder = new StringBuilder();
 
         codeBuilder.AppendLine("using System.Diagnostics.CodeAnalysis;");
@@ -42,13 +45,38 @@ public class RazorSliceProxyGenerator : IIncrementalGenerator
 
         foreach (var file in texts)
         {
-            var filename = Path.GetFileNameWithoutExtension(file.Path);
+            var fileName = Path.GetFileNameWithoutExtension(file.Path);
+            
+            var className = fileName;
 
-            codeBuilder.AppendLine($$"""
-                public sealed class {{filename}} : IRazorSliceProxy
+            if (!CSharpHelpers.IsValidTypeName(className))
+            {
+                className = CSharpHelpers.CreateValidTypeName(className);
+            }
+
+            // Duplicate class name check
+
+            if (generatedClasses.Contains(className))
+            {
+                var descriptor = new DiagnosticDescriptor(
+                    "RSG0001",
+                    "Duplicate Class Name",
+                    $"Generated class with name {className} already exists. File '{fileName}.cshtml' has been ignored.",
+                    "Naming",
+                    DiagnosticSeverity.Warning,
+                    true);
+
+                context.ReportDiagnostic(Diagnostic.Create(descriptor, Location.None));
+            }
+            else
+            {
+                generatedClasses.Add(className);
+
+                codeBuilder.AppendLine($$"""
+                public sealed class {{className}} : IRazorSliceProxy
                 {
                     [DynamicDependency(DynamicallyAccessedMemberTypes.All, TypeName, "{{assemblyName}}")]
-                    private const string TypeName = "AspNetCoreGeneratedDocument.Slices_{{filename}}, {{assemblyName}}";
+                    private const string TypeName = "AspNetCoreGeneratedDocument.Slices_{{className}}, {{assemblyName}}";
                     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
                     private static readonly Type _sliceType = Type.GetType(TypeName)!;
                     private static readonly SliceDefinition _sliceDefinition = new(_sliceType);
@@ -58,7 +86,8 @@ public class RazorSliceProxyGenerator : IIncrementalGenerator
                 }
                 """);
 
-            codeBuilder.AppendLine();
+                codeBuilder.AppendLine();
+            }
         }
 
         context.AddSource("Slices.g.cs", codeBuilder.ToString());

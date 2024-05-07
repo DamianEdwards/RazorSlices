@@ -12,6 +12,8 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+
+	<InternalsVisibleTo Include="RazorSlices.SourceGenerator.Tests" />
   </ItemGroup>
 	
 </Project>
