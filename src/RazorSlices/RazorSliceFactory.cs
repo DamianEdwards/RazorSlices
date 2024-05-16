@@ -2,8 +2,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc.Razor.Internal;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -101,6 +99,8 @@ public static class RazorSliceFactory
     {
         if (!sliceDefinition.InjectableProperties.Any) throw new InvalidOperationException("Shouldn't call GetExpressionInitAction if there's no injectable properties.");
 
+        // Make a delegate like:
+        //
         // (RazorSlice slice, IServiceProvider? sp) =>
         // {
         //     if (sp is null) throw new InvalidOperationException("Cannot initialize @inject properties of slice because the ServiceProvider property is null.");
@@ -199,7 +199,9 @@ public static class RazorSliceFactory
         //     slice.Init = ...;
         //     return slice;
         // }
+        //
         // or
+        //
         // MySlice CreateSlice(object model)
         // {
         //     var slice = new SliceType<MyModel>();
