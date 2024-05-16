@@ -33,13 +33,23 @@ app.MapGet("/lorem-htmlcontent", (bool? encode) =>
     Results.Extensions.RazorSlice<Slices.LoremHtmlContent, HtmlContentParams>(new HtmlContentParams(encode)));
 app.MapGet("/lorem-injectableproperties", (int? paraCount, int? paraLength) =>
     Results.Extensions.RazorSlice<Slices.LoremInjectableProperties, LoremParams>(new LoremParams(paraCount, paraLength)));
-app.MapGet("/lorem-stream", async (HttpContext httpContext) =>
-{
-    var slice = Slices.LoremStatic.Create();
-    httpContext.Response.StatusCode = StatusCodes.Status200OK;
-    httpContext.Response.ContentType = "text/html; charset=utf-8";
-    await slice.RenderAsync(httpContext.Response.Body);
-});
+
+/*
+ * Error code CS9144
+ * Cannot intercept method 'EndpointRouteBuilderExtensions.MapGet(IEndpointRouteBuilder, string, RequestDelegate)' 
+ * with interceptor 
+ * 'GeneratedRouteBuilderExtensionsCore.MapGet4(IEndpointRouteBuilder, string, Delegate)' 
+ * because the signatures do not match.	
+ * RazorSlices.Samples.WebApp (net7.0)	
+ * G:\RazorSlices\samples\RazorSlices.Samples.WebApp\Microsoft.AspNetCore.Http.RequestDelegateGenerator\Microsoft.AspNetCore.Http.RequestDelegateGenerator.RequestDelegateGenerator\GeneratedRouteBuilderExtensions.g.cs
+ */
+//app.MapGet("/lorem-stream", async (HttpContext httpContext) =>
+//{
+//    var slice = Slices.LoremStatic.Create();
+//    httpContext.Response.StatusCode = StatusCodes.Status200OK;
+//    httpContext.Response.ContentType = "text/html; charset=utf-8";
+//    await slice.RenderAsync(httpContext.Response.Body);
+//});
 app.MapGet("/unicode", () => Results.Extensions.RazorSlice<Slices.Unicode>());
 app.MapGet("/library", () => Results.Extensions.RazorSlice<LibrarySlices.FromLibrary>());
 app.MapGet("/render-to-string", async () =>
