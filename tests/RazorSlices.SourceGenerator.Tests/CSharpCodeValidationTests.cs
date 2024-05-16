@@ -2,42 +2,35 @@ namespace RazorSlices.SourceGenerator.Tests;
 
 public class CSharpCodeValidationTests
 {
-    [Fact]
-    public void ValidTypeName_ReturnTrue()
+    [Theory]
+    [InlineData("_Footer")]
+    [InlineData("Todo_")]
+    [InlineData("Todo_Row")]
+    [InlineData("lorem")]
+    public void ValidTypeName_ReturnTrue(string typeName)
     {
-        string[] validNames = new string[] 
-        { 
-            "_Footer", 
-            "Todo_", 
-            "lorem" 
-        };
-        
-        bool isValid = true;
-
-        foreach (string name in validNames)
-        {
-            isValid = isValid && CSharpHelpers.IsValidTypeName(name);
-        }
-
-        Assert.True(isValid);
+        Assert.True(CSharpHelpers.IsValidTypeName(typeName));
     }
 
-    [Fact]
-    public void InvalidTypeName_ReturnFalse()
+    [Theory]
+    [InlineData("1Footer")] // starts with number
+    [InlineData("*Todo_")] // contains special characters
+    [InlineData("lorem ipsum")] // contains space
+    [InlineData("lorem-ipsum")] // contains -
+    [InlineData("lorem.ipsum")] // contains .
+    public void InvalidTypeName_ReturnFalse(string typeName)
     {
-        Assert.False(CSharpHelpers.IsValidTypeName("1Footer"));      // starts with number.
-        Assert.False(CSharpHelpers.IsValidTypeName("*Todo_"));       // contains special characters
-        Assert.False(CSharpHelpers.IsValidTypeName("lorem ipsum"));  // contains space
-        Assert.False(CSharpHelpers.IsValidTypeName("lorem-ipsum"));  // contains -
+        Assert.False(CSharpHelpers.IsValidTypeName(typeName));
     }
 
-    [Fact]
-    public void CreateValidTypeName()
+    [Theory]
+    [InlineData("1Footer", "_1Footer")]
+    [InlineData("*Todo_", "_Todo_")]
+    [InlineData("lorem-ipsum", "lorem_ipsum")]
+    [InlineData("lorem ipsum", "lorem_ipsum")]
+    [InlineData("lorem&*$^^-ipsum", "lorem______ipsum")]
+    public void CreateValidTypeName(string input, string expected)
     {
-        Assert.Equal("_1Footer", CSharpHelpers.CreateValidTypeName("1Footer"));
-        Assert.Equal("_Todo_", CSharpHelpers.CreateValidTypeName("*Todo_"));
-        Assert.Equal("lorem_ipsum", CSharpHelpers.CreateValidTypeName("lorem-ipsum"));
-        Assert.Equal("lorem_ipsum", CSharpHelpers.CreateValidTypeName("lorem ipsum"));
-        Assert.Equal("lorem______ipsum", CSharpHelpers.CreateValidTypeName("lorem&*$^^-ipsum"));
+        Assert.Equal(expected, CSharpHelpers.CreateValidTypeName(input));
     }
 }
