@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using RazorSlices;
 
-#if NET7_0_OR_GREATER
+#if NET8_0_OR_GREATER
 namespace Microsoft.AspNetCore.Http;
 
 ///// <summary>

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "RazorSlices.Samples.WebApp": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\samples\\RazorSlices.Samples.WebApp\\RazorSlices.Samples.WebApp.csproj"
+    }
+  }
+}

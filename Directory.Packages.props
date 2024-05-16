@@ -16,7 +16,7 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.0" />
     <PackageVersion Include="Moq" Version="4.18.2" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.2" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="7.0.0" Condition="'$(TargetFramework)'=='net7.0'" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="8.0.0" Condition="'$(TargetFramework)'=='net8.0'" />
   </ItemGroup>
 </Project>

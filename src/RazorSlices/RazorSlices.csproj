@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageTags>ASP.NET Web MinimalApis IResult Razor templating templates</PackageTags>
@@ -24,6 +24,14 @@
     <None Include="..\..\.editorconfig" Link=".editorconfig" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference the source generator just to ensure it's built but don't reference its output -->
+    <ProjectReference Include="..\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="None" ReferenceOutputAssembly="false" Private="true" />
+    <!-- Include source generator assembly & props in this project's package output -->
+    <None Include="@(ProjectReference->'%(RootDir)%(Directory)\bin\$(Configuration)\netstandard2.0\%(Filename).dll')" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="@(ProjectReference->'%(RootDir)%(Directory)\bin\$(Configuration)\netstandard2.0\%(Filename).props')" Pack="true" PackagePath="build" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>

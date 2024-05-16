@@ -10,7 +10,7 @@ namespace Microsoft.AspNetCore.Http.HttpResults;
 /// a route handler delegate. When executed it will render the template to the response.
 /// </summary>
 public abstract class RazorSliceHttpResult<TModel> : RazorSlice<TModel>, IResult
-#if NET7_0_OR_GREATER
+#if NET8_0_OR_GREATER
     , IStatusCodeHttpResult, IContentTypeHttpResult
 #endif
 {
@@ -19,7 +19,7 @@ public abstract class RazorSliceHttpResult<TModel> : RazorSlice<TModel>, IResult
     /// </summary>
     public int StatusCode { get; set; } = StatusCodes.Status200OK;
 
-#if NET7_0_OR_GREATER
+#if NET8_0_OR_GREATER
     int? IStatusCodeHttpResult.StatusCode => StatusCode;
 #endif
 

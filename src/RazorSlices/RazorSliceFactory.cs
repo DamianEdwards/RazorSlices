@@ -22,7 +22,7 @@ public static class RazorSliceFactory
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)]
     private static readonly Type _razorSliceType = typeof(RazorSlice);
     private static readonly PropertyInfo _razorSliceInitializeProperty = _razorSliceType.GetProperty(nameof(RazorSlice.Initialize))!;
-    private static readonly ConstructorInfo _ioeCtor = typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) })!;
+    private static readonly ConstructorInfo _ioeCtor = typeof(InvalidOperationException).GetConstructor([typeof(string)])!;
     private static readonly NullabilityInfoContext _nullabilityContext = new();
     private static readonly Action<RazorSlice, IServiceProvider?> _emptyInit = (_, __) => { };
 
@@ -67,20 +67,20 @@ public static class RazorSliceFactory
             {
                 if (IsNullable(pi))
                 {
-                    nullable ??= new();
+                    nullable ??= [];
                     nullable.Add(pi);
                 }
                 else
                 {
-                    nonNullable ??= new();
+                    nonNullable ??= [];
                     nonNullable.Add(pi);
                 }
             }
         }
 
         return (nullable is not null || nonNullable is not null,
-                nullable?.ToArray() ?? Array.Empty<PropertyInfo>(),
-                nonNullable?.ToArray() ?? Array.Empty<PropertyInfo>());
+                nullable?.ToArray() ?? [],
+                nonNullable?.ToArray() ?? []);
     }
 
     private static Action<RazorSlice, IServiceProvider?> GetReflectionInitAction(SliceDefinition sliceDefinition)
@@ -104,7 +104,7 @@ public static class RazorSliceFactory
             : _emptyInit;
     }
 
-#if NET7_0_OR_GREATER
+#if NET8_0_OR_GREATER
     [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for initializing slices")]
 #endif
     private static Expression<Action<RazorSlice, IServiceProvider?>> GetExpressionInitAction(SliceDefinition sliceDefinition)
@@ -139,7 +139,7 @@ public static class RazorSliceFactory
             body.Add(Expression.Assign(propertyAccess, Expression.Convert(getServiceCall, ip.PropertyType)));
         }
 
-        var getRequiredServiceMethod = typeof(ServiceProviderServiceExtensions).GetMethod("GetRequiredService", new[] { typeof(IServiceProvider), typeof(Type) })!;
+        var getRequiredServiceMethod = typeof(ServiceProviderServiceExtensions).GetMethod("GetRequiredService", [typeof(IServiceProvider), typeof(Type)])!;
         foreach (var ip in sliceDefinition.InjectableProperties.NonNullable)
         {
             var propertyAccess = Expression.MakeMemberAccess(castSliceVar, ip);
@@ -149,9 +149,9 @@ public static class RazorSliceFactory
 
         return Expression.Lambda<Action<RazorSlice, IServiceProvider?>>(
             body: Expression.Block(
-                variables: new[] { castSliceVar },
+                variables: [castSliceVar],
                 body),
-            parameters: new[] { sliceParam, spParam });
+            parameters: [sliceParam, spParam]);
     }
 
     [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
@@ -183,11 +183,11 @@ public static class RazorSliceFactory
     }
 
     /// <summary>
-    /// Creates a <see cref="SliceFactory"/> that can be used to create a <see cref="RazorSlice"/> of the specified <see cref="Type"/>.
+    /// Creates a <see cref="RazorSliceFactory"/> that can be used to create a <see cref="RazorSlice"/> of the specified <see cref="Type"/>.
     /// </summary>
     /// <param name="sliceDefinition"></param>
-    /// <returns>A <see cref="SliceFactory"/> that can be used to create an instance of the slice.</returns>
-#if NET7_0_OR_GREATER
+    /// <returns>A <see cref="RazorSliceFactory"/> that can be used to create an instance of the slice.</returns>
+#if NET8_0_OR_GREATER
     [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for creating slices")]
 #endif
     private static Delegate GetExpressionsSliceFactory(SliceDefinition sliceDefinition)
@@ -236,7 +236,7 @@ public static class RazorSliceFactory
             var modelPropInfo = sliceType.GetProperty("Model")!;
             factoryType = typeof(Func<,>).MakeGenericType(typeof(object), sliceType);
             var modelParam = Expression.Parameter(typeof(object), "model");
-            parameters = new[] { modelParam };
+            parameters = [modelParam];
             body.Add(Expression.Assign(
                 Expression.MakeMemberAccess(sliceVariable, modelPropInfo),
                 Expression.Convert(modelParam, sliceDefinition.ModelType)));
@@ -248,7 +248,7 @@ public static class RazorSliceFactory
         return Expression.Lambda(
             delegateType: factoryType,
             body: Expression.Block(
-                variables: new[] { sliceVariable },
+                variables: [sliceVariable],
                 body
             ),
             name: "CreateSlice",

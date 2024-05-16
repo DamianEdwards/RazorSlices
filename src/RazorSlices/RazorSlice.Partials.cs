@@ -17,7 +17,7 @@ public partial class RazorSlice
         return RenderPartialAsyncImpl(partial);
     }
 
-#if NET7_0_OR_GREATER
+#if NET8_0_OR_GREATER
     /// <summary>
     /// Renders a template inline.
     /// </summary>
@@ -65,7 +65,7 @@ public partial class RazorSlice
 #pragma warning restore CA2012
         else
         {
-#if NET7_0_OR_GREATER
+#if NET8_0_OR_GREATER
             throw new UnreachableException();
 #else
             Debug.Fail("Unreachable");

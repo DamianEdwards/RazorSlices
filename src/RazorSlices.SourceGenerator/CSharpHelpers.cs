@@ -14,7 +14,9 @@ internal static class CSharpHelpers
         return reservedKeywords.Contains(value);
     }
 
-    internal static bool IsValidTypeName(string text)
+    internal static bool IsValidNamespace(string text) => IsValidTypeName(text, allowPeriod: true);
+
+    internal static bool IsValidTypeName(string text, bool allowPeriod = false)
     {
         // Must be 1 character or longer.
 
@@ -36,6 +38,12 @@ internal static class CSharpHelpers
         for (int i = 0; i < text.Length; i++)
         {
             char character = text[i];
+
+            if (allowPeriod && character == '.')
+            {
+                continue;
+            }
+
             var uc = CharUnicodeInfo.GetUnicodeCategory(character);
 
             switch (uc)
@@ -65,7 +73,9 @@ internal static class CSharpHelpers
         return true;
     }
 
-    internal static string CreateValidTypeName(string text)
+    internal static string CreateValidNamespace(string text) => CreateValidTypeName(text, allowPeriod: true);
+
+    internal static string CreateValidTypeName(string text, bool allowPeriod = false)
     {
         // Each character must be
         // Letter (Lu, Ll, Lt, Lm, Lo or Nl), digit (Nd), connecting (Pc), combining (Mn or Mc), and formatting (Cf) categories.
@@ -76,6 +86,12 @@ internal static class CSharpHelpers
         for (int i = 0; i < characters.Length; i++)
         {
             char character = text[i];
+
+            if (allowPeriod && character == '.')
+            {
+                continue;
+            }
+
             var uc = CharUnicodeInfo.GetUnicodeCategory(character);
 
             switch (uc)

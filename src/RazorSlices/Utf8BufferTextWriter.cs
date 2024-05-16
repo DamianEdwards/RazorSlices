@@ -99,8 +99,8 @@ internal sealed class Utf8BufferTextWriter : TextWriter
         // Json.NET only writes ASCII characters by themselves, e.g. {}[], etc
         // this should be an exceptional case
 
-#if NET7_0_OR_GREATER
-        Utf8.FromUtf16(new ReadOnlySpan<char>(value), destination, out var charsUsed, out var bytesUsed);
+#if NET8_0_OR_GREATER
+        Utf8.FromUtf16(new ReadOnlySpan<char>(ref value), destination, out var charsUsed, out var bytesUsed);
 #else
         ReadOnlySpan<char> valueArray = stackalloc [] { value };
         Utf8.FromUtf16(valueArray, destination, out var charsUsed, out var bytesUsed);

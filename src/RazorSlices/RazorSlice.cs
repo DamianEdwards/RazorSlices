@@ -221,7 +221,7 @@ public abstract partial class RazorSlice : IDisposable
         ArgumentNullException.ThrowIfNull(name);
         ArgumentNullException.ThrowIfNull(section);
 
-        _sectionWriters ??= new();
+        _sectionWriters ??= [];
 
         if (_sectionWriters.ContainsKey(name))
         {
