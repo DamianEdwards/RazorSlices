@@ -301,7 +301,7 @@ public class ProjectBuilder
 
         //DotNetCli.Clean(cmdArgs);
 
-        cmdArgs.AddRange(new[] { $"--output", outputDir });
+        cmdArgs.AddRange([$"--output", outputDir]);
         cmdArgs.Add("--disable-build-servers");
         if (args is not null)
         {

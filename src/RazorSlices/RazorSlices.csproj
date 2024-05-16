@@ -31,7 +31,7 @@
     <ProjectReference Include="..\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="None" ReferenceOutputAssembly="false" Private="true" />
     <!-- Include source generator assembly & props in this project's package output -->
     <None Include="@(ProjectReference->'%(RootDir)%(Directory)\bin\$(Configuration)\netstandard2.0\%(Filename).dll')" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-    <None Include="@(ProjectReference->'%(RootDir)%(Directory)\bin\$(Configuration)\netstandard2.0\%(Filename).props')" Pack="true" PackagePath="build" Visible="false" />
+    <None Include="..\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.props" Pack="true" PackagePath="build/RazorSlices.props" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>

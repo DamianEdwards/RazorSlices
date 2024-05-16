@@ -7,9 +7,9 @@ public class PublishSample
     const string ProjectName = "RazorSlices.Samples.WebApp";
 
     [Theory]
-    //[InlineData(PublishScenario.Default)]
+    [InlineData(PublishScenario.Default)]
     //[InlineData(PublishScenario.Trimmed)]
-    [InlineData(PublishScenario.AOT)]
+    //[InlineData(PublishScenario.AOT)]
     public void Publish(PublishScenario publishScenario)
     {
         var projectBuilder = new ProjectBuilder(ProjectName, publishScenario);
