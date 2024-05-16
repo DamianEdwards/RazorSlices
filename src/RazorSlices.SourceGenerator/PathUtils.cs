@@ -2,12 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-//Adapted from https://github.com/dotnet/corefx/blob/master/src/Common/src/CoreLib/System/IO/Path.cs#L697
+// Adapted from https://github.com/dotnet/corefx/blob/master/src/Common/src/CoreLib/System/IO/Path.cs#L697
 // by Anton Krouglov
+
+// Further tweaked by Damian Edwards
 
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.Text;
+using System.Runtime.InteropServices;
 
 namespace System.IO;
 
@@ -122,7 +125,7 @@ internal static class PathUtils
     public static readonly char PathSeparator = PathInternalNetCore.PathSeparator;
 
     /// <summary>Returns a comparison that can be used to compare file and directory names for equality.</summary>
-    internal static StringComparison StringComparison => StringComparison.OrdinalIgnoreCase;
+    internal static StringComparison StringComparison => RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 }
 
 /// <summary>Contains internal path helpers that are shared between many projects.</summary>

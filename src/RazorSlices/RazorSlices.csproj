@@ -29,9 +29,8 @@
   <ItemGroup>
     <!-- Reference the source generator just to ensure it's built but don't reference its output -->
     <ProjectReference Include="..\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="None" ReferenceOutputAssembly="false" Private="true" />
-    <!-- Include source generator assembly & props in this project's package output -->
+    <!-- Include source generator assembly in this project's package output -->
     <None Include="@(ProjectReference->'%(RootDir)%(Directory)\bin\$(Configuration)\netstandard2.0\%(Filename).dll')" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-    <None Include="..\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.props" Pack="true" PackagePath="build/RazorSlices.props" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>
