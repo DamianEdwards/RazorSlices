@@ -55,8 +55,8 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
 
         var codeBuilder = new StringBuilder();
 
-        codeBuilder.AppendLine("using System.Diagnostics.CodeAnalysis;");
-        codeBuilder.AppendLine("using RazorSlices;");
+        codeBuilder.AppendLine("using global::System.Diagnostics.CodeAnalysis;");
+        codeBuilder.AppendLine("using global::RazorSlices;");
         codeBuilder.AppendLine();
         codeBuilder.AppendLine("#nullable enable");
         codeBuilder.AppendLine();
@@ -130,59 +130,4 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
 
         context.AddSource($"{projectInfo.BuildProperties.RootNamespace}.RazorSliceProxies.g.cs", SourceText.From(codeBuilder.ToString(), Encoding.UTF8));
     }
-
-    /// <summary>
-    /// Creates a relative path from one file or folder to another.
-    /// </summary>
-    /// <param name="fromPath">Contains the directory that defines the start of the relative path.</param>
-    /// <param name="toPath">Contains the path that defines the endpoint of the relative path.</param>
-    /// <returns>The relative path from the start directory to the end path.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="fromPath"/> or <paramref name="toPath"/> is <c>null</c>.</exception>
-    /// <exception cref="UriFormatException"></exception>
-    /// <exception cref="InvalidOperationException"></exception>
-    private static string GetRelativePath(string fromPath, string toPath)
-    {
-        if (string.IsNullOrEmpty(fromPath))
-        {
-            throw new ArgumentNullException(nameof(fromPath));
-        }
-
-        if (string.IsNullOrEmpty(toPath))
-        {
-            throw new ArgumentNullException(nameof(toPath));
-        }
-
-        var fromUri = new Uri(AppendDirectorySeparatorChar(fromPath));
-        var toUri = new Uri(AppendDirectorySeparatorChar(toPath));
-
-        if (!string.Equals(fromUri.Scheme, toUri.Scheme, StringComparison.OrdinalIgnoreCase))
-        {
-            return toPath;
-        }
-
-        var relativeUri = fromUri.MakeRelativeUri(toUri);
-        var relativePath = Uri.UnescapeDataString(relativeUri.ToString());
-
-        if (string.Equals(toUri.Scheme, Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
-        {
-            relativePath = relativePath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-        }
-
-        return relativePath;
-    }
-
-    private static string AppendDirectorySeparatorChar(string path)
-    {
-        // Append a slash only if the path is a directory and does not have a slash.
-        if (!Path.HasExtension(path) && !path.EndsWith(Path.DirectorySeparatorChar.ToString()))
-        {
-            return path + Path.DirectorySeparatorChar;
-        }
-
-        return path;
-    }
-
-    internal static StringComparison StringComparison => IsCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-
-    internal static bool IsCaseSensitive => !(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX));
 }

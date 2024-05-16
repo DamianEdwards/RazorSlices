@@ -26,11 +26,6 @@ public static class RazorSliceFactory
     private static readonly NullabilityInfoContext _nullabilityContext = new();
     private static readonly Action<RazorSlice, IServiceProvider?> _emptyInit = (_, __) => { };
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="sliceType"></param>
-    /// <returns></returns>
     internal static bool IsModelSlice(Type sliceType)
     {
         var baseType = sliceType.BaseType;
@@ -48,11 +43,6 @@ public static class RazorSliceFactory
         return false;
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="sliceType"></param>
-    /// <returns></returns>
     internal static (bool Any, PropertyInfo[] Nullable, PropertyInfo[] NonNullable) GetInjectableProperties(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
         Type sliceType)
