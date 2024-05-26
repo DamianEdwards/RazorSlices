@@ -1,5 +1,7 @@
 ﻿@using System.Reflection;
-@inherits RazorSliceHttpResult
+
+@inherits RazorSlice
+
 <!DOCTYPE html>
 <html lang="en" class="h-100">
 <head>
@@ -17,12 +19,16 @@
         <div class="container">
             <h1 class="mt-5">From Library</h1>
             <p class="text-success">This slice was loaded from a referenced Razor Class Library!</p>
-            <p>Loaded from assembly: @(typeof(MarkerClass).Assembly.FullName)</p>
+            <p>
+                Loaded from assembly:<br />
+                <em>@(typeof(MarkerClass).Assembly.FullName)</em>
+            </p>
         </div>
     </main>
 
     <footer class="footer mt-auto py-3 bg-light">
         <div class="container">
+            <a href="/"><span class="text-muted">Home</span></a> |
             <a href="https://github.com/DamianEdwards/RazorSlices"><span class="text-muted">RazorSlices</span></a>
         </div>
     </footer>

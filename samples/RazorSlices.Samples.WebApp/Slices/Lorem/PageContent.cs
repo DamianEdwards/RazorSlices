@@ -1,4 +1,4 @@
-﻿namespace RazorSlices.Samples.WebApp.Slices;
+﻿namespace RazorSlices.Samples.WebApp.Slices.Lorem;
 
 public static class PageContent
 {
@@ -15,7 +15,7 @@ public static class PageContent
 
         var sentenceLength = SentenceUtf8.Length;
         // Number of sentences + allowance for space in between each sentence
-        var bufferLength = (sentenceLength * count) + (count - 1);
+        var bufferLength = sentenceLength * count + (count - 1);
         var output = new byte[bufferLength];
         var outputSpan = output.AsSpan();
 

@@ -65,7 +65,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             var fileName = Path.GetFileNameWithoutExtension(file.Path);
             var directory = Path.GetDirectoryName(file.Path);
             var relativePath = PathUtils.GetRelativePath(projectInfo.BuildProperties.ProjectDirectory!, directory);
-            var subNamespace = relativePath.Replace(Path.PathSeparator, '.');
+            var subNamespace = relativePath.Replace(Path.DirectorySeparatorChar, '.');
 
             var className = fileName;
 
@@ -113,7 +113,8 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                         [DynamicDependency(DynamicallyAccessedMemberTypes.All, TypeName, "{{projectInfo.AssemblyName}}")]
                         private const string TypeName = "AspNetCoreGeneratedDocument.{{subNamespaceAsClassName}}_{{className}}, {{projectInfo.AssemblyName}}";
                         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
-                        private static readonly Type _sliceType = Type.GetType(TypeName)!;
+                        private static readonly Type _sliceType = Type.GetType(TypeName)
+                            ?? throw new InvalidOperationException($"Razor view type '{TypeName}' was not found. This is likely a bug in the RazorSlices source generator.");
                         private static readonly SliceDefinition _sliceDefinition = new(_sliceType);
 
                         public static RazorSlice Create() => _sliceDefinition.CreateSlice();

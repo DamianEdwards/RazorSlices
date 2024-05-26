@@ -1,6 +1,9 @@
 ﻿@using System.IO;
 @using System.Text.Encodings.Web;
+@using RazorSlices.Samples.WebApp.Slices.Lorem;
+
 @inherits RazorSliceHttpResult<HtmlContentParams>
+
 @{
     var title = $"Lorem Ipsum (IHtmlContent)";
     var content = new LoremHtmlContent { HtmlEncode = Model.Encode };
@@ -20,6 +23,8 @@
 <body class="d-flex flex-column h-100">
     <main class="flex-shrink-0">
         <div class="container">
+            @(await RenderPartialAsync<_LoremMenu>())
+
             <h1 class="mt-5">@title</h1>
             @content
         </div>

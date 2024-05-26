@@ -49,7 +49,7 @@ jobs:
     - name: Publish samples
       run: |
         for projectPath in ./samples/**/*.csproj ; do
-          for tfm in "net6.0" "net7.0"; do
+          for tfm in "net8.0"; do
             projectFileName=${projectPath##*/}
             projectName=${projectFileName%.*}
             dotnet publish "$projectPath" --output "./artifacts/$projectName" --framework $tfm --configuration Release --no-build --verbosity normal

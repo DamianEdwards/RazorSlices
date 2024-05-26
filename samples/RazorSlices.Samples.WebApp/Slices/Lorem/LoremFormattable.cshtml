@@ -1,8 +1,12 @@
-﻿@inherits RazorSliceHttpResult<LoremParams>
+﻿@using RazorSlices.Samples.WebApp.Slices.Lorem
+
+@inherits RazorSliceHttpResult<LoremParams>
+
 @{
     var title = $"Lorem Ipsum (Formattable: {Model.ParagraphCount} paragraphs)";
     var content = new LoremContent { ParagraphCount = Model.ParagraphCount };
 }
+
 <!DOCTYPE html>
 <html lang="en" class="h-100">
 <head>
@@ -18,6 +22,8 @@
 <body class="d-flex flex-column h-100">
     <main class="flex-shrink-0">
         <div class="container">
+            @(await RenderPartialAsync<_LoremMenu>())
+
             <h1 class="mt-5">@title</h1>
             @content
         </div>

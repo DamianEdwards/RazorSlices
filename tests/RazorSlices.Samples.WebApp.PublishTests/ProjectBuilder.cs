@@ -61,7 +61,7 @@ public class ProjectBuilder
             PublishScenario.TrimmedReadyToRun => Publish(ProjectName, framework: framework, selfContained: true, singleFile: true, readyToRun: true, trimLevel: TrimLevel.Full, runId: runId),
             PublishScenario.TrimmedReadyToRunCompressed => Publish(ProjectName, framework: framework, selfContained: true, singleFile: true, enableCompressionInSingleFile: true, readyToRun: true, trimLevel: TrimLevel.Full, runId: runId),
             PublishScenario.AOT => PublishAot(ProjectName, framework: framework, trimLevel: TrimLevel.Default, runId: runId),
-            _ => throw new ArgumentException("Unrecognized publish scenario", nameof(PublishScenario))
+            _ => throw new InvalidOperationException($"Unrecognized publish scenario '{PublishScenario}'")
         };
     }
 
@@ -189,7 +189,7 @@ public class ProjectBuilder
             result.Add(("ASPNETCORE_URLS", "http://localhost:5079"));
         }
 
-        return result.ToArray();
+        return [.. result];
     }
 
     private static PublishResult Publish(
@@ -233,8 +233,8 @@ public class ProjectBuilder
         return PublishImpl(projectName, configuration, framework, args, runId);
     }
 
-    private readonly static List<string> _projectsSupportingAot = new()
-    {
+    private readonly static List<string> _projectsSupportingAot =
+    [
         "HelloWorld.Console",
         "HelloWorld.Web",
         "HelloWorld.Web.Stripped",
@@ -242,7 +242,7 @@ public class ProjectBuilder
         "HelloWorld.HttpListener",
         "TrimmedTodo.Console.ApiClient",
         "TrimmedTodo.Console.PostgreSQL"
-    };
+    ];
 
     private static PublishResult PublishAot(
         string projectName,

@@ -31,7 +31,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.Samples.WebApp.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.SourceGenerator", "src\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj", "{F1CBA828-537D-479F-B669-66231EAD8A17}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RazorSlices.SourceGenerator.Tests", "tests\RazorSlices.SourceGenerator.Tests\RazorSlices.SourceGenerator.Tests.csproj", "{0B5F0815-95E6-418F-95B5-0F3BFFAA08A5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.SourceGenerator.Tests", "tests\RazorSlices.SourceGenerator.Tests\RazorSlices.SourceGenerator.Tests.csproj", "{0B5F0815-95E6-418F-95B5-0F3BFFAA08A5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

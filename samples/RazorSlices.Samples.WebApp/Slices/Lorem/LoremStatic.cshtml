@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@using RazorSlices.Samples.WebApp.Slices.Lorem
+
+<!DOCTYPE html>
 <html lang="en" class="h-100">
 <head>
     <meta charset="utf-8">
@@ -13,6 +15,8 @@
 <body class="d-flex flex-column h-100">
     <main class="flex-shrink-0">
         <div class="container">
+            @(await RenderPartialAsync<_LoremMenu>())
+
             <h1 class="mt-5">@PageTitle</h1>
             
             <p>Philosophi autem in suis lectulis plerumque moriuntur. Quod, inquit, quamquam voluptatibus quibusdam est saepe iucundius, tamen expetitur propter voluptatem. <mark>Cur iustitia laudatur?</mark> Quae tamen a te agetur non melior, quam illae sunt, quas interdum optines. Non quaero, quid dicat, sed quid convenienter possit rationi et sententiae suae dicere. Nonne odio multos dignos putamus, qui quodam motu aut statu videntur naturae legem et modum contempsisse? Iam argumenti ratione conclusi caput esse faciunt ea, quae perspicua dicunt, deinde ordinem sequuntur, tum, quid verum sit in singulis, extrema conclusio est. <i>Respondeat totidem verbis.</i> Atque haec ita iustitiae propria sunt, ut sint virtutum reliquarum communia. </p>
