@@ -103,7 +103,6 @@ internal static class BufferWriterHtmlExtensions
         return false;
     }
 
-#if NET8_0_OR_GREATER
     public static void HtmlEncodeAndWriteUtf8SpanFormattable<T>(this IBufferWriter<byte> bufferWriter, T? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
         where T : IUtf8SpanFormattable
     {
@@ -144,7 +143,6 @@ internal static class BufferWriterHtmlExtensions
         }
         return false;
     }
-#endif
 
     public static void HtmlEncodeAndWrite(this IBufferWriter<byte> bufferWriter, ReadOnlySpan<char> textSpan, HtmlEncoder htmlEncoder)
     {
@@ -180,12 +178,22 @@ internal static class BufferWriterHtmlExtensions
                 {
                     WriteHtml(bufferWriter, rentedBuffer.AsSpan()[..waitingToWrite]);
                     waitingToWrite = 0;
-                    bufferSpan = rentedBuffer;
                 }
+                bufferSpan = rentedBuffer;
             }
 
             // Encode to rented buffer
             encodeStatus = htmlEncoder.Encode(textSpan, bufferSpan, out var charsConsumed, out var charsWritten);
+
+            // REVIEW: This routine needs some review for how it handles cases where the buffer is too small.
+
+            if (charsConsumed == 0 && encodeStatus == OperationStatus.DestinationTooSmall)
+            {
+                // The buffer is too small to encode the current text, so slice buffer span to 0 and continue the loop
+                bufferSpan = bufferSpan[bufferSpan.Length..];
+                continue;
+            }
+
             waitingToWrite += charsWritten;
 
             if (textSpan.Length - charsConsumed == 0)
