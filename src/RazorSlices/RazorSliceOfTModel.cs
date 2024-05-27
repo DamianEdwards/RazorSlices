@@ -9,9 +9,5 @@ public abstract class RazorSlice<TModel> : RazorSlice
     /// <summary>
     /// Gets or sets the model.
     /// </summary>
-#if NET8_0_OR_GREATER
     public required TModel Model { get; set; }
-#else
-    public TModel Model { get; set; } = default!;
-#endif
 }

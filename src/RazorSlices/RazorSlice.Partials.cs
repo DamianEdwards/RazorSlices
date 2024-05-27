@@ -17,7 +17,6 @@ public partial class RazorSlice
         return RenderPartialAsyncImpl(partial);
     }
 
-#if NET8_0_OR_GREATER
     /// <summary>
     /// Renders a template inline.
     /// </summary>
@@ -42,7 +41,6 @@ public partial class RazorSlice
         var slice = TSlice.Create(model);
         return RenderPartialAsyncImpl(slice);
     }
-#endif
 
     private ValueTask<HtmlString> RenderPartialAsyncImpl(RazorSlice partial)
     {
@@ -65,12 +63,7 @@ public partial class RazorSlice
 #pragma warning restore CA2012
         else
         {
-#if NET8_0_OR_GREATER
             throw new UnreachableException();
-#else
-            Debug.Fail("Unreachable");
-            throw new InvalidOperationException();
-#endif
         }
 
         if (renderPartialTask.HandleSynchronousCompletion())

@@ -92,9 +92,7 @@ public static class RazorSliceFactory
             : _emptyInit;
     }
 
-#if NET8_0_OR_GREATER
     [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for initializing slices")]
-#endif
     private static Expression<Action<RazorSlice, IServiceProvider?>> GetExpressionInitAction(SliceDefinition sliceDefinition)
     {
         if (!sliceDefinition.InjectableProperties.Any) throw new InvalidOperationException("Shouldn't call GetExpressionInitAction if there's no injectable properties.");
@@ -177,9 +175,7 @@ public static class RazorSliceFactory
     /// </summary>
     /// <param name="sliceDefinition"></param>
     /// <returns>A <see cref="RazorSliceFactory"/> that can be used to create an instance of the slice.</returns>
-#if NET8_0_OR_GREATER
     [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for creating slices")]
-#endif
     private static Delegate GetExpressionsSliceFactory(SliceDefinition sliceDefinition)
     {
         var sliceType = sliceDefinition.SliceType;

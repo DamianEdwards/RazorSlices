@@ -91,7 +91,6 @@ internal static class TextWriterHtmlExtensions
         return false;
     }
 
-#if NET8_0_OR_GREATER
     public static void HtmlEncodeAndWriteUtf8SpanFormattable<T>(this TextWriter textWriter, T? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
         where T : IUtf8SpanFormattable
     {
@@ -132,7 +131,6 @@ internal static class TextWriterHtmlExtensions
         }
         return false;
     }
-#endif
 
     public static void HtmlEncodeAndWrite(this TextWriter textWriter, ReadOnlySpan<char> value, HtmlEncoder htmlEncoder)
     {

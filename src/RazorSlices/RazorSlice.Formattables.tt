@@ -71,11 +71,7 @@ public abstract partial class RazorSlice
         {
 <#    if (typeDetail.IsStruct) {
           if (typeDetail.IsUtf8Formattable) { #>
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
 <#        }
           else { #>
             WriteSpanFormattable(value.Value);
@@ -83,11 +79,7 @@ public abstract partial class RazorSlice
       }
       else {
           if (typeDetail.IsUtf8Formattable) { #>
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
 <#        }
           else { #>
             WriteSpanFormattable(value.Value);
@@ -114,11 +106,7 @@ public abstract partial class RazorSlice
     protected void Write(<#= typeDetail.Name #> value)
     {
 <#    if (typeDetail.IsUtf8Formattable) { #>
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
 <#    }
       else { #>
             WriteSpanFormattable(value);
@@ -153,11 +141,7 @@ public abstract partial class RazorSlice
         {
 <#    if (typeDetail.IsStruct) { #>
 <#        if (typeDetail.IsUtf8Formattable) { #>
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
 <#        }
           else { #>
             WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
@@ -186,11 +170,7 @@ public abstract partial class RazorSlice
         if (value is <#= typeDetail.Name #>)
         {
 <#      if (typeDetail.IsUtf8Formattable) { #>
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((<#= typeDetail.Name #>)(object)value, default, null);
-#else
-            WriteSpanFormattable((<#= typeDetail.Name #>)(object)value, default, null);
-#endif
 <#      }
         else { #>
             WriteSpanFormattable((<#= typeDetail.Name #>)(object)value, default, null);

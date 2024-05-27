@@ -134,11 +134,7 @@ public abstract partial class RazorSlice : IDisposable
         _textWriter = textWriter;
         _outputFlush = (ct) =>
         {
-#if NET8_0_OR_GREATER
             var flushTask = textWriter.FlushAsync(ct);
-#else
-            var flushTask = textWriter.FlushAsync();
-#endif
             if (flushTask.IsCompletedSuccessfully)
             {
                 return ValueTask.CompletedTask;
@@ -282,18 +278,18 @@ public abstract partial class RazorSlice : IDisposable
     /// <param name="value">The value to write to the output.</param>
     protected void WriteLiteral<T>(T? value)
     {
-#if NET8_0_OR_GREATER
         if (value is IUtf8SpanFormattable)
         {
             WriteUtf8SpanFormattable((IUtf8SpanFormattable)(object)value, htmlEncode: false);
             return;
         }
-#endif
+
         if (value is ISpanFormattable)
         {
             WriteSpanFormattable((ISpanFormattable)(object)value, htmlEncode: false);
             return;
         }
+
         WriteLiteral(value?.ToString());
     }
 
@@ -474,7 +470,6 @@ public abstract partial class RazorSlice : IDisposable
         return HtmlString.Empty;
     }
 
-#if NET8_0_OR_GREATER
     /// <summary>
     /// Write the specified <see cref="IUtf8SpanFormattable"/> value to the output with the specified format and optional <see cref="IFormatProvider" />.
     /// </summary>
@@ -495,7 +490,6 @@ public abstract partial class RazorSlice : IDisposable
 
         return HtmlString.Empty;
     }
-#endif
 
     /// <summary>
     /// Writes the specified <see cref="IHtmlContent"/> value to the output.
@@ -559,12 +553,10 @@ public abstract partial class RazorSlice : IDisposable
             Write(((byte[])(object)value).AsSpan());
         }
         // Handle derived types (this currently results in value types being boxed)
-#if NET8_0_OR_GREATER
         else if (value is IUtf8SpanFormattable)
         {
             WriteUtf8SpanFormattable((IUtf8SpanFormattable)(object)value, default, null);
         }
-#endif
         else if (value is ISpanFormattable)
         {
             WriteSpanFormattable((ISpanFormattable)(object)value, default, null);
@@ -577,12 +569,10 @@ public abstract partial class RazorSlice : IDisposable
         {
             WriteHtml((IHtmlContent)(object)value);
         }
-#if NET8_0_OR_GREATER
         else if (value is Enum)
         {
             WriteSpanFormattable((Enum)(object)value);
         }
-#endif
         // Fallback to ToString()
         else
         {

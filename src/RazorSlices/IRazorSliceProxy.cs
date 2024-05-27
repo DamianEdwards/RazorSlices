@@ -5,7 +5,6 @@
 /// </summary>
 public interface IRazorSliceProxy
 {
-#if NET8_0_OR_GREATER
     /// <summary>
     /// Creates a new <see cref="RazorSlice"/> instance.
     /// </summary>
@@ -18,5 +17,4 @@ public interface IRazorSliceProxy
     /// <param name="model">The model.</param>
     /// <returns>The slice instance.</returns>
     abstract static RazorSlice<TModel> Create<TModel>(TModel model);
-#endif
 }
