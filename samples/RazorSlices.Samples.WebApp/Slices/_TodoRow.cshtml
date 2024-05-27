@@ -1,4 +1,4 @@
-﻿@inherits RazorSlice<RazorSlices.Samples.WebApp.Todo>
+﻿@inherits RazorSlice<Models.Todo>
 <tr class="@(Model.IsComplete ? "complete" : null)">
     <td>@Model.Id</td>
     <td><a href="@Model.Id">@Model.Title</a></td>

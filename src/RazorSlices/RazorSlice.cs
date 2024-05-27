@@ -105,13 +105,25 @@ public abstract partial class RazorSlice : IDisposable
     [MemberNotNull(nameof(_bufferWriter))]
     internal ValueTask RenderToBufferWriterAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
-        // TODO: Render via layout if LayoutAttribute is set
-
         _bufferWriter = bufferWriter;
         _textWriter = null;
         _outputFlush = flushAsync;
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
+
+        // Render via layout if a layout slice is returned
+        var layoutSliceCandidate = GetLayout();
+
+        if (layoutSliceCandidate is { } and not IRazorLayoutSlice)
+        {
+            throw new InvalidOperationException("Layout must derive from RazorLayoutSlice or RazorLayoutSlice<TModel>.");
+        }
+
+        if (layoutSliceCandidate is IRazorLayoutSlice layoutSlice)
+        {
+            layoutSlice.ContentRenderer = ExecuteAsyncImpl;
+            return ((RazorSlice)layoutSlice).RenderToBufferWriterAsync(bufferWriter, flushAsync, htmlEncoder, cancellationToken);
+        }
 
         var executeTask = ExecuteAsyncImpl();
 

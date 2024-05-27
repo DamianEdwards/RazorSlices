@@ -1,39 +1,26 @@
-﻿@using RazorSlices.Samples.WebApp.Slices.Lorem
-
-@inherits RazorSliceHttpResult<LoremParams>
+﻿@inherits RazorSliceHttpResult<LoremParams>
 
 @{
-    var title = $"Lorem Ipsum (Formattable: {Model.ParagraphCount} paragraphs)";
     var content = new LoremContent { ParagraphCount = Model.ParagraphCount };
 }
 
-<!DOCTYPE html>
-<html lang="en" class="h-100">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@title</title>
-    <base href="/" />
-    <link href="lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="css/site.css" rel="stylesheet" />
-    <link rel="icon" href="/docs/5.3/assets/img/favicons/favicon.ico">
-    <link href="css/site.css" rel="stylesheet" />
-</head>
-<body class="d-flex flex-column h-100">
-    <main class="flex-shrink-0">
-        <div class="container">
-            @(await RenderPartialAsync<_LoremMenu>())
-
-            <h1 class="mt-5">@title</h1>
-            @content
-        </div>
-    </main>
-
-    @(await RenderPartialAsync<_Footer>())
-</body>
-</html>
+<h1 class="mt-5">@PageTitle</h1>
+@content
 
 @functions {
+    string PageTitle = "";
+
+    protected override RazorSlice GetLayout()
+    {
+        PageTitle = $"Lorem Ipsum (Formattable: {Model.ParagraphCount} paragraphs)";
+
+        var layoutModel = new LayoutModel
+            {
+                Title = PageTitle
+            };
+        return _LoremLayout.Create(layoutModel);
+    }
+
     public struct LoremContent : ISpanFormattable
     {
         public int ParagraphCount { get; set; }

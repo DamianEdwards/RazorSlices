@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace RazorSlices.Samples.WebApp;
+namespace RazorSlices.Samples.WebApp.Models;
 
 public class Todo
 {

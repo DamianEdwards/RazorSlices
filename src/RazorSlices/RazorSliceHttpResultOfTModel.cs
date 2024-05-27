@@ -27,9 +27,10 @@ public abstract class RazorSliceHttpResult<TModel> : RazorSlice<TModel>, IRazorS
     /// </summary>
     public HtmlEncoder? HtmlEncoder { get; set; }
 
+    /// <inheritdoc/>
     Task IResult.ExecuteAsync(HttpContext httpContext)
     {
         HttpContext = httpContext;
-        return RazorSliceHttpResult.ExecuteAsync(this, httpContext, HtmlEncoder, StatusCode, ContentType);
+        return RazorSliceHttpResultHelpers.ExecuteAsync(this, httpContext, HtmlEncoder, StatusCode, ContentType);
     }
 }

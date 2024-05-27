@@ -1,0 +1,13 @@
+﻿<!-- _LoremLayout.cshtml -->
+@inherits RazorSlices.RazorLayoutSlice<LayoutModel>
+
+@(await RenderPartialAsync<_LoremMenu>())
+
+@await RenderContentAsync()
+
+@functions {
+    protected override RazorSlice GetLayout()
+    {
+        return _Layout.Create(Model);
+    }
+}

@@ -3,6 +3,7 @@ using System.Text;
 using RazorSlices;
 using RazorSlices.Samples.WebApp;
 using RazorSlices.Samples.WebApp.Services;
+using Models = RazorSlices.Samples.WebApp.Models;
 using Slices = RazorSlices.Samples.WebApp.Slices;
 using LibrarySlices = RazorSlices.Samples.RazorClassLibrary.Slices;
 
@@ -56,12 +57,12 @@ app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) 
     return Results.Ok(new ResultDto(stringBuilder.ToString()));
 });
 
-app.MapGet("/", () => Results.Extensions.RazorSlice<Slices.Todos, Todo[]>(Todos.AllTodos));
+app.MapGet("/", () => Results.Extensions.RazorSlice<Slices.Todos, Models.Todo[]>(Models.Todos.AllTodos));
 app.MapGet("/{id:int}", (int id) =>
 {
-    var todo = Todos.AllTodos.FirstOrDefault(t => t.Id == id);
+    var todo = Models.Todos.AllTodos.FirstOrDefault(t => t.Id == id);
     return todo is not null
-        ? Results.Extensions.RazorSlice<Slices.Todo, Todo>(todo)
+        ? Results.Extensions.RazorSlice<Slices.Todo, Models.Todo>(todo)
         : Results.NotFound();
 });
 

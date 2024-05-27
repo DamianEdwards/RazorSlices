@@ -1,37 +1,23 @@
-﻿@using RazorSlices.Samples.WebApp.Slices.Lorem
+﻿@inherits RazorSliceHttpResult<LoremParams>
 
-@inherits RazorSliceHttpResult<LoremParams>
+<h1 class="mt-5">@PageTitle</h1>
 
-@{
-    var title = $"Lorem Ipsum (Dynamic: {Model.ParagraphCount} paragraphs)";
+@for (var i = 0; i < Model.ParagraphCount; i++)
+{
+    <p>@PageContent.SentencesUtf8(Model.ParagraphSentenceCount)</p>
 }
 
-<!DOCTYPE html>
-<html lang="en" class="h-100">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@title</title>
-    <base href="/" />
-    <link href="lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="css/site.css" rel="stylesheet" />
-    <link rel="icon" href="/docs/5.3/assets/img/favicons/favicon.ico">
-    <link href="css/site.css" rel="stylesheet" />
-</head>
-<body class="d-flex flex-column h-100">
-    <main class="flex-shrink-0">
-        <div class="container">
-            @(await RenderPartialAsync<_LoremMenu>())
+@functions {
+    string PageTitle = "";
 
-            <h1 class="mt-5">@title</h1>
+    protected override RazorSlice GetLayout()
+    {
+        PageTitle = $"Lorem Ipsum (Dynamic: {Model.ParagraphCount} paragraphs)";
 
-            @for (var i = 0; i < Model.ParagraphCount; i++)
+        var layoutModel = new LayoutModel
             {
-                <p>@PageContent.SentencesUtf8(Model.ParagraphSentenceCount)</p>
-            }
-        </div>
-    </main>
-
-    @(await RenderPartialAsync<_Footer>())
-</body>
-</html>
+                Title = PageTitle
+            };
+        return _LoremLayout.Create(layoutModel);
+    }
+}

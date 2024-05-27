@@ -1,35 +1,26 @@
-﻿@inherits RazorSliceHttpResult<RazorSlices.Samples.WebApp.Todo[]>
-<!DOCTYPE html>
-<html lang="en" class="h-100">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Todos</title>
-    <base href="/" />
-    <link href="lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="css/site.css" rel="stylesheet" />
-    <link rel="icon" href="/docs/5.3/assets/img/favicons/favicon.ico">
-    <link href="css/site.css" rel="stylesheet" />
-</head>
-<body class="d-flex flex-column h-100">
-    <main class="flex-shrink-0">
-        <div class="container">
-            <h1 class="mt-5">Todos</h1>
-            <table class="table">
-                <tr>
-                    <th>Id</th>
-                    <th>Title</th>
-                    <th>Due by</th>
-                    <th>Status</th>
-                </tr>
-                @foreach (var todo in Model)
-                {
-                    @(await RenderPartialAsync<TodoRow, RazorSlices.Samples.WebApp.Todo>(todo))
-                }
-            </table>
-        </div>
-    </main>
+﻿@inherits RazorSliceHttpResult<Models.Todo[]>
 
-    @(await RenderPartialAsync<_Footer>())
-</body>
-</html>
+<h1 class="mt-5">Todos</h1>
+<table class="table">
+    <tr>
+        <th>Id</th>
+        <th>Title</th>
+        <th>Due by</th>
+        <th>Status</th>
+    </tr>
+    @foreach (var todo in Model)
+    {
+        @(await RenderPartialAsync<_TodoRow, Models.Todo>(todo))
+    }
+</table>
+
+@functions {
+    protected override RazorSlice GetLayout()
+    {
+        var layoutModel = new LayoutModel
+            {
+                Title = $"Todos ({Model.Length})"
+            };
+        return _Layout.Create(layoutModel);
+    }
+}

@@ -20,5 +20,12 @@
     <ProjectReference Include="..\..\src\RazorSlices\RazorSlices.csproj" />
     <ProjectReference Include="..\RazorSlices.Samples.RazorClassLibrary\RazorSlices.Samples.RazorClassLibrary.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <Content Update="Slices\_Layout.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
 
 </Project>

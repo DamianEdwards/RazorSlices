@@ -2,26 +2,16 @@
     var text = "{'antiForgery':'CfDJ8PXqQxmMPkhOiAitfXYwz3Qx8ObgK9ND-yZcc0Wf5Vtyo8pylpAtos8zwLNhJ-T3gJ4m2iX96lbH15gV0LIdcEBHU5xf3U95L_rlojOvp-0XIvZ8HI3CWIr6xUIKGhDpKaasa9hMAzjUZuFjYVdDkmE','formFieldName':'__RequestVerificationToken','antiForgery':'CfDJ8PXqQxmMPkhOiAitfXYwz3Qx8ObgK9ND-yZcc0Wf5Vtyo8pylpAtos8zwLNhJ-T3gJ4m2iX96lbH15gV0LIdcEBHU5xf3U95L_rlojOvp-0XIvZ8HI3CWIr6xUIKGhDpKaasa9hMAzjUZuFjYVdDkmE','formFieldName':'__RequestVerificationToken'}";
 }
 
-<!DOCTYPE html>
-<html lang="en" class="h-100">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Encoding</title>
-    <base href="/" />
-    <link href="lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="css/site.css" rel="stylesheet" />
-    <link rel="icon" href="/docs/5.3/assets/img/favicons/favicon.ico">
-    <link href="css/site.css" rel="stylesheet" />
-</head>
-<body class="d-flex flex-column h-100">
-    <main class="flex-shrink-0">
-        <div class="container">
-            Encoded:<br />
-            <textarea cols="80" rows="12" data-text="@text">@text</textarea>
-        </div>
-    </main>
+Encoded:<br />
+<textarea cols="80" rows="12" data-text="@text">@text</textarea>
 
-    @(await RenderPartialAsync<_Footer>())
-</body>
-</html>
+@functions {
+    protected override RazorSlice GetLayout()
+    {
+        var layoutModel = new LayoutModel
+            {
+                Title = "Encoding"
+            };
+        return _Layout.Create(layoutModel);
+    }
+}

@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace RazorSlices;
 
@@ -12,7 +11,7 @@ internal sealed class RazorSliceHttpResultWrapper(RazorSlice razorSlice) : IRazo
     public string ContentType => "text/html; charset=utf-8";
 
     /// <inheritdoc />
-    Task IResult.ExecuteAsync(HttpContext httpContext) => RazorSliceHttpResult.ExecuteAsync(razorSlice, httpContext, null, StatusCode, ContentType);
+    Task IResult.ExecuteAsync(HttpContext httpContext) => RazorSliceHttpResultHelpers.ExecuteAsync(razorSlice, httpContext, null, StatusCode, ContentType);
 
     public void Dispose()
     {
