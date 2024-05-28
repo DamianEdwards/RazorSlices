@@ -1,24 +1,30 @@
 ﻿@inherits RazorSliceHttpResult<LoremParams>
 @inject LoremService LoremService
 
-<h1 class="mt-5">@PageTitle</h1>
 <p class="text-success">This Lorem Ipsum sentences was created using dependency-injected properties!</p>
+
 @for (var i = 0; i < Model.ParagraphCount; i++)
 {
     <p>@LoremService.Sentences(Model.ParagraphSentenceCount)</p>
 }
 
 @functions {
-    string PageTitle = "";
-
     protected override RazorSlice GetLayout()
     {
-        PageTitle = "Lorem Ipsum (Dependency-injected properties)";
-
         var layoutModel = new LayoutModel
             {
-                Title = PageTitle
+                Title = "Lorem Ipsum (Dependency-injected properties)"
             };
         return _LoremLayout.Create(layoutModel);
+    }
+
+    protected override Task ExecuteSectionAsync(string name)
+    {
+        if (name == "lorem-header")
+        {
+            <p class="text-info">This page renders lorem ipsum content from a service that's injected vie the <code>@@inject</code> directive.</p>
+        }
+
+        return Task.CompletedTask;
     }
 }

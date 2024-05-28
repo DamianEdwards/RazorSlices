@@ -3,6 +3,10 @@
 /// <summary>
 /// Represents a type that can create <see cref="RazorSlice"/> instances.
 /// </summary>
+/// <remarks>
+/// You do not need to implement this interface. Types that implement this interface will be automatically generated for
+/// each <c>.cshtml</c> file in your project by the Razor Slices source generator.
+/// </remarks>
 public interface IRazorSliceProxy
 {
     /// <summary>

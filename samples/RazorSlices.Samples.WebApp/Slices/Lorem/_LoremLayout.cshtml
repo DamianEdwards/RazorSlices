@@ -3,9 +3,24 @@
 
 @(await RenderPartialAsync<_LoremMenu>())
 
-@await RenderContentAsync()
+<h1 class="mt-5">@Model.Title</h1>
+
+@await RenderSectionAsync("lorem-header")
+
+@await RenderBodyAsync()
 
 @functions {
+    protected override Task ExecuteSectionAsync(string sectionName)
+    {
+        if (sectionName == "footer-links")
+        {
+            <text>
+            <a href="https://loremipsum.io/">Lorem Ipsum</a> |
+            </text>
+        }
+        return Task.CompletedTask;
+    }
+
     protected override RazorSlice GetLayout()
     {
         return _Layout.Create(Model);

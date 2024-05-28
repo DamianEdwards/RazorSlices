@@ -7,21 +7,26 @@
     var content = new LoremHtmlContent { HtmlEncode = Model.Encode };
 }
 
-<h1 class="mt-5">@PageTitle</h1>
 @content
 
 @functions {
-    string PageTitle = "";
-
     protected override RazorSlice GetLayout()
     {
-        PageTitle = "Lorem Ipsum (IHtmlContent)";
-
         var layoutModel = new LayoutModel
             {
-                Title = PageTitle
+                Title = "Lorem Ipsum (IHtmlContent)"
             };
         return _LoremLayout.Create(layoutModel);
+    }
+
+    protected override Task ExecuteSectionAsync(string name)
+    {
+        if (name == "lorem-header")
+        {
+            <p class="text-info">This page renders a custom <code>IHtmlContent</code> type that contains lorem ipsum content.</p>
+        }
+
+        return Task.CompletedTask;
     }
 
     public class LoremHtmlContent : IHtmlContent

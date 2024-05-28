@@ -1,23 +1,31 @@
 ﻿@inherits RazorSliceHttpResult<LoremParams>
 
-<h1 class="mt-5">@PageTitle</h1>
-
 @for (var i = 0; i < Model.ParagraphCount; i++)
 {
     <p>@PageContent.SentencesUtf8(Model.ParagraphSentenceCount)</p>
 }
 
 @functions {
-    string PageTitle = "";
-
     protected override RazorSlice GetLayout()
     {
-        PageTitle = $"Lorem Ipsum (Dynamic: {Model.ParagraphCount} paragraphs)";
-
         var layoutModel = new LayoutModel
             {
-                Title = PageTitle
+                Title = $"Lorem Ipsum (Dynamic: {Model.ParagraphCount} paragraphs)"
             };
         return _LoremLayout.Create(layoutModel);
+    }
+
+    protected override Task ExecuteSectionAsync(string name)
+    {
+        if (name == "lorem-header")
+        {
+            <p class="text-info">
+                This page dynamically renders lorem ipsum content based on the passed arguments. Specify the number of paragraphs
+                and the paragraph sentence count via the query string, e.g.
+                <a href="lorem-dynamic?paraCount=12&paraLength=6"><code>/lorem-dynamic?paraCount=12&amp;paraLength=6</code></a>.
+            </p>
+        }
+
+        return Task.CompletedTask;
     }
 }

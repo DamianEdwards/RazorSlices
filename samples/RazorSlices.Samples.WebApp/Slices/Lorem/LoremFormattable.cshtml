@@ -4,21 +4,27 @@
     var content = new LoremContent { ParagraphCount = Model.ParagraphCount };
 }
 
-<h1 class="mt-5">@PageTitle</h1>
 @content
 
 @functions {
-    string PageTitle = "";
 
     protected override RazorSlice GetLayout()
     {
-        PageTitle = $"Lorem Ipsum (Formattable: {Model.ParagraphCount} paragraphs)";
-
         var layoutModel = new LayoutModel
             {
-                Title = PageTitle
+                Title = $"Lorem Ipsum (Formattable: {Model.ParagraphCount} paragraphs)"
             };
         return _LoremLayout.Create(layoutModel);
+    }
+
+    protected override Task ExecuteSectionAsync(string name)
+    {
+        if (name == "lorem-header")
+        {
+            <p class="text-info">This page renders a custom <code>ISpanFormattable</code> type that contains lorem ipsum content.</p>
+        }
+
+        return Task.CompletedTask;
     }
 
     public struct LoremContent : ISpanFormattable

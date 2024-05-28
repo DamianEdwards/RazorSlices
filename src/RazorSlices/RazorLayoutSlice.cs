@@ -3,10 +3,9 @@
 namespace RazorSlices;
 
 /// <summary>
-/// A <see cref="RazorSlice{TModel}"/> that serves as the layout for another <see cref="RazorSlice"/>.
+/// A <see cref="RazorSlice"/> that serves as the layout for another <see cref="RazorSlice"/>.
 /// </summary>
-/// <typeparam name="TModel">The layout model type.</typeparam>
-public abstract class RazorLayoutSlice<TModel> : RazorSlice<TModel>, IRazorLayoutSlice
+public abstract class RazorLayoutSlice : RazorSlice, IRazorLayoutSlice
 {
     internal Func<Task>? ContentRenderer { get; set; }
     internal Func<string, Task>? SectionContentRenderer { get; set; }
@@ -15,13 +14,10 @@ public abstract class RazorLayoutSlice<TModel> : RazorSlice<TModel>, IRazorLayou
     Func<string, Task>? IRazorLayoutSlice.SectionContentRenderer { set => SectionContentRenderer = value; }
 
     /// <summary>
-    /// Renders the <see cref="RazorSlice"/> that is using this <see cref="RazorSlice"/> as layout.
+    /// Renders the content of the <see cref="RazorSlice"/> using this slice for layout.
     /// </summary>
-    /// <remarks>
-    /// 
-    /// </remarks>
-    /// <returns></returns>
-    protected ValueTask<HtmlString> RenderBodyAsync()
+    /// <returns><see cref="HtmlString.Empty"/> just to allow for easy calling within <c>.cshtml</c> files, e.g. <c>@await RenderContentAsync()</c>.</returns>
+    protected ValueTask<HtmlString> RenderContentAsync()
     {
         if (ContentRenderer is not null)
         {
@@ -40,13 +36,10 @@ public abstract class RazorLayoutSlice<TModel> : RazorSlice<TModel>, IRazorLayou
     /// <summary>
     /// Renders the content of the section with the specified name.
     /// </summary>
-    /// <remarks>
-    /// Call this method from layouts to render a template section.
-    /// </remarks>
     /// <param name="sectionName">The section name.</param>
     /// <returns>A <see cref="ValueTask{TResult}"/> representing the rendering of the section.</returns>
     /// <exception cref="ArgumentException">Thrown when no section with name <paramref name="sectionName"/> has been defined by the slice being rendered.</exception>
-    protected ValueTask<HtmlString> RenderSectionAsync(string sectionName)
+    protected ValueTask<HtmlString> RenderSectionContentAsync(string sectionName)
     {
         ArgumentException.ThrowIfNullOrEmpty(sectionName);
 

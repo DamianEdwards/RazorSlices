@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Razor.TagHelpers;
 namespace RazorSlices;
 
 /// <summary>
-/// Base class for a Razor Slice template.
+/// Base class for a Razor Slice template. Inherit from this class in your <c>.cshtml</c> files using the <c>@inherit</c> directive.
 /// </summary>
 public abstract partial class RazorSlice : IDisposable
 {
@@ -22,7 +22,6 @@ public abstract partial class RazorSlice : IDisposable
     private TextWriter? _textWriter;
     private Utf8BufferTextWriter? _utf8BufferTextWriter;
     private Func<CancellationToken, ValueTask>? _outputFlush;
-    private Dictionary<string, Func<Task>>? _sectionWriters;
 
     /// <summary>
     /// Gets or sets the <see cref="IServiceProvider"/> used to resolve services for injectable properties.
@@ -43,7 +42,7 @@ public abstract partial class RazorSlice : IDisposable
     /// <summary>
     /// A token to monitor for cancellation requests.
     /// </summary>
-    public CancellationToken CancellationToken { get; private set; }
+    public CancellationToken CancellationToken { get; protected set; }
 
     /// <summary>
     /// Gets or sets a delegate used to initialize the template class before <see cref="ExecuteAsync"/> is called.
@@ -122,6 +121,7 @@ public abstract partial class RazorSlice : IDisposable
         if (layoutSliceCandidate is IRazorLayoutSlice layoutSlice)
         {
             layoutSlice.ContentRenderer = ExecuteAsyncImpl;
+            layoutSlice.SectionContentRenderer = ExecuteSectionAsync;
             return ((RazorSlice)layoutSlice).RenderToBufferWriterAsync(bufferWriter, flushAsync, htmlEncoder, cancellationToken);
         }
 
@@ -223,54 +223,6 @@ public abstract partial class RazorSlice : IDisposable
     {
         await flushTask;
         return HtmlString.Empty;
-    }
-
-    /// <summary>
-    /// Defines a section that can be rendered on-demand via <see cref="RenderSectionAsync(string, bool)"/>.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method
-    /// for each use of the <c>@section</c> directive in your .cshtml file.
-    /// </remarks>
-    /// <param name="name">The name of the section.</param>
-    /// <param name="section">The section delegate.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> or <paramref name="section"/> is <c>null</c>.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when a section with this name is already defined.</exception>
-    protected virtual void DefineSection(string name, Func<Task> section)
-    {
-        ArgumentNullException.ThrowIfNull(name);
-        ArgumentNullException.ThrowIfNull(section);
-
-        _sectionWriters ??= [];
-
-        if (_sectionWriters.ContainsKey(name))
-        {
-            throw new InvalidOperationException("Section already defined.");
-        }
-        _sectionWriters[name] = section;
-    }
-
-    /// <summary>
-    /// Renders the section with the specified name.
-    /// </summary>
-    /// <param name="sectionName">The section name.</param>
-    /// <param name="required">Whether the section is required or not.</param>
-    /// <returns>A <see cref="ValueTask{TResult}"/> representing the rendering of the section.</returns>
-    /// <exception cref="ArgumentException">Thrown when no section with name <paramref name="sectionName"/> has been defined by the slice being rendered.</exception>
-    /// <exception cref="NotImplementedException"></exception>
-    protected ValueTask<HtmlString> RenderSectionAsync(string sectionName, bool required)
-    {
-        var sectionDefined = _sectionWriters?.ContainsKey(sectionName) != true;
-        if (required && !sectionDefined)
-        {
-            throw new ArgumentException($"The section '{sectionName}' has not been declared by the slice being rendered.");
-        }
-        else if (!required && !sectionDefined)
-        {
-            return ValueTask.FromResult(HtmlString.Empty);
-        }
-
-        throw new NotImplementedException("Haven't implemented layouts yet, but will!");
     }
 
     /// <summary>
