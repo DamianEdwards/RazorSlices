@@ -23,6 +23,7 @@
     <None Include="..\..\.editorconfig" Link=".editorconfig" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <InternalsVisibleTo Include="RazorSlices.Tests" />
   </ItemGroup>
 
   <ItemGroup>
