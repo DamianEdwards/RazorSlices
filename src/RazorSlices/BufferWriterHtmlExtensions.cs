@@ -43,6 +43,14 @@ internal static class BufferWriterHtmlExtensions
 
             // Encode to buffer
             encodeStatus = htmlEncoder.EncodeUtf8(utf8Text, writerSpan, out var bytesConsumed, out var bytesWritten);
+
+            if (bytesConsumed == 0 && encodeStatus == OperationStatus.DestinationTooSmall)
+            {
+                // The buffer is too small to encode the current text, so reset the buffer span to 0 and continue the loop
+                writerSpan = default;
+                continue;
+            }
+
             waitingToAdvance += bytesWritten;
 
             if (utf8Text.Length - bytesConsumed == 0)
@@ -189,8 +197,8 @@ internal static class BufferWriterHtmlExtensions
 
             if (charsConsumed == 0 && encodeStatus == OperationStatus.DestinationTooSmall)
             {
-                // The buffer is too small to encode the current text, so slice buffer span to 0 and continue the loop
-                bufferSpan = bufferSpan[bufferSpan.Length..];
+                // The buffer is too small to encode the current text, so reset the buffer span to 0 and continue the loop
+                bufferSpan = default;
                 continue;
             }
 
@@ -260,6 +268,14 @@ internal static class BufferWriterHtmlExtensions
             }
 
             status = Utf8.FromUtf16(html, writerSpan, out var charsRead, out var bytesWritten);
+
+            if (charsRead == 0 && status == OperationStatus.DestinationTooSmall)
+            {
+                // The buffer is too small to encode the current text, so reset the buffer span to 0 and continue the loop
+                writerSpan = default;
+                continue;
+            }
+
             waitingToAdvance += bytesWritten;
 
             if (html.Length - charsRead == 0)
