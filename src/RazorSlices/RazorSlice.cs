@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -104,6 +105,8 @@ public abstract partial class RazorSlice : IDisposable
     [MemberNotNull(nameof(_bufferWriter))]
     internal ValueTask RenderToBufferWriterAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
+        Debug.WriteLine($"Rendering slice of type '{this.GetType().Name}' to an IBufferWriter");
+
         _bufferWriter = bufferWriter;
         _textWriter = null;
         _outputFlush = flushAsync;
@@ -120,8 +123,7 @@ public abstract partial class RazorSlice : IDisposable
 
         if (layoutSliceCandidate is IRazorLayoutSlice layoutSlice)
         {
-            layoutSlice.ContentRenderer = ExecuteAsyncImpl;
-            layoutSlice.SectionContentRenderer = ExecuteSectionAsync;
+            layoutSlice.ContentSlice = this;
             return ((RazorSlice)layoutSlice).RenderToBufferWriterAsync(bufferWriter, flushAsync, htmlEncoder, cancellationToken);
         }
 
@@ -140,6 +142,8 @@ public abstract partial class RazorSlice : IDisposable
     [MemberNotNull(nameof(_textWriter), nameof(_outputFlush))]
     internal ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
+        Debug.WriteLine($"Rendering slice of type '{this.GetType().Name}' to a TextWriter");
+
         _bufferWriter = null;
         _textWriter = textWriter;
         _outputFlush = (ct) =>
@@ -165,7 +169,7 @@ public abstract partial class RazorSlice : IDisposable
 
         if (layoutSliceCandidate is IRazorLayoutSlice layoutSlice)
         {
-            layoutSlice.ContentRenderer = ExecuteAsyncImpl;
+            layoutSlice.ContentSlice = this;
             return ((RazorSlice)layoutSlice).RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
         }
 
@@ -179,14 +183,20 @@ public abstract partial class RazorSlice : IDisposable
         return AwaitExecuteTask(this, executeTask);
     }
 
+    internal static async ValueTask<HtmlString> AwaitRenderTask(Task renderTask)
+    {
+        await renderTask;
+        return HtmlString.Empty;
+    }
+
     private static async ValueTask AwaitOutputFlushTask(Task flushTask)
     {
         await flushTask;
     }
 
-    private static async ValueTask AwaitExecuteTask(RazorSlice slice, Task task)
+    private static async ValueTask AwaitExecuteTask(RazorSlice slice, Task executeTask)
     {
-        await task;
+        await executeTask;
         slice.Dispose();
     }
 
@@ -569,8 +579,17 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     public virtual void Dispose()
     {
+        Debug.WriteLine($"Disposing slice of type '{this.GetType().Name}'");
+
+        if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
+        {
+            Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
+            contentSlice.Dispose();
+        }
         ReturnPooledObjects();
         GC.SuppressFinalize(this);
+
+        Debug.WriteLine($"Disposed slice of type '{this.GetType().Name}'");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

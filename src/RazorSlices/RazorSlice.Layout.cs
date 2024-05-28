@@ -32,7 +32,7 @@ public partial class RazorSlice
     /// </remarks>
     /// <param name="sectionName">The name of the section.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="sectionName"/> is <c>null</c>.</exception>
-    protected virtual Task ExecuteSectionAsync(string sectionName)
+    protected internal virtual Task ExecuteSectionAsync(string sectionName)
     {
         ArgumentNullException.ThrowIfNull(sectionName);
 

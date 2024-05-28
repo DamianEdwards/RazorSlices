@@ -8,25 +8,20 @@ namespace RazorSlices;
 /// <typeparam name="TModel">The layout model type.</typeparam>
 public abstract class RazorLayoutSlice<TModel> : RazorSlice<TModel>, IRazorLayoutSlice
 {
-    internal Func<Task>? ContentRenderer { get; set; }
-    internal Func<string, Task>? SectionContentRenderer { get; set; }
+    internal RazorSlice? ContentSlice { get; set; }
 
-    Func<Task>? IRazorLayoutSlice.ContentRenderer { set => ContentRenderer = value; }
-    Func<string, Task>? IRazorLayoutSlice.SectionContentRenderer { set => SectionContentRenderer = value; }
+    RazorSlice? IRazorLayoutSlice.ContentSlice { get => ContentSlice; set => ContentSlice = value; }
 
     /// <summary>
     /// Renders the <see cref="RazorSlice"/> that is using this <see cref="RazorSlice"/> as layout.
     /// </summary>
-    /// <remarks>
-    /// 
-    /// </remarks>
     /// <returns></returns>
     protected ValueTask<HtmlString> RenderBodyAsync()
     {
-        if (ContentRenderer is not null)
+        if (ContentSlice is not null)
         {
 #pragma warning disable CA2012 // Use ValueTasks correctly: Completion handled by HandleSynchronousCompletion
-            var renderTask = ContentRenderer();
+            var renderTask = ContentSlice.ExecuteAsyncImpl();
             if (!renderTask.HandleSynchronousCompletion())
             {
                 return AwaitRenderTask(renderTask);
@@ -50,10 +45,10 @@ public abstract class RazorLayoutSlice<TModel> : RazorSlice<TModel>, IRazorLayou
     {
         ArgumentException.ThrowIfNullOrEmpty(sectionName);
 
-        if (SectionContentRenderer is not null)
+        if (ContentSlice is not null)
         {
 #pragma warning disable CA2012 // Use ValueTasks correctly: Completion handled by HandleSynchronousCompletion
-            var renderTask = SectionContentRenderer(sectionName);
+            var renderTask = ContentSlice.ExecuteSectionAsync(sectionName);
             if (!renderTask.HandleSynchronousCompletion())
             {
                 return AwaitRenderTask(renderTask);
@@ -62,11 +57,5 @@ public abstract class RazorLayoutSlice<TModel> : RazorSlice<TModel>, IRazorLayou
         }
 
         return ValueTask.FromResult(HtmlString.Empty);
-    }
-
-    private static async ValueTask<HtmlString> AwaitRenderTask(Task renderTask)
-    {
-        await renderTask;
-        return HtmlString.Empty;
     }
 }
