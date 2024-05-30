@@ -1,5 +1,6 @@
 ﻿<!-- _LoremLayout.cshtml -->
-@inherits RazorSlices.RazorLayoutSlice<LayoutModel>
+@inherits RazorLayoutSlice<LayoutModel>
+@implements IUseLayout<_Layout, LayoutModel>
 
 @(await RenderPartialAsync<_LoremMenu>())
 
@@ -10,6 +11,8 @@
 @await RenderBodyAsync()
 
 @functions {
+    public LayoutModel LayoutModel => new() { Title = Model.Title };
+
     protected override Task ExecuteSectionAsync(string sectionName)
     {
         if (sectionName == "footer-links")
@@ -19,10 +22,5 @@
             </text>
         }
         return Task.CompletedTask;
-    }
-
-    protected override RazorSlice GetLayout()
-    {
-        return _Layout.Create(Model);
     }
 }

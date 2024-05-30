@@ -20,13 +20,11 @@ public abstract class RazorLayoutSlice<TModel> : RazorSlice<TModel>, IRazorLayou
     {
         if (ContentSlice is not null)
         {
-#pragma warning disable CA2012 // Use ValueTasks correctly: Completion handled by HandleSynchronousCompletion
             var renderTask = ContentSlice.ExecuteAsyncImpl();
             if (!renderTask.HandleSynchronousCompletion())
             {
                 return AwaitRenderTask(renderTask);
             }
-#pragma warning restore CA2012
         }
 
         return ValueTask.FromResult(HtmlString.Empty);
@@ -47,13 +45,11 @@ public abstract class RazorLayoutSlice<TModel> : RazorSlice<TModel>, IRazorLayou
 
         if (ContentSlice is not null)
         {
-#pragma warning disable CA2012 // Use ValueTasks correctly: Completion handled by HandleSynchronousCompletion
             var renderTask = ContentSlice.ExecuteSectionAsync(sectionName);
             if (!renderTask.HandleSynchronousCompletion())
             {
                 return AwaitRenderTask(renderTask);
             }
-#pragma warning restore CA2012
         }
 
         return ValueTask.FromResult(HtmlString.Empty);

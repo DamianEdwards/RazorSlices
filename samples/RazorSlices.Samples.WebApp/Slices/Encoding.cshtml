@@ -1,4 +1,7 @@
-﻿@{
+﻿@inherits RazorSliceHttpResult
+@implements IUseLayout<_Layout, LayoutModel>
+
+@{
     var text = "{'antiForgery':'CfDJ8PXqQxmMPkhOiAitfXYwz3Qx8ObgK9ND-yZcc0Wf5Vtyo8pylpAtos8zwLNhJ-T3gJ4m2iX96lbH15gV0LIdcEBHU5xf3U95L_rlojOvp-0XIvZ8HI3CWIr6xUIKGhDpKaasa9hMAzjUZuFjYVdDkmE','formFieldName':'__RequestVerificationToken','antiForgery':'CfDJ8PXqQxmMPkhOiAitfXYwz3Qx8ObgK9ND-yZcc0Wf5Vtyo8pylpAtos8zwLNhJ-T3gJ4m2iX96lbH15gV0LIdcEBHU5xf3U95L_rlojOvp-0XIvZ8HI3CWIr6xUIKGhDpKaasa9hMAzjUZuFjYVdDkmE','formFieldName':'__RequestVerificationToken'}";
 }
 
@@ -6,12 +9,5 @@ Encoded:<br />
 <textarea cols="80" rows="12" data-text="@text">@text</textarea>
 
 @functions {
-    protected override RazorSlice GetLayout()
-    {
-        var layoutModel = new LayoutModel
-            {
-                Title = "Encoding"
-            };
-        return _Layout.Create(layoutModel);
-    }
+    public LayoutModel LayoutModel => new() { Title = "Encoding" };
 }

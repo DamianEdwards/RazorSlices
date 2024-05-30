@@ -14,7 +14,7 @@ public abstract class RazorSliceHttpResult : RazorSlice, IRazorSliceHttpResult
     /// </summary>
     public int StatusCode { get; set; } = StatusCodes.Status200OK;
 
-    int? IStatusCodeHttpResult.StatusCode => StatusCode;
+    int? IRazorSliceHttpResult.StatusCode { get => StatusCode; set => StatusCode = value ?? StatusCodes.Status200OK; }
 
     /// <summary>
     /// Gets the content type: <c>text/html; charset=utf-8</c>
@@ -34,3 +34,9 @@ public abstract class RazorSliceHttpResult : RazorSlice, IRazorSliceHttpResult
         return RazorSliceHttpResultHelpers.ExecuteAsync(this, httpContext, HtmlEncoder, StatusCode, ContentType);
     }
 }
+
+//public abstract class RazorSliceHttpResult<TLayout> : RazorSliceHttpResult, IUseLayout
+//    where TLayout : IUseLayout
+//{
+//    RazorSlice IUseLayout.CreateLayout() => TLayout.Create();
+//}

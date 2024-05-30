@@ -8,7 +8,7 @@ public class PublishSample
 
     [Theory]
     [InlineData(PublishScenario.Default)]
-    //[InlineData(PublishScenario.Trimmed)]
+    [InlineData(PublishScenario.Trimmed)]
     //[InlineData(PublishScenario.AOT)]
     public void Publish(PublishScenario publishScenario)
     {

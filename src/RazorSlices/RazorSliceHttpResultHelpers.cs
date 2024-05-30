@@ -18,6 +18,13 @@ internal static class RazorSliceHttpResultHelpers
         httpContext.Response.StatusCode = statusCode;
         httpContext.Response.ContentType = contentType;
 
+        // Force the response to start before rendering the slice
+        //var startTask = httpContext.Response.StartAsync();
+        //if (!startTask.IsCompletedSuccessfully)
+        //{
+        //    AwaitStartTask(startTask, slice, httpContext, effectiveHtmlEncoder);
+        //}
+
 #pragma warning disable CA2012 // Use ValueTasks correctly: The ValueTask is observed in code below
         var renderTask = slice.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, effectiveHtmlEncoder, httpContext.RequestAborted);
 #pragma warning restore CA2012
@@ -27,8 +34,14 @@ internal static class RazorSliceHttpResultHelpers
             return httpContext.Response.BodyWriter.FlushAsync(httpContext.RequestAborted).GetAsTask();
         }
 
-        return RazorSliceHttpResultHelpers.AwaitRenderTaskAndFlushResponse(renderTask, httpContext.Response.BodyWriter, httpContext.RequestAborted);
+        return AwaitRenderTaskAndFlushResponse(renderTask, httpContext.Response.BodyWriter, httpContext.RequestAborted);
     }
+
+    //private static async Task AwaitStartTask(ValueTask renderTask, PipeWriter responseBodyWriter, CancellationToken cancellationToken)
+    //{
+    //    await renderTask;
+    //    await responseBodyWriter.FlushAsync(cancellationToken);
+    //}
 
     private static async Task AwaitRenderTaskAndFlushResponse(ValueTask renderTask, PipeWriter responseBodyWriter, CancellationToken cancellationToken)
     {

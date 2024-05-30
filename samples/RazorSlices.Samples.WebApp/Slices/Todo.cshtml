@@ -1,6 +1,7 @@
-﻿@using Microsoft.AspNetCore.Html;
+﻿@using Microsoft.AspNetCore.Html
 
 @inherits RazorSliceHttpResult<Models.Todo>
+@implements IUseLayout<_Layout, LayoutModel>
 
 <a href="/">Back to all todos</a>
 <h1 class="mt-5">@Title(Model)</h1>
@@ -14,18 +15,7 @@
 }
 
 @functions {
-    protected override RazorSlice GetLayout()
-    {
-        var layoutModel = new LayoutModel
-            {
-                Title = $"Todo - {Model.Title} ({Model.Id})"
-            };
-        return _Layout.Create(layoutModel);
-    }
+    public LayoutModel LayoutModel => new() { Title = Title(Model) };
 
-    private string? Title(Models.Todo todo)
-    {
-        <text>Todo @todo.Id: @todo.TitleUtf8</text>
-        return null;
-    }
+    static string Title(Models.Todo todo) => $"Todo {todo.Id}: {todo.Title}";
 }

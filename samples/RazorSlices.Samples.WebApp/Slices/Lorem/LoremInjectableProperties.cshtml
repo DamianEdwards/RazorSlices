@@ -1,4 +1,6 @@
 ﻿@inherits RazorSliceHttpResult<LoremParams>
+@implements IUseLayout<_LoremLayout, LayoutModel>
+
 @inject LoremService LoremService
 
 <p class="text-success">This Lorem Ipsum sentences was created using dependency-injected properties!</p>
@@ -9,14 +11,7 @@
 }
 
 @functions {
-    protected override RazorSlice GetLayout()
-    {
-        var layoutModel = new LayoutModel
-            {
-                Title = "Lorem Ipsum (Dependency-injected properties)"
-            };
-        return _LoremLayout.Create(layoutModel);
-    }
+    public LayoutModel LayoutModel => new() { Title = "Lorem Ipsum (Dependency-injected properties)" };
 
     protected override Task ExecuteSectionAsync(string name)
     {

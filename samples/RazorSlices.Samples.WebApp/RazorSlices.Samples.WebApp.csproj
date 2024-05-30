@@ -9,9 +9,9 @@
 
   <PropertyGroup>
     <PublishAot>true</PublishAot>
-    <!--<PublishTrimmed>true</PublishTrimmed>
-    <PublishSingleFile>true</PublishSingleFile>
-    <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>-->
+    <!--<PublishTrimmed>true</PublishTrimmed>-->
+    <!--<PublishSingleFile>true</PublishSingleFile>-->
+    <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
   </PropertyGroup>
   
   <ItemGroup>

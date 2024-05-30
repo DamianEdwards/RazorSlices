@@ -22,7 +22,7 @@ public static class RazorSlicesExtensions
         var razorSlice = TSliceProxy.Create();
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
-        if (razorSlice is RazorSliceHttpResult razorSliceHttpResult)
+        if (razorSlice is IRazorSliceHttpResult razorSliceHttpResult)
         {
             razorSliceHttpResult.StatusCode = statusCode;
             return razorSliceHttpResult;
@@ -47,7 +47,7 @@ public static class RazorSlicesExtensions
         var razorSlice = TSliceProxy.Create(model);
 #pragma warning restore CA2000 // Dispose objects before losing scope
         
-        if (razorSlice is RazorSliceHttpResult<TModel> razorSliceHttpResult)
+        if (razorSlice is IRazorSliceHttpResult razorSliceHttpResult)
         {
             razorSliceHttpResult.StatusCode = statusCode;
             return razorSliceHttpResult;

@@ -103,6 +103,7 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     [MemberNotNull(nameof(_bufferWriter))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IRazorLayoutSlice))]
     internal ValueTask RenderToBufferWriterAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
         Debug.WriteLine($"Rendering slice of type '{this.GetType().Name}' to an IBufferWriter");
@@ -114,17 +115,20 @@ public abstract partial class RazorSlice : IDisposable
         CancellationToken = cancellationToken;
 
         // Render via layout if a layout slice is returned
-        var layoutSliceCandidate = GetLayout();
-
-        if (layoutSliceCandidate is { } and not IRazorLayoutSlice)
+        if (this is IUseLayout useLayout)
         {
-            throw new InvalidOperationException("Layout must derive from RazorLayoutSlice or RazorLayoutSlice<TModel>.");
-        }
+            var layoutSlice = useLayout.CreateLayoutImpl();
 
-        if (layoutSliceCandidate is IRazorLayoutSlice layoutSlice)
-        {
-            layoutSlice.ContentSlice = this;
-            return ((RazorSlice)layoutSlice).RenderToBufferWriterAsync(bufferWriter, flushAsync, htmlEncoder, cancellationToken);
+            if (layoutSlice is IRazorLayoutSlice razorLayoutSlice and RazorSlice)
+            {
+                razorLayoutSlice.ContentSlice = this;
+                ((RazorSlice)razorLayoutSlice).HttpContext = HttpContext;
+                ((RazorSlice)razorLayoutSlice).ServiceProvider = _serviceProvider;
+
+                return layoutSlice.RenderToBufferWriterAsync(bufferWriter, flushAsync, htmlEncoder, cancellationToken);
+            }
+
+            throw new InvalidOperationException("Layout slices must inherit from RazorLayoutSlice or RazorLayoutSlice<TModel>.");
         }
 
         var executeTask = ExecuteAsyncImpl();
@@ -140,6 +144,7 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     [MemberNotNull(nameof(_textWriter), nameof(_outputFlush))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IRazorLayoutSlice))]
     internal ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
         Debug.WriteLine($"Rendering slice of type '{this.GetType().Name}' to a TextWriter");

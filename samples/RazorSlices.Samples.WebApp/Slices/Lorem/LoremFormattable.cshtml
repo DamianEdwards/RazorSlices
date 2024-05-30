@@ -1,4 +1,5 @@
 ﻿@inherits RazorSliceHttpResult<LoremParams>
+@implements IUseLayout<_LoremLayout, LayoutModel>
 
 @{
     var content = new LoremContent { ParagraphCount = Model.ParagraphCount };
@@ -7,15 +8,7 @@
 @content
 
 @functions {
-
-    protected override RazorSlice GetLayout()
-    {
-        var layoutModel = new LayoutModel
-            {
-                Title = $"Lorem Ipsum (Formattable: {Model.ParagraphCount} paragraphs)"
-            };
-        return _LoremLayout.Create(layoutModel);
-    }
+    public LayoutModel LayoutModel => new() { Title = $"Lorem Ipsum (Formattable: {Model.ParagraphCount} paragraphs)" };
 
     protected override Task ExecuteSectionAsync(string name)
     {

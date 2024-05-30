@@ -1,4 +1,7 @@
-﻿<h1 class="mt-5">@Title</h1>
+﻿@inherits RazorSliceHttpResult
+@implements IUseLayout<_Layout, LayoutModel>
+
+<h1 class="mt-5">@Title</h1>
             
 <h2>Emoji</h2>
             
@@ -64,12 +67,5 @@
 
     static string Title = "Unicode";
 
-    protected override RazorSlice GetLayout()
-    {
-        var layoutModel = new LayoutModel
-            {
-                Title = Title
-            };
-        return _Layout.Create(layoutModel);
-    }
+    public LayoutModel LayoutModel => new() { Title = Title };
 }

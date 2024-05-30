@@ -1,4 +1,5 @@
 ﻿@inherits RazorSliceHttpResult<Models.Todo[]>
+@implements IUseLayout<_Layout, LayoutModel>
 
 <h1 class="mt-5">Todos</h1>
 <table class="table">
@@ -10,17 +11,13 @@
     </tr>
     @foreach (var todo in Model)
     {
-        @(await RenderPartialAsync<_TodoRow, Models.Todo>(todo))
+        @* @(await RenderPartialAsync<_TodoRow, Models.Todo>(todo)) *@
+        @await RenderPartialAsync(_TodoRow.Create(todo))
+        @* @await _TodoRow.RenderAsPartialAsync(todo, this) *@
+        @* @{ await _TodoRow.RenderAsPartialAsync(todo); } *@
     }
 </table>
 
 @functions {
-    protected override RazorSlice GetLayout()
-    {
-        var layoutModel = new LayoutModel
-            {
-                Title = $"Todos ({Model.Length})"
-            };
-        return _Layout.Create(layoutModel);
-    }
+    public LayoutModel LayoutModel => new() { Title = $"Todos ({Model.Length})" };
 }
