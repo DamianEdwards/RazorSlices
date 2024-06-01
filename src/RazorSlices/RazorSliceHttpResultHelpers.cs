@@ -19,29 +19,33 @@ internal static class RazorSliceHttpResultHelpers
         httpContext.Response.ContentType = contentType;
 
         // Force the response to start before rendering the slice
-        //var startTask = httpContext.Response.StartAsync();
-        //if (!startTask.IsCompletedSuccessfully)
-        //{
-        //    AwaitStartTask(startTask, slice, httpContext, effectiveHtmlEncoder);
-        //}
+        var startTask = httpContext.Response.StartAsync();
+
+        if (!startTask.IsCompletedSuccessfully)
+        {
+            // Go async
+            return AwaitStartTaskAndRender(startTask, slice, httpContext, effectiveHtmlEncoder);
+        }
 
 #pragma warning disable CA2012 // Use ValueTasks correctly: The ValueTask is observed in code below
         var renderTask = slice.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, effectiveHtmlEncoder, httpContext.RequestAborted);
 #pragma warning restore CA2012
 
-        if (renderTask.HandleSynchronousCompletion())
+        if (!renderTask.HandleSynchronousCompletion())
         {
-            return httpContext.Response.BodyWriter.FlushAsync(httpContext.RequestAborted).GetAsTask();
+            // Go async
+            return AwaitRenderTaskAndFlushResponse(renderTask, httpContext.Response.BodyWriter, httpContext.RequestAborted);
         }
 
-        return AwaitRenderTaskAndFlushResponse(renderTask, httpContext.Response.BodyWriter, httpContext.RequestAborted);
+        return httpContext.Response.BodyWriter.FlushAsync(httpContext.RequestAborted).GetAsTask();
     }
 
-    //private static async Task AwaitStartTask(ValueTask renderTask, PipeWriter responseBodyWriter, CancellationToken cancellationToken)
-    //{
-    //    await renderTask;
-    //    await responseBodyWriter.FlushAsync(cancellationToken);
-    //}
+    private static async Task AwaitStartTaskAndRender(Task startTask, RazorSlice slice, HttpContext httpContext, HtmlEncoder? htmlEncoder)
+    {
+        await startTask;
+        await slice.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, htmlEncoder, httpContext.RequestAborted);
+        await httpContext.Response.BodyWriter.FlushAsync(httpContext.RequestAborted);
+    }
 
     private static async Task AwaitRenderTaskAndFlushResponse(ValueTask renderTask, PipeWriter responseBodyWriter, CancellationToken cancellationToken)
     {
