@@ -11,7 +11,7 @@
     </tr>
     @foreach (var todo in Model)
     {
-        @(await RenderPartialAsync<_TodoRow, Models.Todo>(todo))
+        @await RenderPartialAsync(_TodoRow.Create(todo))
     }
 </table>
 

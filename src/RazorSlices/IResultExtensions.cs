@@ -19,7 +19,7 @@ public static class RazorSlicesExtensions
         where TSliceProxy : IRazorSliceProxy
     {
 #pragma warning disable CA2000 // Dispose objects before losing scope: IResult will get disposed by ASP.NET Core
-        var razorSlice = TSliceProxy.Create();
+        var razorSlice = TSliceProxy.CreateSlice();
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
         if (razorSlice is IRazorSliceHttpResult razorSliceHttpResult)
@@ -44,7 +44,7 @@ public static class RazorSlicesExtensions
         where TSliceProxy : IRazorSliceProxy
     {
 #pragma warning disable CA2000 // Dispose objects before losing scope: IResult will get disposed by ASP.NET Core
-        var razorSlice = TSliceProxy.Create(model);
+        var razorSlice = TSliceProxy.CreateSlice(model);
 #pragma warning restore CA2000 // Dispose objects before losing scope
         
         if (razorSlice is IRazorSliceHttpResult razorSliceHttpResult)

@@ -6,8 +6,16 @@ namespace RazorSlices;
 public partial class RazorSlice
 {
     /// <summary>
-    /// Renders a template inline.
+    /// Renders a Razor Slice template inline.
     /// </summary>
+    /// <remarks>
+    /// Call from a <c>.cshtml</c> file using the <c>await</c> keyword, e.g:
+    /// <example>
+    /// <code>
+    /// @await RenderPartialAsync(MyPartial.Create())
+    /// </code>
+    /// </example>
+    /// </remarks>
     /// <param name="partial">The template instance to render.</param>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
     protected internal ValueTask<HtmlString> RenderPartialAsync(RazorSlice partial)
@@ -18,27 +26,43 @@ public partial class RazorSlice
     }
 
     /// <summary>
-    /// Renders a template inline.
+    /// Renders a Razor Slice template inline.
     /// </summary>
-    /// <typeparam name="TSlice"></typeparam>
-    /// <returns></returns>
+    /// <remarks>
+    /// Call from a <c>.cshtml</c> file using the <c>await</c> keyword in an explicit Razor expression, e.g:
+    /// <example>
+    /// <code>
+    /// @(await RenderPartialAsync&lt;MyPartial&gt;())
+    /// </code>
+    /// </example>
+    /// </remarks>
+    /// <typeparam name="TSlice">The slice proxy type.</typeparam>
+    /// <returns>A <see cref="ValueTask"/> representing the rendering of the tmeplate.</returns>
     protected internal ValueTask<HtmlString> RenderPartialAsync<TSlice>()
         where TSlice : IRazorSliceProxy
     {
-        var slice = TSlice.Create();
+        var slice = TSlice.CreateSlice();
         return RenderPartialAsyncImpl(slice);
     }
 
     /// <summary>
-    /// Renders a template inline.
+    /// Renders a Razor Slice template inline with the given model.
     /// </summary>
-    /// <typeparam name="TSlice"></typeparam>
-    /// <typeparam name="TModel"></typeparam>
-    /// <returns></returns>
+    /// <remarks>
+    /// Call from a <c>.cshtml</c> file using the <c>await</c> keyword in an explicit Razor expression, e.g:
+    /// <example>
+    /// <code>
+    /// @(await RenderPartialAsync&lt;TodoRow, Todo&gt;(todo))
+    /// </code>
+    /// </example>
+    /// </remarks>
+    /// <typeparam name="TSlice">The slice proxy type.</typeparam>
+    /// <typeparam name="TModel">The model type.</typeparam>
+    /// <returns>A <see cref="ValueTask"/> representing the rendering of the tmeplate.</returns>
     protected internal ValueTask<HtmlString> RenderPartialAsync<TSlice, TModel>(TModel model)
         where TSlice : IRazorSliceProxy
     {
-        var slice = TSlice.Create(model);
+        var slice = TSlice.CreateSlice(model);
         return RenderPartialAsyncImpl(slice);
     }
 

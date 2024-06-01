@@ -13,12 +13,12 @@ public interface IRazorSliceProxy
     /// Creates a new <see cref="RazorSlice"/> instance.
     /// </summary>
     /// <returns>The slice instance.</returns>
-    abstract static RazorSlice Create();
+    abstract static RazorSlice CreateSlice();
 
     /// <summary>
     /// Creates a new <see cref="RazorSlice{TModel}"/> instance.
     /// </summary>
     /// <param name="model">The model.</param>
     /// <returns>The slice instance.</returns>
-    abstract static RazorSlice<TModel> Create<TModel>(TModel model);
+    abstract static RazorSlice<TModel> CreateSlice<TModel>(TModel model);
 }

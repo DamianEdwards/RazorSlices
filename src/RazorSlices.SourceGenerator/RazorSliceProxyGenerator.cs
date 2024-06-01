@@ -62,6 +62,28 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         codeBuilder.AppendLine("#nullable enable");
         codeBuilder.AppendLine();
 
+        codeBuilder.AppendLine($$"""
+            namespace {{projectInfo.BuildProperties.RootNamespace}}
+            {
+                /// <summary>
+                /// All calls to create Razor Slices instances via the generated <see cref="global::RazorSlices.IRazorSliceProxy"/> classes
+                /// go through this factory to ensure that the generated types' Create methods are always invoked via the static abstract
+                /// methods defined in the <see cref="global::RazorSlices.IRazorSliceProxy"/> interface. This ensures that the interface
+                /// implementation is never trimmed from the generated types.
+                /// </summary>
+                /// <remarks>
+                /// Workaround for https://github.com/dotnet/runtime/issues/102796
+                /// </remarks>
+                [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)] // Hide from IntelliSense.
+                internal static class RazorSlicesGenericFactory
+                {
+                    public static RazorSlice CreateSlice<TProxy>() where TProxy : IRazorSliceProxy => TProxy.CreateSlice();
+        
+                    public static RazorSlice<TModel> CreateSlice<TProxy, TModel>(TModel model) where TProxy : IRazorSliceProxy => TProxy.CreateSlice(model);
+                }
+            }
+            """);
+
         foreach (var file in distinctTexts)
         {
             var fileName = Path.GetFileNameWithoutExtension(file.Path);
@@ -125,12 +147,20 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                         /// <summary>
                         /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> .
                         /// </summary>
-                        public static global::RazorSlices.RazorSlice Create() => _sliceDefinition.CreateSlice();
+                        public static global::RazorSlices.RazorSlice Create()
+                            => global::{{projectInfo.BuildProperties.RootNamespace}}.RazorSlicesGenericFactory.CreateSlice<global::{{fullNamespace}}.{{className}}>();
 
                         /// <summary>
                         /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> with the given model.
                         /// </summary>
-                        public static global::RazorSlices.RazorSlice<TModel> Create<TModel>(TModel model) => _sliceDefinition.CreateSlice(model);
+                        public static global::RazorSlices.RazorSlice<TModel> Create<TModel>(TModel model)
+                            => global::{{projectInfo.BuildProperties.RootNamespace}}.RazorSlicesGenericFactory.CreateSlice<global::{{fullNamespace}}.{{className}}, TModel>(model);
+
+                        // Explicit interface implementation
+                        static global::RazorSlices.RazorSlice global::RazorSlices.IRazorSliceProxy.CreateSlice() => _sliceDefinition.CreateSlice();
+
+                        // Explicit interface implementation
+                        static global::RazorSlices.RazorSlice<TModel> global::RazorSlices.IRazorSliceProxy.CreateSlice<TModel>(TModel model) => _sliceDefinition.CreateSlice(model);
                     }
                 """);
 
