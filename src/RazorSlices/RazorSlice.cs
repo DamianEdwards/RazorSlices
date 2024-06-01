@@ -104,10 +104,9 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     [MemberNotNull(nameof(_bufferWriter))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IRazorLayoutSlice))]
     internal ValueTask RenderToBufferWriterAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
-        Debug.WriteLine($"Rendering slice of type '{this.GetType().Name}' to an IBufferWriter");
+        Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to an IBufferWriter");
 
         _bufferWriter = bufferWriter;
         _textWriter = null;
@@ -116,7 +115,7 @@ public abstract partial class RazorSlice : IDisposable
         CancellationToken = cancellationToken;
 
         // Render via layout if a layout slice is returned
-        if (this is IUseLayout useLayout)
+        if (this is IUsesLayout useLayout)
         {
             var layoutSlice = useLayout.CreateLayoutImpl();
 
@@ -129,7 +128,7 @@ public abstract partial class RazorSlice : IDisposable
                 return layoutSlice.RenderToBufferWriterAsync(bufferWriter, flushAsync, htmlEncoder, cancellationToken);
             }
 
-            throw new InvalidOperationException("Layout slices must inherit from RazorLayoutSlice or RazorLayoutSlice<TModel>.");
+            throw new InvalidOperationException($"Layout slices must inherit from {nameof(RazorLayoutSlice)} or {nameof(RazorLayoutSlice)}<TModel>.");
         }
 
         var executeTask = ExecuteAsyncImpl();

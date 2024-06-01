@@ -1,6 +1,6 @@
 ﻿<!-- _LoremLayout.cshtml -->
 @inherits RazorLayoutSlice<LayoutModel>
-@implements IUseLayout<_Layout, LayoutModel>
+@implements IUsesLayout<_Layout, LayoutModel>
 
 @(await RenderPartialAsync<_LoremMenu>())
 
@@ -17,9 +17,7 @@
     {
         if (sectionName == "footer-links")
         {
-            <text>
-            <a href="https://loremipsum.io/">Lorem Ipsum</a> |
-            </text>
+            <a href="https://loremipsum.io/">Lorem Ipsum</a>
         }
         return Task.CompletedTask;
     }

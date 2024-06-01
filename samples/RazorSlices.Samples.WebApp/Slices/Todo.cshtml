@@ -1,7 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Html
 
 @inherits RazorSliceHttpResult<Models.Todo>
-@implements IUseLayout<_Layout, LayoutModel>
+@implements IUsesLayout<_Layout, LayoutModel>
 
 <a href="/">Back to all todos</a>
 <h1 class="mt-5">@Title(Model)</h1>

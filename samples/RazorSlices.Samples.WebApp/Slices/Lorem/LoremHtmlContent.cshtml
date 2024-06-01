@@ -2,7 +2,7 @@
 @using System.Text.Encodings.Web
 
 @inherits RazorSliceHttpResult<HtmlContentParams>
-@implements IUseLayout<_LoremLayout, LayoutModel>
+@implements IUsesLayout<_LoremLayout, LayoutModel>
 
 @{
     var content = new LoremHtmlContent { HtmlEncode = Model.Encode };
