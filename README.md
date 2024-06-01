@@ -128,7 +128,7 @@ The library is still new and features are being actively added.
 - Rendering slices from slices (aka partials)
 - Asynchronous rendering, i.e. the template can contain `await` statements, e.g. `@await WriteTheThing()`
 - Writing UTF8 `byte[]` values directly to the output
-- Rendering directly to `IBufferWriter<byte>`, `PipeWriter`, `Stream`, `TextWriter`, `StringBuilder`, and `string` outputs, including optimizations for not boxing struct values, zero-allocation rendering of primitives like numbers, etc. (rather than just calling `ToString()` on everything)
+- Rendering directly to `PipeWriter`, `Stream`, `TextWriter`, `StringBuilder`, and `string` outputs, including optimizations for not boxing struct values, zero-allocation rendering of primitives like numbers, etc. (rather than just calling `ToString()` on everything)
 - Return a slice instance directly as an `IResult` in minimal APIs via `@inherits RazorSliceHttpResult` and `Results.Extensions.RazorSlice("/Slices/Hello.cshtml")`
 - Avoiding slice lookup costs at render time via `RazorSlice.ResolveSliceFactory(string sliceName)` which returns a `SliceFactory` delegate that can be cached and then used to directly create an instance of the slice whenever needed. Use `SliceFactory<TModel> RazorSlice.ResolveSliceFactory<TModel>(string sliceName, TModel model)` for slices with strongly-typed models.
 

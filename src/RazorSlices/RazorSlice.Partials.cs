@@ -73,12 +73,12 @@ public partial class RazorSlice
         // only if needed
         partial.ServiceProvider = _serviceProvider;
 
-        ValueTask renderPartialTask = default;
+        ValueTask renderPartialTask;
 
 #pragma warning disable CA2012 // Use ValueTasks correctly: Completion handled by HandleSynchronousCompletion
-        if (_bufferWriter is not null)
+        if (_pipeWriter is not null)
         {
-            renderPartialTask = partial.RenderToBufferWriterAsync(_bufferWriter, _outputFlush, _htmlEncoder, CancellationToken);
+            renderPartialTask = partial.RenderToPipeWriterAsync(_pipeWriter, _htmlEncoder, CancellationToken);
         }
         else if (_textWriter is not null)
         {
@@ -90,12 +90,13 @@ public partial class RazorSlice
             throw new UnreachableException();
         }
 
-        if (renderPartialTask.HandleSynchronousCompletion())
+        if (!renderPartialTask.HandleSynchronousCompletion())
         {
-            return ValueTask.FromResult(HtmlString.Empty);
+            // Go async
+            return AwaitPartialTask(renderPartialTask);
         }
 
-        return AwaitPartialTask(renderPartialTask);
+        return ValueTask.FromResult(HtmlString.Empty);
     }
 
     private static async ValueTask<HtmlString> AwaitPartialTask(ValueTask partialTask)

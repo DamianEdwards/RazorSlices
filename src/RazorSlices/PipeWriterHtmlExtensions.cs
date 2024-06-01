@@ -1,5 +1,6 @@
 ﻿using System.Buffers.Text;
 using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
 using Microsoft.AspNetCore.Razor.TagHelpers;
@@ -7,9 +8,9 @@ using RazorSlices;
 
 namespace System.Buffers;
 
-internal static class BufferWriterHtmlExtensions
+internal static class PipeWriterHtmlExtensions
 {
-    public static void HtmlEncodeAndWriteUtf8(this IBufferWriter<byte> bufferWriter, ReadOnlySpan<byte> utf8Text, HtmlEncoder htmlEncoder)
+    public static void HtmlEncodeAndWriteUtf8(this PipeWriter pipeWriter, ReadOnlySpan<byte> utf8Text, HtmlEncoder htmlEncoder)
     {
         if (utf8Text.Length == 0)
         {
@@ -19,7 +20,7 @@ internal static class BufferWriterHtmlExtensions
         if (htmlEncoder == NullHtmlEncoder.Default)
         {
             // No HTML encoding required
-            bufferWriter.Write(utf8Text);
+            pipeWriter.Write(utf8Text);
             return;
         }
 
@@ -33,12 +34,12 @@ internal static class BufferWriterHtmlExtensions
             {
                 if (waitingToAdvance > 0)
                 {
-                    bufferWriter.Advance(waitingToAdvance);
+                    pipeWriter.Advance(waitingToAdvance);
                     waitingToAdvance = 0;
                 }
                 // Allow space for HTML encoding the string
                 var spanSizeHint = BufferSizes.GetHtmlEncodedSizeHint(utf8Text.Length);
-                writerSpan = bufferWriter.GetSpan(spanSizeHint);
+                writerSpan = pipeWriter.GetSpan(spanSizeHint);
             }
 
             // Encode to buffer
@@ -64,13 +65,13 @@ internal static class BufferWriterHtmlExtensions
 
         if (waitingToAdvance > 0)
         {
-            bufferWriter.Advance(waitingToAdvance);
+            pipeWriter.Advance(waitingToAdvance);
         }
 
-        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
+        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IpipeWriter HTML writing extensions");
     }
 
-    public static void HtmlEncodeAndWriteSpanFormattable<T>(this IBufferWriter<byte> bufferWriter, T? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
+    public static void HtmlEncodeAndWriteSpanFormattable<T>(this PipeWriter pipeWriter, T? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
         where T : ISpanFormattable
     {
         if (formattable is null)
@@ -78,7 +79,7 @@ internal static class BufferWriterHtmlExtensions
             return;
         }
 
-        if (TryHtmlEncodeAndWriteSpanFormattableSmall(bufferWriter, formattable, htmlEncoder, format, formatProvider))
+        if (TryHtmlEncodeAndWriteSpanFormattableSmall(pipeWriter, formattable, htmlEncoder, format, formatProvider))
         {
             return;
         }
@@ -95,23 +96,23 @@ internal static class BufferWriterHtmlExtensions
             rentedBuffer = ArrayPool<char>.Shared.Rent(bufferSize);
         }
 
-        HtmlEncodeAndWrite(bufferWriter, rentedBuffer.AsSpan()[..charsWritten], htmlEncoder);
+        HtmlEncodeAndWrite(pipeWriter, rentedBuffer.AsSpan()[..charsWritten], htmlEncoder);
         ArrayPool<char>.Shared.Return(rentedBuffer);
     }
 
-    private static bool TryHtmlEncodeAndWriteSpanFormattableSmall<T>(IBufferWriter<byte> bufferWriter, T formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
+    private static bool TryHtmlEncodeAndWriteSpanFormattableSmall<T>(PipeWriter pipeWriter, T formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
         where T : ISpanFormattable
     {
         Span<char> buffer = stackalloc char[BufferSizes.SmallFormattableWriteCharSize];
         if (formattable.TryFormat(buffer, out var charsWritten, format, formatProvider))
         {
-            HtmlEncodeAndWrite(bufferWriter, buffer[..charsWritten], htmlEncoder);
+            HtmlEncodeAndWrite(pipeWriter, buffer[..charsWritten], htmlEncoder);
             return true;
         }
         return false;
     }
 
-    public static void HtmlEncodeAndWriteUtf8SpanFormattable<T>(this IBufferWriter<byte> bufferWriter, T? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
+    public static void HtmlEncodeAndWriteUtf8SpanFormattable<T>(this PipeWriter pipeWriter, T? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
         where T : IUtf8SpanFormattable
     {
         if (formattable is null)
@@ -119,7 +120,7 @@ internal static class BufferWriterHtmlExtensions
             return;
         }
 
-        if (TryHtmlEncodeAndWriteUtf8SpanFormattableSmall(bufferWriter, formattable, htmlEncoder, format, formatProvider))
+        if (TryHtmlEncodeAndWriteUtf8SpanFormattableSmall(pipeWriter, formattable, htmlEncoder, format, formatProvider))
         {
             return;
         }
@@ -136,23 +137,23 @@ internal static class BufferWriterHtmlExtensions
             rentedBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
         }
 
-        HtmlEncodeAndWriteUtf8(bufferWriter, rentedBuffer.AsSpan()[..bytesWritten], htmlEncoder);
+        HtmlEncodeAndWriteUtf8(pipeWriter, rentedBuffer.AsSpan()[..bytesWritten], htmlEncoder);
         ArrayPool<byte>.Shared.Return(rentedBuffer);
     }
 
-    private static bool TryHtmlEncodeAndWriteUtf8SpanFormattableSmall<T>(IBufferWriter<byte> bufferWriter, T formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
+    private static bool TryHtmlEncodeAndWriteUtf8SpanFormattableSmall<T>(PipeWriter pipeWriter, T formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
         where T : IUtf8SpanFormattable
     {
         Span<byte> buffer = stackalloc byte[BufferSizes.SmallFormattableWriteByteSize];
         if (formattable.TryFormat(buffer, out var bytesWritten, format, formatProvider))
         {
-            HtmlEncodeAndWriteUtf8(bufferWriter, buffer[..bytesWritten], htmlEncoder);
+            HtmlEncodeAndWriteUtf8(pipeWriter, buffer[..bytesWritten], htmlEncoder);
             return true;
         }
         return false;
     }
 
-    public static void HtmlEncodeAndWrite(this IBufferWriter<byte> bufferWriter, ReadOnlySpan<char> textSpan, HtmlEncoder htmlEncoder)
+    public static void HtmlEncodeAndWrite(this PipeWriter pipeWriter, ReadOnlySpan<char> textSpan, HtmlEncoder htmlEncoder)
     {
         if (textSpan.Length == 0)
         {
@@ -162,13 +163,13 @@ internal static class BufferWriterHtmlExtensions
         if (htmlEncoder == NullHtmlEncoder.Default)
         {
             // No HTML encoding required
-            WriteHtml(bufferWriter, textSpan);
+            WriteHtml(pipeWriter, textSpan);
             return;
         }
 
         if (textSpan.Length <= BufferSizes.SmallTextWriteCharSize)
         {
-            HtmlEncodeAndWriteSmall(bufferWriter, textSpan, htmlEncoder);
+            HtmlEncodeAndWriteSmall(pipeWriter, textSpan, htmlEncoder);
             return;
         }
 
@@ -184,7 +185,7 @@ internal static class BufferWriterHtmlExtensions
             {
                 if (waitingToWrite > 0)
                 {
-                    WriteHtml(bufferWriter, rentedBuffer.AsSpan()[..waitingToWrite]);
+                    WriteHtml(pipeWriter, rentedBuffer.AsSpan()[..waitingToWrite]);
                     waitingToWrite = 0;
                 }
                 bufferSpan = rentedBuffer;
@@ -215,15 +216,15 @@ internal static class BufferWriterHtmlExtensions
 
         if (waitingToWrite > 0)
         {
-            WriteHtml(bufferWriter, rentedBuffer.AsSpan()[..waitingToWrite]);
+            WriteHtml(pipeWriter, rentedBuffer.AsSpan()[..waitingToWrite]);
         }
 
         ArrayPool<char>.Shared.Return(rentedBuffer);
 
-        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
+        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IpipeWriter HTML writing extensions");
     }
 
-    private static void HtmlEncodeAndWriteSmall(IBufferWriter<byte> bufferWriter, ReadOnlySpan<char> textSpan, HtmlEncoder htmlEncoder)
+    private static void HtmlEncodeAndWriteSmall(PipeWriter pipeWriter, ReadOnlySpan<char> textSpan, HtmlEncoder htmlEncoder)
     {
         Span<char> encodedBuffer = stackalloc char[BufferSizes.SmallTextWriteCharSize];
         var encodeStatus = OperationStatus.Done;
@@ -239,15 +240,15 @@ internal static class BufferWriterHtmlExtensions
 
             // Write encoded chars to the writer
             var encoded = encodedBuffer[..charsWritten];
-            WriteHtml(bufferWriter, encoded);
+            WriteHtml(pipeWriter, encoded);
 
             textSpan = textSpan[charsConsumed..];
         }
 
-        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
+        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IpipeWriter HTML writing extensions");
     }
 
-    public static void WriteHtml(this IBufferWriter<byte> bufferWriter, ReadOnlySpan<char> html)
+    public static void WriteHtml(this PipeWriter pipeWriter, ReadOnlySpan<char> html)
     {
         Span<byte> writerSpan = default;
 
@@ -260,11 +261,11 @@ internal static class BufferWriterHtmlExtensions
             {
                 if (waitingToAdvance > 0)
                 {
-                    bufferWriter.Advance(waitingToAdvance);
+                    pipeWriter.Advance(waitingToAdvance);
                     waitingToAdvance = 0;
                 }
                 var spanLengthHint = Math.Min(html.Length, BufferSizes.MaxBufferSize);
-                writerSpan = bufferWriter.GetSpan(spanLengthHint);
+                writerSpan = pipeWriter.GetSpan(spanLengthHint);
             }
 
             status = Utf8.FromUtf16(html, writerSpan, out var charsRead, out var bytesWritten);
@@ -289,18 +290,18 @@ internal static class BufferWriterHtmlExtensions
 
         if (waitingToAdvance > 0)
         {
-            bufferWriter.Advance(waitingToAdvance);
+            pipeWriter.Advance(waitingToAdvance);
         }
 
-        Debug.Assert(status == OperationStatus.Done, "Bad math in IBufferWriter HTML writing extensions");
+        Debug.Assert(status == OperationStatus.Done, "Bad math in IpipeWriter HTML writing extensions");
     }
 
     private static readonly int TrueStringLength = bool.TrueString.Length;
     private static readonly int FalseStringLength = bool.FalseString.Length;
 
-    public static void Write(this IBufferWriter<byte> bufferWriter, bool value)
+    public static void Write(this PipeWriter pipeWriter, bool value)
     {
-        var buffer = bufferWriter.GetSpan(value ? TrueStringLength : FalseStringLength);
+        var buffer = pipeWriter.GetSpan(value ? TrueStringLength : FalseStringLength);
         if (!Utf8Formatter.TryFormat(value, buffer, out var _))
         {
             throw new FormatException("Unexpectedly insufficient space in buffer to format bool value.");

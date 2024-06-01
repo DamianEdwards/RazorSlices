@@ -1,5 +1,6 @@
-﻿using System.Buffers;
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Unicode;
@@ -7,15 +8,15 @@ using System.Text.Unicode;
 namespace Microsoft.AspNetCore.Internal;
 
 // Adapted from https://github.com/dotnet/aspnetcore/blob/main/src/SignalR/common/Shared/Utf8BufferTextWriter.cs
-internal sealed class Utf8BufferTextWriter : TextWriter
+internal sealed class Utf8PipeTextWriter : TextWriter
 {
     private static readonly UTF8Encoding _utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
     private const int MaximumBytesPerUtf8Char = 4;
 
     [ThreadStatic]
-    private static Utf8BufferTextWriter? _cachedInstance;
+    private static Utf8PipeTextWriter? _cachedInstance;
 
-    private IBufferWriter<byte>? _bufferWriter;
+    private PipeWriter? _pipeWriter;
     private Memory<byte> _memory;
     private int _memoryUsed;
 
@@ -25,10 +26,10 @@ internal sealed class Utf8BufferTextWriter : TextWriter
 
     public override Encoding Encoding => _utf8NoBom;
 
-    public static Utf8BufferTextWriter Get(IBufferWriter<byte> bufferWriter)
+    public static Utf8PipeTextWriter Get(PipeWriter pipeWriter)
     {
         var writer = _cachedInstance;
-        writer ??= new Utf8BufferTextWriter();
+        writer ??= new Utf8PipeTextWriter();
 
         // Taken off the thread static
         _cachedInstance = null;
@@ -40,26 +41,27 @@ internal sealed class Utf8BufferTextWriter : TextWriter
 
         writer._inUse = true;
 #endif
-        writer.SetWriter(bufferWriter);
+        writer.SetWriter(pipeWriter);
         return writer;
     }
 
-    public static void Return(Utf8BufferTextWriter writer)
+    public static void Return(Utf8PipeTextWriter writer)
     {
         _cachedInstance = writer;
 
         writer._memory = Memory<byte>.Empty;
         writer._memoryUsed = 0;
-        writer._bufferWriter = null;
+        writer._pipeWriter = null;
 
 #if DEBUG
         writer._inUse = false;
 #endif
     }
 
-    public void SetWriter(IBufferWriter<byte> bufferWriter)
+    [MemberNotNull(nameof(_pipeWriter))]
+    public void SetWriter(PipeWriter pipeWriter)
     {
-        _bufferWriter = bufferWriter;
+        _pipeWriter = pipeWriter;
     }
 
     public override void Write(char[] buffer, int index, int count)
@@ -133,10 +135,10 @@ internal sealed class Utf8BufferTextWriter : TextWriter
             // Used up the memory from the buffer writer so advance and get more
             if (_memoryUsed > 0)
             {
-                _bufferWriter!.Advance(_memoryUsed);
+                _pipeWriter!.Advance(_memoryUsed);
             }
 
-            _memory = _bufferWriter!.GetMemory(MaximumBytesPerUtf8Char);
+            _memory = _pipeWriter!.GetMemory(MaximumBytesPerUtf8Char);
             _memoryUsed = 0;
         }
     }
@@ -159,7 +161,18 @@ internal sealed class Utf8BufferTextWriter : TextWriter
     {
         if (_memoryUsed > 0)
         {
-            _bufferWriter!.Advance(_memoryUsed);
+            _pipeWriter!.Advance(_memoryUsed);
+            _memory = _memory[_memoryUsed..];
+            _memoryUsed = 0;
+        }
+    }
+
+    public override async Task FlushAsync()
+    {
+        if (_memoryUsed > 0)
+        {
+            _pipeWriter!.Advance(_memoryUsed);
+            await _pipeWriter!.FlushAsync().GetAsTask();
             _memory = _memory[_memoryUsed..];
             _memoryUsed = 0;
         }

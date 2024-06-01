@@ -3,8 +3,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;
+using System.Threading;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Internal;
@@ -18,11 +20,13 @@ namespace RazorSlices;
 /// <seealso cref="RazorSlice{TModel}"/>
 public abstract partial class RazorSlice : IDisposable
 {
+    private const int _autoFlushThreshold = 1_024 * 16; // Auto-flush after each slice rendering if unflushed bytes is over 16 KB
+
     private IServiceProvider? _serviceProvider;
     private HtmlEncoder _htmlEncoder = HtmlEncoder.Default;
-    private IBufferWriter<byte>? _bufferWriter;
+    private PipeWriter? _pipeWriter;
     private TextWriter? _textWriter;
-    private Utf8BufferTextWriter? _utf8BufferTextWriter;
+    private Utf8PipeTextWriter? _utf8BufferTextWriter;
     private Func<CancellationToken, ValueTask>? _outputFlush;
 
     /// <summary>
@@ -56,7 +60,7 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     /// <remarks>
     /// This method should not be called directly. Call
-    /// <see cref="RenderAsync(IBufferWriter{byte}, Func{CancellationToken, ValueTask}?, HtmlEncoder?, CancellationToken)"/> or
+    /// <see cref="RenderAsync(PipeWriter, HtmlEncoder?, CancellationToken)"/> or
     /// <see cref="RenderAsync(TextWriter, HtmlEncoder?, CancellationToken)"/> instead to render the template.
     /// </remarks>
     /// <returns>A <see cref="Task"/> representing the execution of the template.</returns>
@@ -74,18 +78,17 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     /// <summary>
-    /// Renders the template to the specified <see cref="IBufferWriter{T}"/>.
+    /// Renders the template to the specified <see cref="PipeWriter"/>.
     /// </summary>
-    /// <param name="bufferWriter">The <see cref="IBufferWriter{T}"/> to render the template to.</param>
-    /// <param name="flushAsync">An optional delegate that flushes the <see cref="IBufferWriter{T}"/>.</param>
+    /// <param name="pipeWriter">The <see cref="PipeWriter"/> to render the template to.</param>
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
-    public ValueTask RenderAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync = null, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
+    public ValueTask RenderAsync(PipeWriter pipeWriter, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(bufferWriter);
+        ArgumentNullException.ThrowIfNull(pipeWriter);
 
-        return RenderToBufferWriterAsync(bufferWriter, flushAsync, htmlEncoder, cancellationToken);
+        return RenderToPipeWriterAsync(pipeWriter, htmlEncoder, cancellationToken);
     }
 
     /// <summary>
@@ -103,14 +106,14 @@ public abstract partial class RazorSlice : IDisposable
         return RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
     }
 
-    [MemberNotNull(nameof(_bufferWriter))]
-    internal ValueTask RenderToBufferWriterAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+    [MemberNotNull(nameof(_pipeWriter), nameof(_outputFlush))]
+    internal ValueTask RenderToPipeWriterAsync(PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
-        Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to an IBufferWriter");
+        Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a PipeWriter");
 
-        _bufferWriter = bufferWriter;
+        _pipeWriter = pipeWriter;
         _textWriter = null;
-        _outputFlush = flushAsync;
+        _outputFlush = (ct) => pipeWriter.FlushAsync(ct).GetAsValueTask();
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
@@ -125,7 +128,7 @@ public abstract partial class RazorSlice : IDisposable
                 ((RazorSlice)razorLayoutSlice).HttpContext = HttpContext;
                 ((RazorSlice)razorLayoutSlice).ServiceProvider = _serviceProvider;
 
-                return layoutSlice.RenderToBufferWriterAsync(bufferWriter, flushAsync, htmlEncoder, cancellationToken);
+                return layoutSlice.RenderToPipeWriterAsync(pipeWriter, htmlEncoder, cancellationToken);
             }
 
             throw new InvalidOperationException($"Layout slices must inherit from {nameof(RazorLayoutSlice)} or {nameof(RazorLayoutSlice)}<TModel>.");
@@ -133,14 +136,15 @@ public abstract partial class RazorSlice : IDisposable
 
         var executeTask = ExecuteAsyncImpl();
 
-        if (executeTask.HandleSynchronousCompletion())
+        if (!executeTask.HandleSynchronousCompletion())
         {
-            Dispose();
-            return ValueTask.CompletedTask;
+            // Go async
+            return AwaitExecuteTask(this, executeTask);
         }
-        return AwaitExecuteTask(this, executeTask);
 
-        // TODO: Should we explicitly flush here if flushAsync is not null?
+        Dispose();
+
+        return FlushIfOverThreshold(_pipeWriter, cancellationToken).GetAsValueTask();
     }
 
     [MemberNotNull(nameof(_textWriter), nameof(_outputFlush))]
@@ -149,7 +153,7 @@ public abstract partial class RazorSlice : IDisposable
     {
         Debug.WriteLine($"Rendering slice of type '{this.GetType().Name}' to a TextWriter");
 
-        _bufferWriter = null;
+        _pipeWriter = null;
         _textWriter = textWriter;
         _outputFlush = (ct) =>
         {
@@ -180,18 +184,35 @@ public abstract partial class RazorSlice : IDisposable
 
         var executeTask = ExecuteAsyncImpl();
 
-        if (executeTask.IsCompletedSuccessfully)
+        if (!executeTask.IsCompletedSuccessfully)
         {
-            Dispose();
-            return ValueTask.CompletedTask;
+            // Go async
+            return AwaitExecuteTask(this, executeTask);
         }
-        return AwaitExecuteTask(this, executeTask);
+
+        Dispose();
+
+        // REVIEW: call FlushIfOverThreshold here?
+
+        return ValueTask.CompletedTask;
     }
 
     internal static async ValueTask<HtmlString> AwaitRenderTask(Task renderTask)
     {
         await renderTask;
         return HtmlString.Empty;
+    }
+
+    private static FlushResult _noFlushResult = new(false, false);
+
+    private static ValueTask<FlushResult> FlushIfOverThreshold(PipeWriter? pipeWriter, CancellationToken cancellationToken)
+    {
+        if (pipeWriter is not null && pipeWriter.CanGetUnflushedBytes && pipeWriter.UnflushedBytes >= _autoFlushThreshold)
+        {
+            return pipeWriter.FlushAsync(cancellationToken);
+        }
+
+        return ValueTask.FromResult(_noFlushResult);
     }
 
     private static async ValueTask AwaitOutputFlushTask(Task flushTask)
@@ -202,6 +223,7 @@ public abstract partial class RazorSlice : IDisposable
     private static async ValueTask AwaitExecuteTask(RazorSlice slice, Task executeTask)
     {
         await executeTask;
+        await FlushIfOverThreshold(slice._pipeWriter, slice.CancellationToken);
         slice.Dispose();
     }
 
@@ -226,12 +248,13 @@ public abstract partial class RazorSlice : IDisposable
         var flushTask = _outputFlush(CancellationToken);
 #pragma warning restore CA2012
 
-        if (flushTask.HandleSynchronousCompletion())
+        if (!flushTask.HandleSynchronousCompletion())
         {
-            return ValueTask.FromResult(HtmlString.Empty);
+            // Go async
+            return AwaitFlushAsyncTask(flushTask);
         }
 
-        return AwaitFlushAsyncTask(flushTask);
+        return ValueTask.FromResult(HtmlString.Empty);
     }
 
     private static async ValueTask<HtmlString> AwaitFlushAsyncTask(ValueTask flushTask)
@@ -255,7 +278,7 @@ public abstract partial class RazorSlice : IDisposable
             return;
         }
 
-        _bufferWriter?.WriteHtml(value.AsSpan());
+        _pipeWriter?.WriteHtml(value.AsSpan());
         _textWriter?.Write(value);
     }
 
@@ -305,7 +328,7 @@ public abstract partial class RazorSlice : IDisposable
             return;
         }
 
-        _bufferWriter?.Write(value);
+        _pipeWriter?.Write(value);
         _textWriter?.WriteUtf8(value);
     }
 
@@ -349,7 +372,7 @@ public abstract partial class RazorSlice : IDisposable
             return;
         }
 
-        _bufferWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
+        _pipeWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
         _textWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
     }
 
@@ -407,7 +430,7 @@ public abstract partial class RazorSlice : IDisposable
     {
         if (value.Length > 0)
         {
-            _bufferWriter?.HtmlEncodeAndWrite(value, _htmlEncoder);
+            _pipeWriter?.HtmlEncodeAndWrite(value, _htmlEncoder);
             _textWriter?.HtmlEncodeAndWrite(value, _htmlEncoder);
         }
     }
@@ -434,7 +457,7 @@ public abstract partial class RazorSlice : IDisposable
     {
         if (value.HasValue)
         {
-            _bufferWriter?.Write(value.Value);
+            _pipeWriter?.Write(value.Value);
             _textWriter?.Write(value.Value);
         }
         return HtmlString.Empty;
@@ -454,7 +477,7 @@ public abstract partial class RazorSlice : IDisposable
         if (formattable is not null)
         {
             var htmlEncoder = htmlEncode ? _htmlEncoder : NullHtmlEncoder.Default;
-            _bufferWriter?.HtmlEncodeAndWriteSpanFormattable(formattable, htmlEncoder, format, formatProvider);
+            _pipeWriter?.HtmlEncodeAndWriteSpanFormattable(formattable, htmlEncoder, format, formatProvider);
             _textWriter?.HtmlEncodeAndWriteSpanFormattable(formattable, htmlEncoder, format, formatProvider);
         }
 
@@ -475,7 +498,7 @@ public abstract partial class RazorSlice : IDisposable
         if (formattable is not null)
         {
             var htmlEncoder = htmlEncode ? _htmlEncoder : NullHtmlEncoder.Default;
-            _bufferWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
+            _pipeWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
             _textWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
         }
 
@@ -492,9 +515,9 @@ public abstract partial class RazorSlice : IDisposable
     {
         if (htmlContent is not null)
         {
-            if (_bufferWriter is not null)
+            if (_pipeWriter is not null)
             {
-                _utf8BufferTextWriter ??= Utf8BufferTextWriter.Get(_bufferWriter);
+                _utf8BufferTextWriter ??= Utf8PipeTextWriter.Get(_pipeWriter);
                 htmlContent.WriteTo(_utf8BufferTextWriter, _htmlEncoder);
             }
             if (_textWriter is not null)
@@ -515,7 +538,7 @@ public abstract partial class RazorSlice : IDisposable
     {
         if (htmlString is not null && htmlString != HtmlString.Empty)
         {
-            _bufferWriter?.WriteHtml(htmlString.Value);
+            _pipeWriter?.WriteHtml(htmlString.Value);
             _textWriter?.Write(htmlString.Value);
         }
 
@@ -602,7 +625,7 @@ public abstract partial class RazorSlice : IDisposable
     {
         if (_utf8BufferTextWriter is not null)
         {
-            Utf8BufferTextWriter.Return(_utf8BufferTextWriter);
+            Utf8PipeTextWriter.Return(_utf8BufferTextWriter);
         }
     }
 }
