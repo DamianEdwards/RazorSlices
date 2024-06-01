@@ -66,8 +66,9 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         {
             var fileName = Path.GetFileNameWithoutExtension(file.Path);
             var directory = Path.GetDirectoryName(file.Path);
-            var relativePath = PathUtils.GetRelativePath(projectInfo.BuildProperties.ProjectDirectory!, directory);
-            var subNamespace = relativePath.Replace(Path.DirectorySeparatorChar, '.');
+            var relativeFilePath = PathUtils.GetRelativePath(projectInfo.BuildProperties.ProjectDirectory!, file.Path);
+            var relativeDirectoryPath = PathUtils.GetRelativePath(projectInfo.BuildProperties.ProjectDirectory!, directory);
+            var subNamespace = relativeDirectoryPath.Replace(Path.DirectorySeparatorChar, '.');
 
             var className = fileName;
 
@@ -92,7 +93,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 var descriptor = new DiagnosticDescriptor(
                     "RSG0001",
                     "Duplicate Class Name",
-                    $"Generated class with name {className} already exists. File '{fileName}.cshtml' has been ignored.",
+                    $"Generated class with name {className} already exists. File '{relativeFilePath}' has been ignored.",
                     "Naming",
                     DiagnosticSeverity.Warning,
                     true);
@@ -110,7 +111,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
 
                 codeBuilder.AppendLine($$"""
                     /// <summary>
-                    /// Static proxy for the Razor Slice defined in '{{fileName}}.cshtml'.
+                    /// Static proxy for the Razor Slice defined in <c>{{relativeFilePath}}</c>.
                     /// </summary>
                     public sealed class {{className}} : global::RazorSlices.IRazorSliceProxy
                     {
@@ -122,12 +123,12 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                         private static readonly global::RazorSlices.SliceDefinition _sliceDefinition = new(_sliceType);
 
                         /// <summary>
-                        /// Creates a new instance of the Razor Slice defined in '{{fileName}}.cshtml'.
+                        /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> .
                         /// </summary>
                         public static global::RazorSlices.RazorSlice Create() => _sliceDefinition.CreateSlice();
 
                         /// <summary>
-                        /// Creates a new instance of the Razor Slice defined in '{{fileName}}.cshtml' with the given model.
+                        /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> with the given model.
                         /// </summary>
                         public static global::RazorSlices.RazorSlice<TModel> Create<TModel>(TModel model) => _sliceDefinition.CreateSlice(model);
                     }

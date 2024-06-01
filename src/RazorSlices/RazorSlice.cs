@@ -15,6 +15,7 @@ namespace RazorSlices;
 /// <summary>
 /// Base class for a Razor Slice template. Inherit from this class or <see cref="RazorSlice{TModel}"/> in your <c>.cshtml</c> files using the <c>@inherit</c> directive.
 /// </summary>
+/// <seealso cref="RazorSlice{TModel}"/>
 public abstract partial class RazorSlice : IDisposable
 {
     private IServiceProvider? _serviceProvider;
