@@ -41,7 +41,9 @@ public partial class RazorSlice
     protected internal ValueTask<HtmlString> RenderPartialAsync<TSlice>()
         where TSlice : IRazorSliceProxy
     {
+#pragma warning disable CA2000 // Dispose objects before losing scope: Disposed by RenderPartialAsyncImpl
         var slice = TSlice.CreateSlice();
+#pragma warning restore CA2000
         return RenderPartialAsyncImpl(slice);
     }
 
@@ -62,7 +64,9 @@ public partial class RazorSlice
     protected internal ValueTask<HtmlString> RenderPartialAsync<TSlice, TModel>(TModel model)
         where TSlice : IRazorSliceProxy
     {
+#pragma warning disable CA2000 // Dispose objects before losing scope: Disposed by RenderPartialAsyncImpl
         var slice = TSlice.CreateSlice(model);
+#pragma warning restore CA2000
         return RenderPartialAsyncImpl(slice);
     }
 

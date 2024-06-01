@@ -144,7 +144,7 @@ public abstract partial class RazorSlice : IDisposable
 
         Dispose();
 
-        return FlushIfOverThreshold(_pipeWriter, cancellationToken).GetAsValueTask();
+        return AutoFlush(_pipeWriter, cancellationToken).GetAsValueTask();
     }
 
     [MemberNotNull(nameof(_textWriter), nameof(_outputFlush))]
@@ -205,7 +205,7 @@ public abstract partial class RazorSlice : IDisposable
 
     private static FlushResult _noFlushResult = new(false, false);
 
-    private static ValueTask<FlushResult> FlushIfOverThreshold(PipeWriter? pipeWriter, CancellationToken cancellationToken)
+    private static ValueTask<FlushResult> AutoFlush(PipeWriter? pipeWriter, CancellationToken cancellationToken)
     {
         if (pipeWriter is not null && pipeWriter.CanGetUnflushedBytes && pipeWriter.UnflushedBytes >= _autoFlushThreshold)
         {
@@ -223,7 +223,7 @@ public abstract partial class RazorSlice : IDisposable
     private static async ValueTask AwaitExecuteTask(RazorSlice slice, Task executeTask)
     {
         await executeTask;
-        await FlushIfOverThreshold(slice._pipeWriter, slice.CancellationToken);
+        await AutoFlush(slice._pipeWriter, slice.CancellationToken);
         slice.Dispose();
     }
 
