@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Razor.TagHelpers;
 namespace RazorSlices;
 
 /// <summary>
-/// Base class for a Razor Slice template. Inherit from this class in your <c>.cshtml</c> files using the <c>@inherit</c> directive.
+/// Base class for a Razor Slice template. Inherit from this class or <see cref="RazorSlice{TModel}"/> in your <c>.cshtml</c> files using the <c>@inherit</c> directive.
 /// </summary>
 public abstract partial class RazorSlice : IDisposable
 {
@@ -584,7 +584,7 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     public virtual void Dispose()
     {
-        Debug.WriteLine($"Disposing slice of type '{this.GetType().Name}'");
+        Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
 
         if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
         {
@@ -594,7 +594,7 @@ public abstract partial class RazorSlice : IDisposable
         ReturnPooledObjects();
         GC.SuppressFinalize(this);
 
-        Debug.WriteLine($"Disposed slice of type '{this.GetType().Name}'");
+        Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

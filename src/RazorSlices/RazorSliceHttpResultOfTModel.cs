@@ -34,28 +34,3 @@ public abstract class RazorSliceHttpResult<TModel> : RazorSlice<TModel>, IRazorS
         return RazorSliceHttpResultHelpers.ExecuteAsync(this, httpContext, HtmlEncoder, StatusCode, ContentType);
     }
 }
-
-///// <summary>
-///// A <see cref="RazorSlice{TModel, TLayout}" /> template that is also an <see cref="IResult" /> so it can be directly returned from
-///// a route handler delegate. When executed it will render the template to the response.
-///// </summary>
-//public abstract class RazorSliceHttpResult<TModel, TLayout> : RazorSliceHttpResult<TModel>, IUseLayout
-//    where TLayout : IRazorSliceProxy
-//{
-//    RazorSlice IUseLayout.CreateLayout() => TLayout.Create();
-//}
-
-///// <summary>
-///// A <see cref="RazorSlice{TModel, TLayout, TLayoutModel}" /> template that is also an <see cref="IResult" /> so it can be directly returned from
-///// a route handler delegate. When executed it will render the template to the response.
-///// </summary>
-//public abstract class RazorSliceHttpResult<TModel, TLayout, TLayoutModel> : RazorSliceHttpResult<TModel, TLayout>, IUseLayout
-//    where TLayout : IRazorSliceProxy
-//{
-//    RazorSlice IUseLayout.CreateLayout() => TLayout.Create(LayoutModel);
-
-//    /// <summary>
-//    /// Gets the layout model.
-//    /// </summary>
-//    protected abstract TLayoutModel LayoutModel { get; }
-//}

@@ -101,7 +101,6 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             }
             else
             {
-
                 generatedClasses.Add($"{fullNamespace}.{className}");
 
                 codeBuilder.AppendLine($$"""
@@ -110,6 +109,9 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 """);
 
                 codeBuilder.AppendLine($$"""
+                    /// <summary>
+                    /// Static proxy for the Razor Slice defined in '{{fileName}}.cshtml'.
+                    /// </summary>
                     public sealed class {{className}} : global::RazorSlices.IRazorSliceProxy
                     {
                         [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, TypeName, "{{projectInfo.AssemblyName}}")]
@@ -119,7 +121,14 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                             ?? throw new global::System.InvalidOperationException($"Razor view type '{TypeName}' was not found. This is likely a bug in the RazorSlices source generator.");
                         private static readonly global::RazorSlices.SliceDefinition _sliceDefinition = new(_sliceType);
 
+                        /// <summary>
+                        /// Creates a new instance of the Razor Slice defined in '{{fileName}}.cshtml'.
+                        /// </summary>
                         public static global::RazorSlices.RazorSlice Create() => _sliceDefinition.CreateSlice();
+
+                        /// <summary>
+                        /// Creates a new instance of the Razor Slice defined in '{{fileName}}.cshtml' with the given model.
+                        /// </summary>
                         public static global::RazorSlices.RazorSlice<TModel> Create<TModel>(TModel model) => _sliceDefinition.CreateSlice(model);
                     }
                 """);
