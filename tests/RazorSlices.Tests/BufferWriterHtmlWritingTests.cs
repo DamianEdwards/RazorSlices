@@ -1,12 +1,31 @@
 using System.Buffers;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Text;
 using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Razor.TagHelpers;
 
 namespace RazorSlices.Tests;
 
 public class BufferWriterHtmlWritingTests
 {
+    private static readonly TimeSpan _timeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(5000);
+
+    [Fact]
+    public async ValueTask HtmlEncodeAndWrite_DoesNotEncodeTextWhenPassedNullEncoder()
+    {
+        var bufferStream = new MemoryStream(512);
+        var pipeWriter = PipeWriter.Create(bufferStream);
+
+        var text = "Hello, World<test>!";
+        pipeWriter.HtmlEncodeAndWrite(text.AsSpan(), NullHtmlEncoder.Default);
+        await pipeWriter.FlushAsync();
+
+        var writtenText = Encoding.UTF8.GetString(bufferStream.ToArray(), 0, (int)bufferStream.Length);
+
+        Assert.Equal(text, writtenText);
+    }
+
     [Fact]
     public async ValueTask HtmlEncodeAndWrite_DoesNotEncodeTextThatRequiresNoEncoding()
     {
@@ -38,6 +57,56 @@ public class BufferWriterHtmlWritingTests
     }
 
     [Fact]
+    public async Task HtmlEncodeAndWrite_EncodesTextThatIsLessThanSmallEncodeBuffer()
+    {
+        var bufferStream = new MemoryStream(512);
+        var pipeWriter = PipeWriter.Create(bufferStream);
+
+        // Create a string with no encodable chars that's half the small threshold then add a small string that requires encoding
+        var text = new string('a', BufferSizes.SmallTextWriteCharSize / 2);
+        text += "<encode>";
+
+        var encodeTask = Task.Run(() => pipeWriter.HtmlEncodeAndWrite(text.AsSpan(), HtmlEncoder.Default));
+
+        var completedTask = await Task.WhenAny(encodeTask, Task.Delay(_timeout));
+
+        Assert.Equal(encodeTask, completedTask);
+
+        await pipeWriter.FlushAsync();
+
+        var writtenText = Encoding.UTF8.GetString(bufferStream.ToArray(), 0, (int)bufferStream.Length);
+
+        var expected = text.Replace("<", "&lt;").Replace(">", "&gt;");
+        Assert.Equal(expected, writtenText);
+    }
+
+
+    [Fact]
+    public async Task HtmlEncodeAndWrite_EncodesTextThatIsLessThanSmallEncodeBufferAndButRequiresMultiplePasses()
+    {
+        var bufferStream = new MemoryStream(512);
+        var pipeWriter = PipeWriter.Create(bufferStream);
+
+        // Create a string with no encodable chars that's 5 chars smaller than the threshold then add a two chars that require encoding
+        // This should result in the first encode phase being successful as the encoded chars will fit in the small buffer but there will
+        // not be enough space left in the buffer to encode the remaining char, forcing a buffer reset or growth.
+        var text = new string('a', BufferSizes.SmallTextWriteCharSize - 5);
+        text += "<>";
+
+        var encodeTask = Task.Run(() => pipeWriter.HtmlEncodeAndWrite(text.AsSpan(), HtmlEncoder.Default));
+
+        var completedTask = await Task.WhenAny(encodeTask, Task.Delay(_timeout));
+
+        Assert.Equal(encodeTask, completedTask);
+
+        await pipeWriter.FlushAsync();
+
+        var writtenText = Encoding.UTF8.GetString(bufferStream.ToArray(), 0, (int)bufferStream.Length);
+
+        var expected = text.Replace("<", "&lt;").Replace(">", "&gt;");
+        Assert.Equal(expected, writtenText);
+    }
+    [Fact]
     public async Task HtmlEncodeAndWrite_EncodesTextThatIsLargerThanEncodeBuffer()
     {
         var bufferStream = new MemoryStream(512);
@@ -48,7 +117,7 @@ public class BufferWriterHtmlWritingTests
 
         var encodeTask = Task.Run(() => pipeWriter.HtmlEncodeAndWrite(text.AsSpan(), HtmlEncoder.Default));
 
-        var completedTask = await Task.WhenAny(encodeTask, Task.Delay(5000));
+        var completedTask = await Task.WhenAny(encodeTask, Task.Delay(_timeout));
 
         Assert.Equal(encodeTask, completedTask);
 
@@ -73,7 +142,7 @@ public class BufferWriterHtmlWritingTests
 
         var encodeTask = Task.Run(() => pipeWriter.HtmlEncodeAndWrite(text.AsSpan(), HtmlEncoder.Default));
 
-        var completedTask = await Task.WhenAny(encodeTask, Task.Delay(5000));
+        var completedTask = await Task.WhenAny(encodeTask, Task.Delay(_timeout));
 
         Assert.Equal(encodeTask, completedTask);
 
