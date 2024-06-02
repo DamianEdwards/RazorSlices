@@ -19,11 +19,7 @@ public abstract class RazorLayoutSlice : RazorSlice, IRazorLayoutSlice
     {
         if (ContentSlice is not null)
         {
-            var renderTask = ContentSlice.ExecuteAsyncImpl();
-            if (!renderTask.HandleSynchronousCompletion())
-            {
-                return AwaitRenderTask(renderTask);
-            }
+            return RenderChildSliceAsync(ContentSlice);
         }
 
         return ValueTask.FromResult(HtmlString.Empty);

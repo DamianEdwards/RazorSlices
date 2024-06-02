@@ -20,7 +20,7 @@ public static class RazorSliceStreamExtensions
     public static async ValueTask RenderAsync(this RazorSlice razorSlice, Stream stream, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
         var pipe = PipeWriter.Create(stream, new(MemoryPool<byte>.Shared));
-        await razorSlice.RenderToPipeWriterAsync(pipe, htmlEncoder, cancellationToken);
+        await razorSlice.RenderAsync(pipe, htmlEncoder, cancellationToken);
         await pipe.FlushAsync(razorSlice.CancellationToken);
     }
 }

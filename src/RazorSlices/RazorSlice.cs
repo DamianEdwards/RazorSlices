@@ -6,7 +6,6 @@ using System.Globalization;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;
-using System.Threading;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Internal;
@@ -53,7 +52,7 @@ public abstract partial class RazorSlice : IDisposable
     /// <summary>
     /// Gets or sets a delegate used to initialize the template class before <see cref="ExecuteAsync"/> is called.
     /// </summary>
-    public Action<RazorSlice, IServiceProvider?>? Initialize { get; set; }
+    public Action<RazorSlice, IServiceProvider?, HttpContext?>? Initialize { get; set; }
 
     /// <summary>
     /// Implemented by the generated template class.
@@ -71,7 +70,7 @@ public abstract partial class RazorSlice : IDisposable
     {
         if (Initialize is not null)
         {
-            Initialize(this, ServiceProvider);
+            Initialize(this, _serviceProvider, HttpContext);
         }
 
         return ExecuteAsync();
@@ -88,7 +87,40 @@ public abstract partial class RazorSlice : IDisposable
     {
         ArgumentNullException.ThrowIfNull(pipeWriter);
 
-        return RenderToPipeWriterAsync(pipeWriter, htmlEncoder, cancellationToken);
+        var pipe = FlushTrackingPipeWriter.Create(pipeWriter);
+
+        ValueTask renderTask;
+        try
+        {
+            renderTask = RenderToPipeWriterAsync(pipe, htmlEncoder, cancellationToken);
+        }
+        catch (Exception)
+        {
+            FlushTrackingPipeWriter.Return(pipe);
+            throw;
+        }
+
+        if (!renderTask.IsCompletedSuccessfully)
+        {
+            // Go async
+            return AwaitRenderTaskAndReturnPipe(renderTask, pipe);
+        }
+
+        FlushTrackingPipeWriter.Return(pipe);
+
+        return ValueTask.CompletedTask;
+    }
+
+    private static async ValueTask AwaitRenderTaskAndReturnPipe(ValueTask renderTask, PipeWriter pipe)
+    {
+        try
+        {
+            await renderTask;
+        }
+        finally
+        {
+            FlushTrackingPipeWriter.Return(pipe);
+        }
     }
 
     /// <summary>
@@ -107,31 +139,19 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     [MemberNotNull(nameof(_pipeWriter), nameof(_outputFlush))]
-    internal ValueTask RenderToPipeWriterAsync(PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+    private ValueTask RenderToPipeWriterAsync(PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken, bool renderLayout = true)
     {
         Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a PipeWriter");
 
         _pipeWriter = pipeWriter;
         _textWriter = null;
-        _outputFlush = (ct) => pipeWriter.FlushAsync(ct).GetAsValueTask();
+        _outputFlush = (ct) => _pipeWriter.FlushAsync(ct).GetAsValueTask();
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        // Render via layout if a layout slice is returned
-        if (this is IUsesLayout useLayout)
+        if (renderLayout && this is IUsesLayout useLayout)
         {
-            var layoutSlice = useLayout.CreateLayoutImpl();
-
-            if (layoutSlice is IRazorLayoutSlice razorLayoutSlice and RazorSlice)
-            {
-                razorLayoutSlice.ContentSlice = this;
-                ((RazorSlice)razorLayoutSlice).HttpContext = HttpContext;
-                ((RazorSlice)razorLayoutSlice).ServiceProvider = _serviceProvider;
-
-                return layoutSlice.RenderToPipeWriterAsync(pipeWriter, htmlEncoder, cancellationToken);
-            }
-
-            throw new InvalidOperationException($"Layout slices must inherit from {nameof(RazorLayoutSlice)} or {nameof(RazorLayoutSlice)}<TModel>.");
+            return RenderViaLayout(RenderToPipeWriterAsync, useLayout, _pipeWriter, htmlEncoder, cancellationToken);
         }
 
         var executeTask = ExecuteAsyncImpl();
@@ -139,19 +159,18 @@ public abstract partial class RazorSlice : IDisposable
         if (!executeTask.HandleSynchronousCompletion())
         {
             // Go async
-            return AwaitExecuteTask(this, executeTask);
+            return AwaitExecuteTaskFlushAndDispose(this, executeTask);
         }
 
         Dispose();
 
-        return AutoFlush(_pipeWriter, cancellationToken).GetAsValueTask();
+        return AutoFlush().GetAsValueTask();
     }
 
     [MemberNotNull(nameof(_textWriter), nameof(_outputFlush))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IRazorLayoutSlice))]
-    internal ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+    private ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
-        Debug.WriteLine($"Rendering slice of type '{this.GetType().Name}' to a TextWriter");
+        Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a TextWriter");
 
         _pipeWriter = null;
         _textWriter = textWriter;
@@ -164,22 +183,12 @@ public abstract partial class RazorSlice : IDisposable
             }
             return AwaitOutputFlushTask(flushTask);
         };
-
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        // Render via layout if a layout slice is returned
-        var layoutSliceCandidate = GetLayout();
-
-        if (layoutSliceCandidate is { } and not IRazorLayoutSlice)
+        if (this is IUsesLayout useLayout)
         {
-            throw new InvalidOperationException("Layout must derive from RazorLayoutSlice or RazorLayoutSlice<TModel>.");
-        }
-
-        if (layoutSliceCandidate is IRazorLayoutSlice layoutSlice)
-        {
-            layoutSlice.ContentSlice = this;
-            return ((RazorSlice)layoutSlice).RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
+            return RenderViaLayout(RenderToTextWriterAsync, useLayout, textWriter, htmlEncoder, cancellationToken);
         }
 
         var executeTask = ExecuteAsyncImpl();
@@ -187,14 +196,44 @@ public abstract partial class RazorSlice : IDisposable
         if (!executeTask.IsCompletedSuccessfully)
         {
             // Go async
-            return AwaitExecuteTask(this, executeTask);
+            return AwaitExecuteTaskFlushAndDispose(this, executeTask);
         }
 
         Dispose();
 
-        // REVIEW: call FlushIfOverThreshold here?
+        // REVIEW: call AutoFlush here?
 
         return ValueTask.CompletedTask;
+    }
+
+    private static ValueTask RenderToPipeWriterAsync(RazorSlice razorSlice, PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+        => razorSlice.RenderToPipeWriterAsync(pipeWriter, htmlEncoder, cancellationToken);
+
+    private static ValueTask RenderToTextWriterAsync(RazorSlice razorSlice, TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+        => razorSlice.RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
+
+    private ValueTask RenderViaLayout<TWriter>(Func<RazorSlice, TWriter, HtmlEncoder?, CancellationToken, ValueTask> render, IUsesLayout usesLayout, TWriter writer, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+    {
+        var layoutSlice = usesLayout.CreateLayoutImpl();
+
+        if (layoutSlice is IRazorLayoutSlice razorLayoutSlice and RazorSlice)
+        {
+            razorLayoutSlice.ContentSlice = this;
+            CopySliceState(this, (RazorSlice)razorLayoutSlice);
+
+            return render(layoutSlice, writer, htmlEncoder, cancellationToken);
+        }
+
+        throw new InvalidOperationException($"Layout slices must inherit from {nameof(RazorLayoutSlice)} or {nameof(RazorLayoutSlice)}<TModel>.");
+    }
+
+    internal static void CopySliceState(RazorSlice source, RazorSlice destination)
+    {
+        destination.HttpContext = source.HttpContext;
+        destination.CancellationToken = source.CancellationToken;
+        // Avoid setting the service provider directly from our ServiceProvider property so it can be lazily initialized from HttpContext.RequestServices
+        // only if needed
+        destination.ServiceProvider = source._serviceProvider;
     }
 
     internal static async ValueTask<HtmlString> AwaitRenderTask(Task renderTask)
@@ -205,11 +244,14 @@ public abstract partial class RazorSlice : IDisposable
 
     private static FlushResult _noFlushResult = new(false, false);
 
-    private static ValueTask<FlushResult> AutoFlush(PipeWriter? pipeWriter, CancellationToken cancellationToken)
+    private ValueTask<FlushResult> AutoFlush()
     {
-        if (pipeWriter is not null && pipeWriter.CanGetUnflushedBytes && pipeWriter.UnflushedBytes >= _autoFlushThreshold)
+        Debug.Assert(_pipeWriter is null || _pipeWriter.CanGetUnflushedBytes, "PipeWriter must support unflushed bytes to auto-flush.");
+
+        if (_pipeWriter is not null && _pipeWriter.UnflushedBytes >= _autoFlushThreshold)
         {
-            return pipeWriter.FlushAsync(cancellationToken);
+            Debug.WriteLine($"Auto-flushing slice of type '{GetType().Name}' to a PipeWriter");
+            return _pipeWriter.FlushAsync(CancellationToken);
         }
 
         return ValueTask.FromResult(_noFlushResult);
@@ -220,10 +262,10 @@ public abstract partial class RazorSlice : IDisposable
         await flushTask;
     }
 
-    private static async ValueTask AwaitExecuteTask(RazorSlice slice, Task executeTask)
+    private static async ValueTask AwaitExecuteTaskFlushAndDispose(RazorSlice slice, Task executeTask)
     {
         await executeTask;
-        await AutoFlush(slice._pipeWriter, slice.CancellationToken);
+        await slice.AutoFlush();
         slice.Dispose();
     }
 

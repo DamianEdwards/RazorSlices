@@ -28,7 +28,7 @@ internal static class RazorSliceHttpResultHelpers
         }
 
 #pragma warning disable CA2012 // Use ValueTasks correctly: The ValueTask is observed in code below
-        var renderTask = slice.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, effectiveHtmlEncoder, httpContext.RequestAborted);
+        var renderTask = slice.RenderAsync(httpContext.Response.BodyWriter, effectiveHtmlEncoder, httpContext.RequestAborted);
 #pragma warning restore CA2012
 
         if (!renderTask.HandleSynchronousCompletion())
@@ -43,7 +43,7 @@ internal static class RazorSliceHttpResultHelpers
     private static async Task AwaitStartTaskAndRender(Task startTask, RazorSlice slice, HttpContext httpContext, HtmlEncoder? htmlEncoder)
     {
         await startTask;
-        await slice.RenderToPipeWriterAsync(httpContext.Response.BodyWriter, htmlEncoder, httpContext.RequestAborted);
+        await slice.RenderAsync(httpContext.Response.BodyWriter, htmlEncoder, httpContext.RequestAborted);
         await httpContext.Response.BodyWriter.FlushAsync(httpContext.RequestAborted);
     }
 

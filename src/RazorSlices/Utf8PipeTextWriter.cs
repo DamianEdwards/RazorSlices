@@ -167,17 +167,6 @@ internal sealed class Utf8PipeTextWriter : TextWriter
         }
     }
 
-    public override async Task FlushAsync()
-    {
-        if (_memoryUsed > 0)
-        {
-            _pipeWriter!.Advance(_memoryUsed);
-            await _pipeWriter!.FlushAsync().GetAsTask();
-            _memory = _memory[_memoryUsed..];
-            _memoryUsed = 0;
-        }
-    }
-
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);

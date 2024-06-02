@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Razor.Internal;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,7 +23,7 @@ public static class RazorSliceFactory
     private static readonly PropertyInfo _razorSliceInitializeProperty = _razorSliceType.GetProperty(nameof(RazorSlice.Initialize))!;
     private static readonly ConstructorInfo _ioeCtor = typeof(InvalidOperationException).GetConstructor([typeof(string)])!;
     private static readonly NullabilityInfoContext _nullabilityContext = new();
-    private static readonly Action<RazorSlice, IServiceProvider?> _emptyInit = (_, __) => { };
+    private static readonly Action<RazorSlice, IServiceProvider?, HttpContext?> _emptyInit = (_, __, ___) => { };
 
     internal static bool IsModelSlice(Type sliceType)
     {
@@ -71,22 +72,22 @@ public static class RazorSliceFactory
                 nonNullable?.ToArray() ?? []);
     }
 
-    private static Action<RazorSlice, IServiceProvider?> GetReflectionInitAction(SliceDefinition sliceDefinition)
+    private static Action<RazorSlice, IServiceProvider?, HttpContext?> GetReflectionInitAction(SliceDefinition sliceDefinition)
     {
         return sliceDefinition.InjectableProperties.Any
-            ? (s, sp) =>
+            ? (slice, serviceProvider, httpContext) =>
             {
-                if (sp is null)
-                {
-                    throw new InvalidOperationException($"Cannot initialize @inject properties of slice {sliceDefinition.SliceType.Name} because the ServiceProvider property is null.");
-                }
+                var services = (serviceProvider ?? httpContext?.RequestServices)
+                    ?? throw new InvalidOperationException($"Cannot initialize @inject properties of slice {sliceDefinition.SliceType.Name} because the ServiceProvider property is null.");
+
                 foreach (var pi in sliceDefinition.InjectableProperties.NonNullable)
                 {
-                    pi.SetValue(s, sp.GetRequiredService(pi.PropertyType));
+                    pi.SetValue(slice, services.GetRequiredService(pi.PropertyType));
                 }
+
                 foreach (var pi in sliceDefinition.InjectableProperties.Nullable)
                 {
-                    pi.SetValue(s, sp.GetService(pi.PropertyType));
+                    pi.SetValue(slice, services.GetService(pi.PropertyType));
                 }
             }
             : _emptyInit;

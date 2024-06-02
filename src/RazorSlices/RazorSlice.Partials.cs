@@ -22,7 +22,7 @@ public partial class RazorSlice
     {
         ArgumentNullException.ThrowIfNull(partial);
 
-        return RenderPartialAsyncImpl(partial);
+        return RenderChildSliceAsync(partial);
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public partial class RazorSlice
 #pragma warning disable CA2000 // Dispose objects before losing scope: Disposed by RenderPartialAsyncImpl
         var slice = TSlice.CreateSlice();
 #pragma warning restore CA2000
-        return RenderPartialAsyncImpl(slice);
+        return RenderChildSliceAsync(slice);
     }
 
     /// <summary>
@@ -67,26 +67,25 @@ public partial class RazorSlice
 #pragma warning disable CA2000 // Dispose objects before losing scope: Disposed by RenderPartialAsyncImpl
         var slice = TSlice.CreateSlice(model);
 #pragma warning restore CA2000
-        return RenderPartialAsyncImpl(slice);
+        return RenderChildSliceAsync(slice);
     }
 
-    private ValueTask<HtmlString> RenderPartialAsyncImpl(RazorSlice partial)
+    internal ValueTask<HtmlString> RenderChildSliceAsync(RazorSlice child)
     {
-        partial.HttpContext = HttpContext;
-        // Avoid setting the service provider directly from our ServiceProvider property so it can be lazily initialized from HttpContext.RequestServices
-        // only if needed
-        partial.ServiceProvider = _serviceProvider;
+        Debug.WriteLine($"Rendering child slice of type '{child.GetType().Name}' from layout slice of type '{GetType().Name}'");
+
+        CopySliceState(this, child);
 
         ValueTask renderPartialTask;
 
 #pragma warning disable CA2012 // Use ValueTasks correctly: Completion handled by HandleSynchronousCompletion
         if (_pipeWriter is not null)
         {
-            renderPartialTask = partial.RenderToPipeWriterAsync(_pipeWriter, _htmlEncoder, CancellationToken);
+            renderPartialTask = child.RenderToPipeWriterAsync(_pipeWriter, _htmlEncoder, CancellationToken, renderLayout: false);
         }
         else if (_textWriter is not null)
         {
-            renderPartialTask = partial.RenderToTextWriterAsync(_textWriter, _htmlEncoder, CancellationToken);
+            renderPartialTask = child.RenderToTextWriterAsync(_textWriter, _htmlEncoder, CancellationToken);
         }
 #pragma warning restore CA2012
         else
