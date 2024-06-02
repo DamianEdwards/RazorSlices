@@ -52,7 +52,7 @@ public abstract partial class RazorSlice : IDisposable
     /// <summary>
     /// Gets or sets a delegate used to initialize the template class before <see cref="ExecuteAsync"/> is called.
     /// </summary>
-    public Action<RazorSlice, IServiceProvider?, HttpContext?>? Initialize { get; set; }
+    internal Action<RazorSlice, IServiceProvider?, HttpContext?>? Initialize { get; set; }
 
     /// <summary>
     /// Implemented by the generated template class.
@@ -145,7 +145,7 @@ public abstract partial class RazorSlice : IDisposable
 
         _pipeWriter = pipeWriter;
         _textWriter = null;
-        _outputFlush = (ct) => _pipeWriter.FlushAsync(ct).GetAsValueTask();
+        _outputFlush ??= (ct) => _pipeWriter.FlushAsync(ct).GetAsValueTask();
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
@@ -230,7 +230,6 @@ public abstract partial class RazorSlice : IDisposable
     internal static void CopySliceState(RazorSlice source, RazorSlice destination)
     {
         destination.HttpContext = source.HttpContext;
-        destination.CancellationToken = source.CancellationToken;
         // Avoid setting the service provider directly from our ServiceProvider property so it can be lazily initialized from HttpContext.RequestServices
         // only if needed
         destination.ServiceProvider = source._serviceProvider;
