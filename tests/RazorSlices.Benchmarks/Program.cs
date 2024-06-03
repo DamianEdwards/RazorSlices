@@ -8,26 +8,29 @@ BenchmarkRunner.Run<RazorSlicesBenchmarks>();
 [MemoryDiagnoser, ShortRunJob]
 public class RazorSlicesBenchmarks
 {
-    private readonly WebApplicationFactory<BenchmarksWebApp> _waf = new();
+    private readonly WebApplicationFactory<BenchmarksWebApp> _slicesWAF = new();
+    private readonly WebApplicationFactory<BenchmarksRazorPagesWebApp> _pagesWAF = new();
+    private readonly WebApplicationFactory<BenchmarksRazorComponentsWebApp> _componentsWAF = new();
+    private readonly WebApplicationFactory<BenchmarksBlazorWebApp> _blazorWAF = new();
     private readonly byte[] _buffer = new byte[1024 * 128]; // 128 KB buffer
     private readonly int _iterations = 100;
 
     [Benchmark(Baseline = true)]
-    public  Task<int> RazorSlices() => GetPath("/slices/hello");
+    public  Task<int> RazorSlices() => GetPath(_slicesWAF, "/hello");
 
     [Benchmark]
-    public Task<int> RazorPages() => GetPath("/pages/hello");
+    public Task<int> RazorPages() => GetPath(_pagesWAF, "/hello");
 
     [Benchmark]
-    public Task<int> RazorComponentsManual() => GetPath("/components/hello");
+    public Task<int> RazorComponentsManual() => GetPath(_componentsWAF, "/hello");
 
     [Benchmark]
-    public Task<int> RazorComponentPages() => GetPath("/componentpages/hello");
+    public Task<int> BlazorSSR() => GetPath(_blazorWAF, "/hello");
 
-    private async Task<int> GetPath(string path)
+    private async Task<int> GetPath<TApp>(WebApplicationFactory<TApp> waf, string path) where TApp : class
     {
         var bytesRead = 0;
-        using var client = _waf.CreateClient();
+        using var client = waf.CreateClient();
 
         for (int i = 0; i < _iterations; i++)
         {

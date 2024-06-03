@@ -6,7 +6,7 @@ public static class SliceBuilderExtensions
 {
     public static IEndpointRouteBuilder MapRazorSlicesEndpoints(this IEndpointRouteBuilder routes)
     {
-        routes.MapGet("/slices/hello", () => Results.Extensions.RazorSlice<Slices.Hello>());
+        routes.MapGet("/hello", () => Results.Extensions.RazorSlice<Slices.Hello>());
 
         return routes;
     }
