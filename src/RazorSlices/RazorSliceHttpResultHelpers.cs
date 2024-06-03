@@ -6,7 +6,6 @@ using RazorSlices;
 
 internal static class RazorSliceHttpResultHelpers
 {
-
     /// <inheritdoc />
     internal static Task ExecuteAsync(RazorSlice slice, HttpContext httpContext, HtmlEncoder? htmlEncoder, int statusCode, string contentType)
     {
