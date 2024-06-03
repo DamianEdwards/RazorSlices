@@ -23,7 +23,6 @@ public abstract partial class RazorSlice : IDisposable
     private PipeWriter? _pipeWriter;
     private TextWriter? _textWriter;
     private Utf8PipeTextWriter? _utf8BufferTextWriter;
-    private Func<CancellationToken, ValueTask>? _outputFlush;
 
     /// <summary>
     /// Gets or sets the <see cref="IServiceProvider"/> used to resolve services for injectable properties.
@@ -135,14 +134,13 @@ public abstract partial class RazorSlice : IDisposable
         return RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
     }
 
-    [MemberNotNull(nameof(_pipeWriter), nameof(_outputFlush))]
+    [MemberNotNull(nameof(_pipeWriter))]
     private ValueTask RenderToPipeWriterAsync(PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken, bool renderLayout = true)
     {
         Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a PipeWriter");
 
         _pipeWriter = pipeWriter;
         _textWriter = null;
-        _outputFlush ??= (ct) => _pipeWriter.FlushAsync(ct).GetAsValueTask();
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
@@ -164,18 +162,13 @@ public abstract partial class RazorSlice : IDisposable
         return AutoFlush().GetAsValueTask();
     }
 
-    [MemberNotNull(nameof(_textWriter), nameof(_outputFlush))]
+    [MemberNotNull(nameof(_textWriter))]
     private ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
         Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a TextWriter");
 
         _pipeWriter = null;
         _textWriter = textWriter;
-        _outputFlush = (ct) => textWriter.FlushAsync(ct) switch
-        {
-            { IsCompletedSuccessfully: false } flushTask => AwaitOutputFlushTask(flushTask), // Go async
-            _ => ValueTask.CompletedTask
-        };
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
@@ -262,36 +255,44 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     /// <summary>
-    /// Indicates whether <see cref="FlushAsync"/> will actually flush the underlying output during rendering.
-    /// </summary>
-    protected bool CanFlush => _outputFlush is not null;
-
-    /// <summary>
-    /// Attempts to flush the underlying output the template is being rendered to. Check <see cref="CanFlush"/> to determine if
-    /// the output will actually be flushed or not before calling this method.
+    /// Attempts to flush the underlying output the template is being rendered to.
     /// </summary>
     /// <returns>A <see cref="ValueTask"/> representing the flush operation.</returns>
     protected ValueTask<HtmlString> FlushAsync()
     {
-        if (!CanFlush || _outputFlush is null)
+        if (_pipeWriter is not null)
         {
+            var pipeWriterFlushTask = _pipeWriter.FlushAsync(CancellationToken);
+            if (!pipeWriterFlushTask.IsCompletedSuccessfully)
+            {
+                // Go async
+                return AwaitPipeWriterFlushAsyncTask(pipeWriterFlushTask);
+            }
+
+            return ValueTask.FromResult(HtmlString.Empty);
+        }
+        else if (_textWriter is not null)
+        {
+            var textWriterFlushTask = _textWriter.FlushAsync(CancellationToken);
+            if (!textWriterFlushTask.IsCompletedSuccessfully)
+            {
+                // Go async
+                return AwaitTextWriterFlushAsyncTask(textWriterFlushTask);
+            }
+
             return ValueTask.FromResult(HtmlString.Empty);
         }
 
-#pragma warning disable CA2012 // Use ValueTasks correctly: The ValueTask is observed in code below
-        var flushTask = _outputFlush(CancellationToken);
-#pragma warning restore CA2012
-
-        if (!flushTask.HandleSynchronousCompletion())
-        {
-            // Go async
-            return AwaitFlushAsyncTask(flushTask);
-        }
-
-        return ValueTask.FromResult(HtmlString.Empty);
+        throw new UnreachableException();
     }
 
-    private static async ValueTask<HtmlString> AwaitFlushAsyncTask(ValueTask flushTask)
+    private static async ValueTask<HtmlString> AwaitPipeWriterFlushAsyncTask(ValueTask<FlushResult> flushTask)
+    {
+        await flushTask;
+        return HtmlString.Empty;
+    }
+
+    private static async ValueTask<HtmlString> AwaitTextWriterFlushAsyncTask(Task flushTask)
     {
         await flushTask;
         return HtmlString.Empty;

@@ -33,7 +33,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.SourceGenerator
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.SourceGenerator.Tests", "tests\RazorSlices.SourceGenerator.Tests\RazorSlices.SourceGenerator.Tests.csproj", "{0B5F0815-95E6-418F-95B5-0F3BFFAA08A5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RazorSlices.Tests", "tests\RazorSlices.Tests\RazorSlices.Tests.csproj", "{29E74017-0BF5-4DCA-B97E-0FBAAFF06F6D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.Tests", "tests\RazorSlices.Tests\RazorSlices.Tests.csproj", "{29E74017-0BF5-4DCA-B97E-0FBAAFF06F6D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RazorSlices.Benchmarks", "tests\RazorSlices.Benchmarks\RazorSlices.Benchmarks.csproj", "{703BA38C-211A-44C5-AECF-35672F59937C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RazorSlices.Benchmarks.WebApp", "tests\RazorSlices.Benchmarks.WebApp\RazorSlices.Benchmarks.WebApp.csproj", "{DD727B98-770B-4FF4-A328-FC9D607FE610}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,6 +73,14 @@ Global
 		{29E74017-0BF5-4DCA-B97E-0FBAAFF06F6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{29E74017-0BF5-4DCA-B97E-0FBAAFF06F6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{29E74017-0BF5-4DCA-B97E-0FBAAFF06F6D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{703BA38C-211A-44C5-AECF-35672F59937C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{703BA38C-211A-44C5-AECF-35672F59937C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{703BA38C-211A-44C5-AECF-35672F59937C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{703BA38C-211A-44C5-AECF-35672F59937C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DD727B98-770B-4FF4-A328-FC9D607FE610}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD727B98-770B-4FF4-A328-FC9D607FE610}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD727B98-770B-4FF4-A328-FC9D607FE610}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD727B98-770B-4FF4-A328-FC9D607FE610}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -81,6 +93,8 @@ Global
 		{F1CBA828-537D-479F-B669-66231EAD8A17} = {DE078A12-A280-4586-87D4-5B2C86ADB454}
 		{0B5F0815-95E6-418F-95B5-0F3BFFAA08A5} = {74D410EA-ED69-4905-B8D1-A27A22A27DC9}
 		{29E74017-0BF5-4DCA-B97E-0FBAAFF06F6D} = {74D410EA-ED69-4905-B8D1-A27A22A27DC9}
+		{703BA38C-211A-44C5-AECF-35672F59937C} = {74D410EA-ED69-4905-B8D1-A27A22A27DC9}
+		{DD727B98-770B-4FF4-A328-FC9D607FE610} = {74D410EA-ED69-4905-B8D1-A27A22A27DC9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C8326A4D-8BD2-44AA-B97B-56017B0CF2F2}
