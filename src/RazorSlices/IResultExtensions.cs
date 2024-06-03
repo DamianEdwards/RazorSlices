@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+﻿using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Http.HttpResults;
 using RazorSlices;
 
 namespace Microsoft.AspNetCore.Http;
@@ -24,6 +25,8 @@ public static class RazorSlicesExtensions
 
         if (razorSlice is IRazorSliceHttpResult razorSliceHttpResult)
         {
+            // Set the default HtmlEncoder if it's not set to avoid looking it up from the DI container and paying the cost of the request services scope.
+            razorSliceHttpResult.HtmlEncoder ??= HtmlEncoder.Default;
             razorSliceHttpResult.StatusCode = statusCode;
             return razorSliceHttpResult;
         }
@@ -49,6 +52,8 @@ public static class RazorSlicesExtensions
         
         if (razorSlice is IRazorSliceHttpResult razorSliceHttpResult)
         {
+            // Set the default HtmlEncoder if it's not set to avoid looking it up from the DI container and paying the cost of the request services scope.
+            razorSliceHttpResult.HtmlEncoder ??= HtmlEncoder.Default;
             razorSliceHttpResult.StatusCode = statusCode;
             return razorSliceHttpResult;
         }
