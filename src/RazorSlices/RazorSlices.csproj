@@ -12,7 +12,7 @@
     <AnalysisModeSecurity>All</AnalysisModeSecurity>
     <IsAotCompatible>true</IsAotCompatible>
     <Configurations>Debug;Release;Benchmarks</Configurations>
-    <AssemblyName Condition=" '$(Configuration)' == 'Benchmarks' ">RazorSlices.Benchmarks</AssemblyName>
+    <AssemblyName Condition=" '$(Configuration)' == 'Benchmarks' ">RazorSlices.ForBenchmarks</AssemblyName>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Benchmarks' ">
