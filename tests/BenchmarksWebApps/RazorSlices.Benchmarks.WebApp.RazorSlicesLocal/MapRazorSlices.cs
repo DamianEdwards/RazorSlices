@@ -1,4 +1,4 @@
-﻿using Slices = RazorSlices.Benchmarks.WebApp.Slices;
+﻿using Slices = RazorSlices.Benchmarks.WebApp.RazorSlicesLocal.Slices;
 
 namespace Microsoft.AspNetCore.Builder;
 

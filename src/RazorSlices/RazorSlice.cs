@@ -18,6 +18,8 @@ public abstract partial class RazorSlice : IDisposable
 {
     private const int _autoFlushThreshold = 1_024 * 16; // Auto-flush after each slice rendering if unflushed bytes is over 16 KB
 
+    private static readonly FlushResult _noFlushResult = new(false, false);
+
     private IServiceProvider? _serviceProvider;
     private HtmlEncoder _htmlEncoder = HtmlEncoder.Default;
     private PipeWriter? _pipeWriter;
@@ -226,8 +228,6 @@ public abstract partial class RazorSlice : IDisposable
         await renderTask;
         return HtmlString.Empty;
     }
-
-    private static FlushResult _noFlushResult = new(false, false);
 
     private ValueTask<FlushResult> AutoFlush()
     {

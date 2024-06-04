@@ -7,10 +7,11 @@ using RazorSlices.Benchmarks.WebApp;
 
 BenchmarkRunner.Run<RazorSlicesBenchmarks>();
 
-[MemoryDiagnoser, ShortRunJob]
+[MemoryDiagnoser]
 public class RazorSlicesBenchmarks
 {
-    private readonly HttpClient _slicesClient = new();
+    private readonly HttpClient _slicesNuGetClient = new();
+    private readonly HttpClient _slicesLocalClient = new();
     private readonly HttpClient _pagesClient = new();
     private readonly HttpClient _componentsClient = new();
     private readonly HttpClient _blazorClient = new();
@@ -19,14 +20,18 @@ public class RazorSlicesBenchmarks
 
     public RazorSlicesBenchmarks()
     {
-        _slicesClient = CreateHttpClient<BenchmarksWebApp>();
+        _slicesNuGetClient = CreateHttpClient<BenchmarksWebAppRazorSlicesPreviousVersion>();
+        _slicesLocalClient = CreateHttpClient<BenchmarksWebApp>();
         _pagesClient = CreateHttpClient<BenchmarksRazorPagesWebApp>();
         _componentsClient = CreateHttpClient<BenchmarksRazorComponentsWebApp>();
         _blazorClient = CreateHttpClient<BenchmarksBlazorWebApp>();
     }
 
     [Benchmark(Baseline = true)]
-    public Task<int> RazorSlices() => GetPath(_slicesClient, "/hello");
+    public Task<int> RazorSlicesNuGet() => GetPath(_slicesNuGetClient, "/hello");
+
+    [Benchmark()]
+    public Task<int> RazorSlicesLocal() => GetPath(_slicesLocalClient, "/hello");
 
     [Benchmark]
     public Task<int> RazorPages() => GetPath(_pagesClient, "/hello");
