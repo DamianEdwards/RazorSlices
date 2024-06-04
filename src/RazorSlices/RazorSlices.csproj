@@ -11,7 +11,7 @@
     <AnalysisModePerformance>All</AnalysisModePerformance>
     <AnalysisModeSecurity>All</AnalysisModeSecurity>
     <IsAotCompatible>true</IsAotCompatible>
-    <!--<AssemblyName Condition=" '$(ContinuousIntegrationBuild)' != 'true' ">local.RazorSlices</AssemblyName>-->
+    <AssemblyName Condition=" '$(ContinuousIntegrationBuild)' != 'true' ">local.RazorSlices</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

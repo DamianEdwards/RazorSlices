@@ -17,8 +17,8 @@
     <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.Blazor\RazorSlices.Benchmarks.WebApp.Blazor.csproj" />
     <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorComponents\RazorSlices.Benchmarks.WebApp.RazorComponents.csproj" />
     <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorPages\RazorSlices.Benchmarks.WebApp.RazorPages.csproj" />
-    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorSlicesLocal\RazorSlices.Benchmarks.WebApp.RazorSlicesLocal.csproj" />
     <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion\RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorSlicesLocal\RazorSlices.Benchmarks.WebApp.RazorSlicesLocal.csproj" />
   </ItemGroup>
 
 </Project>
