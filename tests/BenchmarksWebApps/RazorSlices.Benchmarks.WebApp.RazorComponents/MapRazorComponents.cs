@@ -9,6 +9,8 @@ public static class ComponentBuilderExtensions
     {
         routes.MapGet("/hello", () => new RazorComponentResult<Hello>());
 
+        routes.MapGet("/lorem25", () => new RazorComponentResult<Lorem25>());
+
         return routes;
     }
 }
