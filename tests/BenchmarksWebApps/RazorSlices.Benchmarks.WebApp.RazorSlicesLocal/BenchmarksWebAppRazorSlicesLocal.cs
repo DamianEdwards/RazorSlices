@@ -1,6 +1,6 @@
 ﻿namespace RazorSlices.Benchmarks.WebApp;
 
-public class BenchmarksWebApp
+public class BenchmarksWebAppRazorSlicesLocal
 {
 
 }

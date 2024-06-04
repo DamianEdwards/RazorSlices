@@ -5,7 +5,12 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Configurations>Debug;Release</Configurations>
+    <Configurations>Debug;Release;PrevVersion</Configurations>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'PrevVersion' ">
+      <Optimize>true</Optimize>
+      <DefineConstants>$(DefineConstants);PREVVERSION</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,12 +18,15 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition=" '$(Configuration)' != 'PrevVersion' ">
     <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.Blazor\RazorSlices.Benchmarks.WebApp.Blazor.csproj" />
     <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorComponents\RazorSlices.Benchmarks.WebApp.RazorComponents.csproj" />
     <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorPages\RazorSlices.Benchmarks.WebApp.RazorPages.csproj" />
     <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorSlicesLocal\RazorSlices.Benchmarks.WebApp.RazorSlicesLocal.csproj" />
-    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion\RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(Configuration)' == 'PrevVersion' ">
+      <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion\RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion.csproj" />
   </ItemGroup>
 
 </Project>
