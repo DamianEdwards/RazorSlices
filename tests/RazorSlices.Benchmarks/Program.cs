@@ -9,7 +9,7 @@ using RazorSlices.Benchmarks.WebApp;
 
 BenchmarkRunner.Run<RazorSlicesBenchmarks>();
 
-[MemoryDiagnoser, Config(typeof(Config))]
+[MemoryDiagnoser, AnyCategoriesFilter("Hello"), Config(typeof(Config))]
 public class RazorSlicesBenchmarks
 {
     private readonly HttpClient _slicesNuGetClient = new();
@@ -30,22 +30,43 @@ public class RazorSlicesBenchmarks
     }
 
     [Benchmark(Baseline = true), BenchmarkCategory("Hello")]
-    public Task<int> RazorSlicesNuGet() => GetPath(_slicesNuGetClient, "/hello");
+    public Task<int> RazorSlicesHelloNuGet() => GetPath(_slicesNuGetClient, "/hello");
 
     [Benchmark(), BenchmarkCategory("Hello")]
-    public Task<int> RazorSlicesLocal() => GetPath(_slicesLocalClient, "/hello");
+    public Task<int> RazorSlicesHelloLocal() => GetPath(_slicesLocalClient, "/hello");
 
     [Benchmark, BenchmarkCategory("Hello")]
-    public Task<int> RazorPages() => GetPath(_pagesClient, "/hello");
+    public Task<int> RazorPagesHello() => GetPath(_pagesClient, "/hello");
 
     [Benchmark, BenchmarkCategory("Hello")]
-    public Task<int> RazorComponents() => GetPath(_componentsClient, "/hello");
+    public Task<int> RazorComponentsHello() => GetPath(_componentsClient, "/hello");
 
     [Benchmark, BenchmarkCategory("Hello")]
-    public Task<int> BlazorSSR() => GetPath(_blazorClient, "/hello");
+    public Task<int> BlazorSSRHello() => GetPath(_blazorClient, "/hello");
 
-    [Benchmark(), BenchmarkCategory("Pride")]
-    public Task<int> RazorSlicesPrideLocal() => GetPath(_slicesLocalClient, "/pride");
+    [Benchmark(), BenchmarkCategory("Lorem")]
+    public Task<int> RazorSlicesLorem25Local() => GetPath(_slicesLocalClient, "/lorem25");
+
+    [Benchmark(), BenchmarkCategory("Lorem")]
+    public Task<int> RazorSlicesLorem50Local() => GetPath(_slicesLocalClient, "/lorem50");
+
+    [Benchmark(), BenchmarkCategory("Lorem")]
+    public Task<int> RazorSlicesLorem100Local() => GetPath(_slicesLocalClient, "/lorem100");
+
+    [Benchmark(), BenchmarkCategory("Lorem")]
+    public Task<int> RazorSlicesLorem200Local() => GetPath(_slicesLocalClient, "/lorem200");
+
+    [Benchmark(), BenchmarkCategory("Lorem")]
+    public Task<int> RazorSlicesLorem25() => GetPath(_slicesNuGetClient, "/lorem25");
+
+    [Benchmark(), BenchmarkCategory("Lorem")]
+    public Task<int> RazorSlicesLorem50() => GetPath(_slicesNuGetClient, "/lorem50");
+
+    [Benchmark(), BenchmarkCategory("Lorem")]
+    public Task<int> RazorSlicesLorem100() => GetPath(_slicesNuGetClient, "/lorem100");
+
+    [Benchmark(), BenchmarkCategory("Lorem")]
+    public Task<int> RazorSlicesLorem200() => GetPath(_slicesNuGetClient, "/lorem200");
 
     private async Task<int> GetPath(HttpClient httpClient, string path)
     {

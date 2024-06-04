@@ -1,0 +1,25 @@
+﻿@inherits RazorLayoutSlice
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <style>
+            body {
+                font-family: sans-serif;
+            }
+            section.content {
+                margin: 0 auto;
+                max-width: 70%
+            }
+        </style>
+        @await RenderSectionAsync("head")
+</head>
+<body>
+    <section class="content">
+        <h1>Lorem Ipsum</h1>
+
+        @await RenderBodyAsync()
+    </section>
+</body>
+</html>
