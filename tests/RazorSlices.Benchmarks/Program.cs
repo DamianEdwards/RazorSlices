@@ -1,4 +1,6 @@
 ﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -7,7 +9,7 @@ using RazorSlices.Benchmarks.WebApp;
 
 BenchmarkRunner.Run<RazorSlicesBenchmarks>();
 
-[MemoryDiagnoser]
+[MemoryDiagnoser, Config(typeof(Config))]
 public class RazorSlicesBenchmarks
 {
     private readonly HttpClient _slicesNuGetClient = new();
@@ -63,5 +65,13 @@ public class RazorSlicesBenchmarks
         var waf = new WebApplicationFactory<TApp>();
         waf.WithWebHostBuilder(webHost => webHost.ConfigureLogging(logging => logging.ClearProviders()));
         return waf.CreateClient();
+    }
+
+    private class Config : ManualConfig
+    {
+        public Config()
+        {
+            AddJob(Job.ShortRun.WithCustomBuildConfiguration("Benchmarks").WithId("Benchmarks"));
+        }
     }
 }

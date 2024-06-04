@@ -11,7 +11,12 @@
     <AnalysisModePerformance>All</AnalysisModePerformance>
     <AnalysisModeSecurity>All</AnalysisModeSecurity>
     <IsAotCompatible>true</IsAotCompatible>
-    <AssemblyName Condition=" '$(ContinuousIntegrationBuild)' != 'true' ">local.RazorSlices</AssemblyName>
+    <Configurations>Debug;Release;Benchmarks</Configurations>
+    <AssemblyName Condition=" '$(Configuration)' == 'Benchmarks' ">RazorSlices.Benchmarks</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Benchmarks' ">
+    <Optimize>True</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
