@@ -22,6 +22,8 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         var projectDirectory = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
             options.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var projectDir) ? projectDir : null);
 
+        // (Left.Left          , (Left.Right.Left     , Left.Right.Right.......))
+        // (string assemblyName, (string rootNamespace, string projectDirectory))
         var projectInfo = assemblyName.Combine(rootNamespace.Combine(projectDirectory));
 
         var texts = context.AdditionalTextsProvider
@@ -29,14 +31,15 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                            && !text.Path.EndsWith("_ViewImports.cshtml", StringComparison.OrdinalIgnoreCase)
                            && !text.Path.EndsWith("_ViewStart.cshtml", StringComparison.OrdinalIgnoreCase));
 
+        // (() projectInfo, texts)
         var combined = projectInfo.Combine(texts.Collect());
         
-        context.RegisterSourceOutput(combined, static (spc, pair) => Execute(spc, pair.Left, pair.Right));
+        context.RegisterSourceOutput(combined, static (spc, pair) => Execute(spc, pair.Left.Left, pair.Left.Right.Left, pair.Left.Right.Right, pair.Right));
     }
 
-    private static void Execute(SourceProductionContext context, (string? AssemblyName, (string? RootNamespace, string? ProjectDirectory) BuildProperties) projectInfo, ImmutableArray<AdditionalText> texts)
+    private static void Execute(SourceProductionContext context, string? assemblyName, string? rootNamespace, string? projectDirectory, ImmutableArray<AdditionalText> texts)
     {
-        if (string.IsNullOrEmpty(projectInfo.BuildProperties.RootNamespace) || string.IsNullOrEmpty(projectInfo.BuildProperties.ProjectDirectory))
+        if (string.IsNullOrEmpty(rootNamespace) || string.IsNullOrEmpty(projectDirectory))
         {
             // Need to have a root namespace and project directory to generate the code
             return;
@@ -63,7 +66,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         codeBuilder.AppendLine();
 
         codeBuilder.AppendLine($$"""
-            namespace {{projectInfo.BuildProperties.RootNamespace}}
+            namespace {{rootNamespace}}
             {
                 /// <summary>
                 /// All calls to create Razor Slices instances via the generated <see cref="global::RazorSlices.IRazorSliceProxy"/> classes
@@ -88,8 +91,8 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         {
             var fileName = Path.GetFileNameWithoutExtension(file.Path);
             var directory = Path.GetDirectoryName(file.Path);
-            var relativeFilePath = PathUtils.GetRelativePath(projectInfo.BuildProperties.ProjectDirectory!, file.Path);
-            var relativeDirectoryPath = PathUtils.GetRelativePath(projectInfo.BuildProperties.ProjectDirectory!, directory);
+            var relativeFilePath = PathUtils.GetRelativePath(projectDirectory!, file.Path);
+            var relativeDirectoryPath = PathUtils.GetRelativePath(projectDirectory!, directory);
             var subNamespace = relativeDirectoryPath.Replace(Path.DirectorySeparatorChar, '.');
 
             var className = fileName;
@@ -105,7 +108,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             }
 
             var subNamespaceAsClassName = subNamespace.Replace('.', '_');
-            var fullNamespace = $"{projectInfo.BuildProperties.RootNamespace}.{subNamespace}";
+            var fullNamespace = $"{rootNamespace}.{subNamespace}";
 
             // Duplicate class name check
 
@@ -137,8 +140,8 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                     /// </summary>
                     public sealed class {{className}} : global::RazorSlices.IRazorSliceProxy
                     {
-                        [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, TypeName, "{{projectInfo.AssemblyName}}")]
-                        private const string TypeName = "AspNetCoreGeneratedDocument.{{subNamespaceAsClassName}}_{{className}}, {{projectInfo.AssemblyName}}";
+                        [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, TypeName, "{{assemblyName}}")]
+                        private const string TypeName = "AspNetCoreGeneratedDocument.{{subNamespaceAsClassName}}_{{className}}, {{assemblyName}}";
                         [global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All)]
                         private static readonly global::System.Type _sliceType = global::System.Type.GetType(TypeName)
                             ?? throw new global::System.InvalidOperationException($"Razor view type '{TypeName}' was not found. This is likely a bug in the RazorSlices source generator.");
@@ -148,13 +151,13 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                         /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> .
                         /// </summary>
                         public static global::RazorSlices.RazorSlice Create()
-                            => global::{{projectInfo.BuildProperties.RootNamespace}}.RazorSlicesGenericFactory.CreateSlice<global::{{fullNamespace}}.{{className}}>();
+                            => global::{{rootNamespace}}.RazorSlicesGenericFactory.CreateSlice<global::{{fullNamespace}}.{{className}}>();
 
                         /// <summary>
                         /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> with the given model.
                         /// </summary>
                         public static global::RazorSlices.RazorSlice<TModel> Create<TModel>(TModel model)
-                            => global::{{projectInfo.BuildProperties.RootNamespace}}.RazorSlicesGenericFactory.CreateSlice<global::{{fullNamespace}}.{{className}}, TModel>(model);
+                            => global::{{rootNamespace}}.RazorSlicesGenericFactory.CreateSlice<global::{{fullNamespace}}.{{className}}, TModel>(model);
 
                         // Explicit interface implementation
                         static global::RazorSlices.RazorSlice global::RazorSlices.IRazorSliceProxy.CreateSlice() => _sliceDefinition.CreateSlice();
@@ -170,6 +173,6 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             }
         }
 
-        context.AddSource($"{projectInfo.BuildProperties.RootNamespace}.RazorSliceProxies.g.cs", SourceText.From(codeBuilder.ToString(), Encoding.UTF8));
+        context.AddSource($"{rootNamespace}.RazorSliceProxies.g.cs", SourceText.From(codeBuilder.ToString(), Encoding.UTF8));
     }
 }
