@@ -27,20 +27,23 @@ public class RazorSlicesBenchmarks
         _blazorClient = CreateHttpClient<BenchmarksBlazorWebApp>();
     }
 
-    [Benchmark(Baseline = true)]
+    [Benchmark(Baseline = true), BenchmarkCategory("Hello")]
     public Task<int> RazorSlicesNuGet() => GetPath(_slicesNuGetClient, "/hello");
 
-    [Benchmark()]
+    [Benchmark(), BenchmarkCategory("Hello")]
     public Task<int> RazorSlicesLocal() => GetPath(_slicesLocalClient, "/hello");
 
-    [Benchmark]
+    [Benchmark, BenchmarkCategory("Hello")]
     public Task<int> RazorPages() => GetPath(_pagesClient, "/hello");
 
-    [Benchmark]
+    [Benchmark, BenchmarkCategory("Hello")]
     public Task<int> RazorComponents() => GetPath(_componentsClient, "/hello");
 
-    [Benchmark]
+    [Benchmark, BenchmarkCategory("Hello")]
     public Task<int> BlazorSSR() => GetPath(_blazorClient, "/hello");
+
+    [Benchmark(), BenchmarkCategory("Pride")]
+    public Task<int> RazorSlicesPrideLocal() => GetPath(_slicesLocalClient, "/pride");
 
     private async Task<int> GetPath(HttpClient httpClient, string path)
     {

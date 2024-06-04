@@ -14,7 +14,7 @@ public abstract class RazorLayoutSlice : RazorSlice, IRazorLayoutSlice
     /// <summary>
     /// Renders the content of the <see cref="RazorSlice"/> using this slice for layout.
     /// </summary>
-    /// <returns><see cref="HtmlString.Empty"/> just to allow for easy calling within <c>.cshtml</c> files, e.g. <c>@await RenderContentAsync()</c>.</returns>
+    /// <returns><see cref="HtmlString.Empty"/> just to allow for easy calling within <c>.cshtml</c> files, e.g. <c>@await RenderBodyAsync()</c>.</returns>
     protected ValueTask<HtmlString> RenderBodyAsync()
     {
         if (ContentSlice is not null)
