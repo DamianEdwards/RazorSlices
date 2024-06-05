@@ -290,6 +290,26 @@ public partial class RazorSlice
         return HtmlString.Empty;
     }
 
+
+    /// <summary>
+    /// Writes the specified HTML string value to the output without HTML encoding it.
+    /// </summary>
+    /// <remarks>
+    /// WARNING: This method does not HTML encode the value. Only call this method when you intend for the value to not be HTML encoded.
+    /// </remarks>
+    /// <param name="htmlString">The HTML value to write to the output.</param>
+    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtml(Model.SomeHtml)</c></returns>
+    protected HtmlString WriteHtml(string? htmlString)
+    {
+        if (string.IsNullOrEmpty(htmlString))
+        {
+            _pipeWriter?.WriteHtml(htmlString.AsSpan());
+            _textWriter?.Write(htmlString);
+        }
+
+        return HtmlString.Empty;
+    }
+
     private void WriteValue<T>(T value)
     {
         if (value is null)
