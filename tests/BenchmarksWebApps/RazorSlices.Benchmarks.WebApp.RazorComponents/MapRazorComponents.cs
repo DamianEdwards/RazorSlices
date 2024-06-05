@@ -10,6 +10,9 @@ public static class ComponentBuilderExtensions
         routes.MapGet("/hello", () => new RazorComponentResult<Hello>());
 
         routes.MapGet("/lorem25", () => new RazorComponentResult<Lorem25>());
+        routes.MapGet("/lorem50", () => new RazorComponentResult<Lorem50>());
+        routes.MapGet("/lorem100", () => new RazorComponentResult<Lorem100>());
+        routes.MapGet("/lorem200", () => new RazorComponentResult<Lorem200>());
 
         return routes;
     }

@@ -28,6 +28,7 @@ public abstract partial class RazorSlice
         ArgumentNullException.ThrowIfNull(prefix);
         ArgumentNullException.ThrowIfNull(suffix);
 
+        // PERF: Just use a single instance and update it each time instead?
         _attributeInfo = new()
         {
             Name = name,
