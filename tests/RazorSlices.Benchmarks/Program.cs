@@ -1,6 +1,7 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Order;
 using BenchmarkDotNet.Running;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -10,7 +11,7 @@ using RazorSlices.Benchmarks.WebApp;
 BenchmarkRunner.Run<RazorSlicesBenchmarks>();
 
 [MemoryDiagnoser]
-[AnyCategoriesFilter("Lorem"), /*GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)*/]
+[AnyCategoriesFilter("Lorem"), Orderer(SummaryOrderPolicy.FastestToSlowest) /*GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)*/]
 [Config(typeof(Config))]
 public class RazorSlicesBenchmarks
 {
@@ -62,7 +63,7 @@ public class RazorSlicesBenchmarks
     public Task<int> RazorSlicesLorem25_NuGet() => GetPath(_slicesNuGetClient, "/lorem25");
 
     [Benchmark, BenchmarkCategory("Lorem", "Lorem50", "RazorSlices")]
-    public Task<int> RazorSlicesLorem50_NuGet0() => GetPath(_slicesNuGetClient, "/lorem50");
+    public Task<int> RazorSlicesLorem50_NuGet() => GetPath(_slicesNuGetClient, "/lorem50");
 
     [Benchmark, BenchmarkCategory("Lorem", "Lorem100", "RazorSlices")]
     public Task<int> RazorSlicesLorem100_NuGet() => GetPath(_slicesNuGetClient, "/lorem100");
@@ -93,6 +94,18 @@ public class RazorSlicesBenchmarks
 
     [Benchmark, BenchmarkCategory("Lorem", "Lorem200", "RazorComponents")]
     public Task<int> RazorComponentsLorem200() => GetPath(_componentsClient, "/lorem200");
+
+    [Benchmark, BenchmarkCategory("Lorem", "Lorem25", "BlazorSSR")]
+    public Task<int> BlazorSSRLorem25() => GetPath(_blazorClient, "/lorem25");
+
+    [Benchmark, BenchmarkCategory("Lorem", "Lorem50", "BlazorSSR")]
+    public Task<int> BlazorSSRLorem50() => GetPath(_blazorClient, "/lorem50");
+
+    [Benchmark, BenchmarkCategory("Lorem", "Lorem100", "BlazorSSR")]
+    public Task<int> BlazorSSRLorem100() => GetPath(_blazorClient, "/lorem100");
+
+    [Benchmark, BenchmarkCategory("Lorem", "Lorem200", "BlazorSSR")]
+    public Task<int> BlazorSSRLorem200() => GetPath(_blazorClient, "/lorem200");
 
     private async Task<int> GetPath(HttpClient httpClient, string path)
     {
