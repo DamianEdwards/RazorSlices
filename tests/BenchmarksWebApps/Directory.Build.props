@@ -1,0 +1,13 @@
+<Project>
+
+  <Import Project="..\..\Directory.Build.props" />
+
+  <PropertyGroup>
+    <Configurations>Debug;Release;Benchmarks</Configurations>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Benchmarks' ">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+</Project>

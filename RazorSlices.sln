@@ -38,6 +38,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.Benchmarks", "tests\RazorSlices.Benchmarks\RazorSlices.Benchmarks.csproj", "{703BA38C-211A-44C5-AECF-35672F59937C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BenchmarksWebApps", "BenchmarksWebApps", "{A068C539-8A03-4733-B141-4C5170E53E7B}"
+	ProjectSection(SolutionItems) = preProject
+		tests\BenchmarksWebApps\Directory.Build.props = tests\BenchmarksWebApps\Directory.Build.props
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.Benchmarks.WebApp.RazorPages", "tests\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorPages\RazorSlices.Benchmarks.WebApp.RazorPages.csproj", "{1B193E38-FA2C-4DED-9496-5A7DADFE8A6D}"
 EndProject
