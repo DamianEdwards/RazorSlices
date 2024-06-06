@@ -93,7 +93,9 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             var directory = Path.GetDirectoryName(file.Path);
             var relativeFilePath = PathUtils.GetRelativePath(projectDirectory!, file.Path);
             var relativeDirectoryPath = PathUtils.GetRelativePath(projectDirectory!, directory);
-            var subNamespace = relativeDirectoryPath.Replace(Path.DirectorySeparatorChar, '.');
+            var subNamespace = relativeDirectoryPath == "."
+                ? ""
+                : relativeDirectoryPath.Replace(Path.DirectorySeparatorChar, '.');
 
             var className = fileName;
 
@@ -102,13 +104,15 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 className = CSharpHelpers.CreateValidTypeName(className);
             }
 
-            if (!CSharpHelpers.IsValidNamespace(subNamespace))
+            if (!string.IsNullOrEmpty(subNamespace) && !CSharpHelpers.IsValidNamespace(subNamespace))
             {
                 subNamespace = CSharpHelpers.CreateValidNamespace(subNamespace);
             }
 
             var subNamespaceAsClassName = subNamespace.Replace('.', '_');
-            var fullNamespace = $"{rootNamespace}.{subNamespace}";
+            var fullNamespace = string.IsNullOrEmpty(subNamespace)
+                ? rootNamespace
+                : $"{rootNamespace}.{subNamespace}";
 
             // Duplicate class name check
 
@@ -134,6 +138,10 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 {
                 """);
 
+                var generatedTypeName = string.IsNullOrEmpty(subNamespaceAsClassName)
+                    ? className
+                    : $"{subNamespaceAsClassName}_{className}";
+
                 codeBuilder.AppendLine($$"""
                     /// <summary>
                     /// Static proxy for the Razor Slice defined in <c>{{relativeFilePath}}</c>.
@@ -141,7 +149,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                     public sealed class {{className}} : global::RazorSlices.IRazorSliceProxy
                     {
                         [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, TypeName, "{{assemblyName}}")]
-                        private const string TypeName = "AspNetCoreGeneratedDocument.{{subNamespaceAsClassName}}_{{className}}, {{assemblyName}}";
+                        private const string TypeName = "AspNetCoreGeneratedDocument.{{generatedTypeName}}, {{assemblyName}}";
                         [global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All)]
                         private static readonly global::System.Type _sliceType = global::System.Type.GetType(TypeName)
                             ?? throw new global::System.InvalidOperationException($"Razor view type '{TypeName}' was not found. This is likely a bug in the RazorSlices source generator.");

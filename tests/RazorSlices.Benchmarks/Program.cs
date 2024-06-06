@@ -1,4 +1,5 @@
-﻿using BenchmarkDotNet.Attributes;
+﻿using System.IO.Pipelines;
+using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
@@ -6,14 +7,65 @@ using BenchmarkDotNet.Running;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Logging;
+using RazorSlices.Benchmarks.RazorClassLibrary.Local;
+using RazorSlices.Benchmarks.RazorClassLibrary.PreviousVersion;
 using RazorSlices.Benchmarks.WebApp;
 
-BenchmarkRunner.Run<RazorSlicesBenchmarks>();
+//BenchmarkRunner.Run<RazorSlicesBenchmarks>();
+BenchmarkRunner.Run<RazorSlicesAppBenchmarks>();
+
+[MemoryDiagnoser, Config(typeof(Config))]
+public class RazorSlicesBenchmarks
+{
+    private Pipe _pipe = new();
+    private readonly int _iterations = 1000;
+
+    [IterationSetup]
+    public void Setup()
+    {
+        ResetPipe();
+    }
+
+    [Benchmark(Baseline = true)]
+    public async ValueTask RazorSlicesHello()
+    {
+        for (int i = 0; i < _iterations; i++)
+        {
+            await PreviousVersion.RenderHello(_pipe.Writer);
+            ResetPipe();
+        }
+    }
+
+    [Benchmark]
+    public async ValueTask RazorSlicesHello_Local()
+    {
+        for (int i = 0; i < _iterations; i++)
+        {
+            await LocalVersion.RenderHello(_pipe.Writer);
+            ResetPipe();
+        }
+    }
+
+    private void ResetPipe()
+    {
+        _pipe.Reader.Complete();
+        _pipe.Writer.Complete();
+        _pipe.Reset();
+    }
+
+    private class Config : ManualConfig
+    {
+        public Config()
+        {
+            AddJob(Job.Default.WithCustomBuildConfiguration("Benchmarks").WithId("Benchmarks"));
+        }
+    }
+}
 
 [MemoryDiagnoser]
 [AnyCategoriesFilter("Lorem"), Orderer(SummaryOrderPolicy.FastestToSlowest) /*GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)*/]
 [Config(typeof(Config))]
-public class RazorSlicesBenchmarks
+public class RazorSlicesAppBenchmarks
 {
     private readonly HttpClient _slicesNuGetClient = new();
     private readonly HttpClient _slicesLocalClient = new();
@@ -23,7 +75,7 @@ public class RazorSlicesBenchmarks
     private readonly byte[] _buffer = new byte[1024 * 256]; // 256 KB buffer
     private readonly int _iterations = 100;
 
-    public RazorSlicesBenchmarks()
+    public RazorSlicesAppBenchmarks()
     {
         _slicesNuGetClient = CreateHttpClient<BenchmarksWebAppRazorSlicesPreviousVersion>();
         _slicesLocalClient = CreateHttpClient<BenchmarksWebApp>();

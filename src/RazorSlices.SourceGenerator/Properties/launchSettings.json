@@ -3,6 +3,10 @@
     "RazorSlices.Samples.WebApp": {
       "commandName": "DebugRoslynComponent",
       "targetProject": "..\\..\\samples\\RazorSlices.Samples.WebApp\\RazorSlices.Samples.WebApp.csproj"
+    },
+    "RazorSlices.Benchmarks.RazorClassLibrary.Local": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\tests\\BenchmarksWebApps\\RazorSlices.Benchmarks.RazorClassLibrary.Local\\RazorSlices.Benchmarks.RazorClassLibrary.Local.csproj"
     }
   }
 }

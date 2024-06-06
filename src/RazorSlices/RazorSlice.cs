@@ -165,7 +165,7 @@ public abstract partial class RazorSlice : IDisposable
     }
 
     [MemberNotNull(nameof(_textWriter))]
-    private ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+    private ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken, bool renderLayout = true)
     {
         Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a TextWriter");
 
@@ -174,7 +174,7 @@ public abstract partial class RazorSlice : IDisposable
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        if (this is IUsesLayout useLayout)
+        if (renderLayout && this is IUsesLayout useLayout)
         {
             return RenderViaLayout(RenderToTextWriterAsync, useLayout, textWriter, htmlEncoder, cancellationToken);
         }

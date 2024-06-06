@@ -18,6 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.RazorClassLibrary.Local\RazorSlices.Benchmarks.RazorClassLibrary.Local.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.RazorClassLibrary.PreviousVersion\RazorSlices.Benchmarks.RazorClassLibrary.PreviousVersion.csproj" />
     <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.Blazor\RazorSlices.Benchmarks.WebApp.Blazor.csproj" />
     <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorComponents\RazorSlices.Benchmarks.WebApp.RazorComponents.csproj" />
     <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorPages\RazorSlices.Benchmarks.WebApp.RazorPages.csproj" />
