@@ -75,6 +75,7 @@ public partial class RazorSlice
         Debug.WriteLine($"Rendering child slice of type '{child.GetType().Name}' from layout slice of type '{GetType().Name}'");
 
         CopySliceState(this, child);
+        var trackChildItems = child._items is null;
 
         ValueTask renderPartialTask;
 
@@ -96,15 +97,26 @@ public partial class RazorSlice
         if (!renderPartialTask.HandleSynchronousCompletion())
         {
             // Go async
-            return AwaitPartialTask(renderPartialTask);
+            return AwaitPartialTask(renderPartialTask, this, child, trackChildItems);
+        }
+
+        if (trackChildItems && child._items is not null)
+        {
+            _items = child._items;
         }
 
         return ValueTask.FromResult(HtmlString.Empty);
     }
 
-    private static async ValueTask<HtmlString> AwaitPartialTask(ValueTask partialTask)
+    private static async ValueTask<HtmlString> AwaitPartialTask(ValueTask partialTask, RazorSlice parent, RazorSlice child, bool trackChildItems)
     {
         await partialTask;
+
+        if (trackChildItems && child._items is not null)
+        {
+            parent._items = child._items;
+        }
+
         return HtmlString.Empty;
     }
 }

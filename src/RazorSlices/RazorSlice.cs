@@ -25,6 +25,7 @@ public abstract partial class RazorSlice : IDisposable
     private PipeWriter? _pipeWriter;
     private TextWriter? _textWriter;
     private Utf8PipeTextWriter? _utf8BufferTextWriter;
+    private SliceItemsDictionary? _items;
 
     /// <summary>
     /// Gets or sets the <see cref="IServiceProvider"/> used to resolve services for injectable properties.
@@ -46,6 +47,11 @@ public abstract partial class RazorSlice : IDisposable
     /// A token to monitor for cancellation requests.
     /// </summary>
     public CancellationToken CancellationToken { get; protected set; }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public SliceItemsDictionary Items => _items ??= new();
 
     /// <summary>
     /// Gets or sets a delegate used to initialize the template class before <see cref="ExecuteAsync"/> is called.
@@ -207,7 +213,7 @@ public abstract partial class RazorSlice : IDisposable
         if (layoutSlice is IRazorLayoutSlice razorLayoutSlice and RazorSlice)
         {
             razorLayoutSlice.ContentSlice = this;
-            CopySliceState(this, (RazorSlice)razorLayoutSlice);
+            CopySliceState(this, layoutSlice);
 
             return render(layoutSlice, writer, htmlEncoder, cancellationToken);
         }
@@ -221,6 +227,7 @@ public abstract partial class RazorSlice : IDisposable
         // Avoid setting the service provider directly from our ServiceProvider property so it can be lazily initialized from HttpContext.RequestServices
         // only if needed
         destination.ServiceProvider = source._serviceProvider;
+        destination._items = source._items;
     }
 
     internal static async ValueTask<HtmlString> AwaitRenderTask(Task renderTask)
