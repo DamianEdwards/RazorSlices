@@ -22,7 +22,7 @@ jobs:
       DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Install .NET SDK
       uses: actions/setup-dotnet@v4
