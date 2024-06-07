@@ -35,10 +35,10 @@ jobs:
 
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
 
       - name: Add GitHub Package Repository source
         run: dotnet nuget add source --username DamianEdwards --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name GPR "https://nuget.pkg.github.com/DamianEdwards/index.json"

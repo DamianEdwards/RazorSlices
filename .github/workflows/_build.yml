@@ -55,7 +55,10 @@ jobs:
             dotnet publish "$projectPath" --output "./artifacts/$projectName" --framework $tfm --configuration Release --verbosity normal
           done;
         done;
-      
+    
+    - name: Build benchmarks
+      run: dotnet build --configuration Benchmarks
+
     - name: Pack (ci)
       run: dotnet pack --configuration Release --output ./artifacts/ci --verbosity normal -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
 
@@ -64,7 +67,7 @@ jobs:
       run: dotnet pack --configuration Release --output ./artifacts/ship --verbosity normal -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true -p:IsShipCandidate=true
 
     - name: Upload artifacts (packages)
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@v4
       with:
         name: nupkg
         path: ./artifacts/**/*.nupkg
