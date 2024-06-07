@@ -150,34 +150,34 @@ The library is still new and features are being actively added.
       </html>
       ```
 
-  - For the slice using the layout, implement `IUsesLayout<TLayout>` or `IUsesLayout<TLayout, TModel>` to declare which layout to use. If using a layout with a model, ensure you implement the `LayoutModel` property in your `@functions` block, e.g.:
-          
-        ```cshtml
-        @inherits RazorSlice<SomeModel>
-        @implements IUsesLayout<LayoutSlice, LayoutModel>
+  - For the slice using the layout, implement `IUsesLayout<TLayout>` or `IUsesLayout<TLayout, TModel>` to declare which layout to use. If using a layout with a model, ensure you implement the `LayoutModel` property in your `@functions` block, e.g
 
-        <div>
-            @* Content here *@
-        </div>
+      ```cshtml
+      @inherits RazorSlice<SomeModel>
+      @implements IUsesLayout<LayoutSlice, LayoutModel>
 
-        @functions {
-            public LayoutModel LayoutModel => new() { Title = "My Layout" };
-        }
-        ```
+      <div>
+          @* Content here *@
+      </div>
 
-    - Layouts can render sections via `@await RenderSectionAsync("SectionName")` and slices can render content into sections by overriding `ExecuteSectionAsync`, e.g.:
+      @functions {
+          public LayoutModel LayoutModel => new() { Title = "My Layout" };
+      }
+      ```
 
-        ```cshtml
-        protected override Task ExecuteSectionAsync(string name)
-        {
-            if (name == "lorem-header")
-            {
-                <p class="text-info">This page renders a custom <code>IHtmlContent</code> type that contains lorem ipsum content.</p>
-            }
+  - Layouts can render sections via `@await RenderSectionAsync("SectionName")` and slices can render content into sections by overriding `ExecuteSectionAsync`, e.g.:
 
-            return Task.CompletedTask;
-        }
-        ```
+      ```cshtml
+      protected override Task ExecuteSectionAsync(string name)
+      {
+          if (name == "lorem-header")
+          {
+              <p class="text-info">This page renders a custom <code>IHtmlContent</code> type that contains lorem ipsum content.</p>
+          }
+
+          return Task.CompletedTask;
+      }
+      ```
 
     **Note: The `@section` directive is not supported as it's incompatible with the rendering approach of Razor Slices**
 
