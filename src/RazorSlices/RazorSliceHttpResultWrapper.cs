@@ -14,7 +14,11 @@ internal sealed class RazorSliceHttpResultWrapper(RazorSlice razorSlice) : IRazo
     public HtmlEncoder? HtmlEncoder { get; set; }
 
     /// <inheritdoc />
-    Task IResult.ExecuteAsync(HttpContext httpContext) => RazorSliceHttpResultHelpers.ExecuteAsync(razorSlice, httpContext, HtmlEncoder, StatusCode ?? StatusCodes.Status200OK, ContentType);
+    Task IResult.ExecuteAsync(HttpContext httpContext)
+    {
+        razorSlice.HttpContext = httpContext;
+        return RazorSliceHttpResultHelpers.ExecuteAsync(razorSlice, httpContext, HtmlEncoder, StatusCode ?? StatusCodes.Status200OK, ContentType);
+    }
 
     public void Dispose()
     {

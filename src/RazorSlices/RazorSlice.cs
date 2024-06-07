@@ -180,7 +180,7 @@ public abstract partial class RazorSlice : IDisposable
 
         if (renderLayout && this is IUsesLayout useLayout)
         {
-            return RenderViaLayout(RenderToTextWriterAsync, useLayout, textWriter, htmlEncoder, cancellationToken);
+            return RenderViaLayout(RenderToTextWriterAsync, useLayout, _textWriter, htmlEncoder, cancellationToken);
         }
 
         var executeTask = ExecuteAsyncImpl();

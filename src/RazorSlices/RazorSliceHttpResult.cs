@@ -34,9 +34,3 @@ public abstract class RazorSliceHttpResult : RazorSlice, IRazorSliceHttpResult
         return RazorSliceHttpResultHelpers.ExecuteAsync(this, httpContext, HtmlEncoder, StatusCode, ContentType);
     }
 }
-
-//public abstract class RazorSliceHttpResult<TLayout> : RazorSliceHttpResult, IUseLayout
-//    where TLayout : IUseLayout
-//{
-//    RazorSlice IUseLayout.CreateLayout() => TLayout.Create();
-//}
