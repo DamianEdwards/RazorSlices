@@ -37,7 +37,7 @@ jobs:
           cmd: 'jq .head_sha workflow_details.json -r'
 
       - name: Download workflow run artifacts
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
         with:
           run_id: ${{ inputs.runId }}
           workflow_conclusion: success
@@ -78,7 +78,7 @@ jobs:
           prerelease: ${{ contains(env.PACKAGE_VERSION, '-') }}
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
 
       - name: Add nuget.org source
         run: dotnet nuget add source --name NUGET https://www.nuget.org
