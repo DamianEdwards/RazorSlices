@@ -23,7 +23,7 @@ public static class RazorSliceFactory
     private static readonly MethodInfo _getServiceMethod = typeof(IServiceProvider).GetMethod(nameof(IServiceProvider.GetService))
         ?? throw new InvalidOperationException("Could not find IServiceProvider.GetService. Likely a bug in Razor Slices itself.");
     private static readonly MethodInfo _getRequiredServiceMethod = typeof(ServiceProviderServiceExtensions).GetMethod(nameof(ServiceProviderServiceExtensions.GetRequiredService), [typeof(IServiceProvider), typeof(Type)])
-        ?? throw new InvalidOperationException("Could not find HttpConServiceProviderServiceExtensionstext.GetRequirdService. Likely a bug in Razor Slices itself.");
+        ?? throw new InvalidOperationException("Could not find ServiceProviderServiceExtensions.GetRequirdService. Likely a bug in Razor Slices itself.");
 
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)]
     private static readonly Type _razorSliceType = typeof(RazorSlice);
