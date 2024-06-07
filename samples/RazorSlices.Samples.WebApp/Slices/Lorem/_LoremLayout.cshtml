@@ -1,0 +1,24 @@
+﻿<!-- _LoremLayout.cshtml -->
+@inherits RazorLayoutSlice<LayoutModel>
+@implements IUsesLayout<_Layout, LayoutModel>
+
+@(await RenderPartialAsync<_LoremMenu>())
+
+<h1 class="mt-5">@Model.Title</h1>
+
+@await RenderSectionAsync("lorem-header")
+
+@await RenderBodyAsync()
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = Model.Title };
+
+    protected override Task ExecuteSectionAsync(string sectionName)
+    {
+        if (sectionName == "footer-links")
+        {
+            <a href="https://loremipsum.io/">Lorem Ipsum</a>
+        }
+        return Task.CompletedTask;
+    }
+}

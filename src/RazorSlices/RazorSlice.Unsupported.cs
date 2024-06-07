@@ -45,4 +45,13 @@ public abstract partial class RazorSlice
     {
         throw new NotSupportedException(TagHelpersNotSupportedMessage);
     }
+
+    /// <summary>
+    /// Not supported on Razor Slices. Do not use.
+    /// </summary>
+    [Obsolete(TagHelpersNotSupportedMessage, error: true)]
+    protected void DefineSection(string name, Func<Task> section)
+    {
+        throw new NotSupportedException("@section is not supported on Razor Slices. Override the RenderSectionAsync(string name) method instead.");
+    }
 }

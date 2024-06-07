@@ -1,12 +1,20 @@
+using System.Runtime.CompilerServices;
+using System.Text;
 using RazorSlices;
 using RazorSlices.Samples.WebApp;
 using RazorSlices.Samples.WebApp.Services;
-using System.Text;
+using Models = RazorSlices.Samples.WebApp.Models;
+using Slices = RazorSlices.Samples.WebApp.Slices;
+using LibrarySlices = RazorSlices.Samples.RazorClassLibrary.Slices;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddWebEncoders();
 builder.Services.AddSingleton<LoremService>();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default);
+});
 
 var app = builder.Build();
 
@@ -14,67 +22,51 @@ app.UseStatusCodePages();
 app.UseStaticFiles();
 
 app.MapGet("/lorem", () => Results.Redirect("/lorem-static"));
-app.MapGet("/lorem-static", () => Results.Extensions.RazorSlice("/Slices/LoremStatic.cshtml"));
+app.MapGet("/lorem-static", () => Results.Extensions.RazorSlice<Slices.Lorem.LoremStatic>());
 app.MapGet("/lorem-dynamic", (int? paraCount, int? paraLength) =>
-    Results.Extensions.RazorSlice("/Slices/LoremDynamic.cshtml", new LoremParams(paraCount, paraLength)));
+    Results.Extensions.RazorSlice<Slices.Lorem.LoremDynamic, LoremParams>(new LoremParams(paraCount, paraLength)));
 app.MapGet("/lorem-formattable", (int? paraCount, int? paraLength) =>
-    Results.Extensions.RazorSlice("/Slices/LoremFormattable.cshtml", new LoremParams(paraCount, paraLength)));
+    Results.Extensions.RazorSlice<Slices.Lorem.LoremFormattable, LoremParams>(new LoremParams(paraCount, paraLength)));
 app.MapGet("/lorem-htmlcontent", (bool? encode) =>
-    Results.Extensions.RazorSlice("/Slices/LoremHtmlContent.cshtml", new HtmlContentParams(encode)));
-app.MapGet("/lorem-stream", (HttpContext httpContext) =>
+    Results.Extensions.RazorSlice<Slices.Lorem.LoremHtmlContent, HtmlContentParams>(new HtmlContentParams(encode)));
+app.MapGet("/lorem-injectableproperties", (int? paraCount, int? paraLength) =>
+    Results.Extensions.RazorSlice<Slices.Lorem.LoremInjectableProperties, LoremParams>(new LoremParams(paraCount, paraLength)));
+
+app.MapGet("/lorem-stream", async (HttpResponse httpResponse) =>
 {
-    var slice = RazorSlice.Create("/Slices/LoremStatic.cshtml");
-    httpContext.Response.StatusCode = StatusCodes.Status200OK;
-    httpContext.Response.ContentType = "text/html; charset=utf-8";
-    return slice.RenderAsync(httpContext.Response.Body);
+    var slice = Slices.Lorem.LoremStatic.Create();
+    httpResponse.StatusCode = StatusCodes.Status200OK;
+    httpResponse.ContentType = "text/html; charset=utf-8";
+    await slice.RenderAsync(httpResponse.Body);
 });
-app.MapGet("/lorem-injectableproperties", (int? paraCount, int? paraLength, IServiceProvider serviceProvider) =>
-    Results.Extensions.RazorSlice("/Slices/LoremInjectableProperties.cshtml", new LoremParams(paraCount, paraLength), serviceProvider));
-app.MapGet("/unicode", () => Results.Extensions.RazorSlice("/Slices/Unicode.cshtml"));
-app.MapGet("/library", () => Results.Extensions.RazorSlice("/Slices/FromLibrary.cshtml"));
+app.MapGet("/encoding", () => Results.Extensions.RazorSlice<Slices.Encoding>());
+app.MapGet("/unicode", () => Results.Extensions.RazorSlice<Slices.Unicode>());
+app.MapGet("/library", () => Results.Extensions.RazorSlice<LibrarySlices.FromLibrary>());
 app.MapGet("/render-to-string", async () =>
 {
-    var slice = RazorSlice.Create("/Slices/LoremFormattable.cshtml", new LoremParams(1, 4));
+    var slice = Slices.Lorem.LoremFormattable.Create(new LoremParams(1, 4));
     var template = await slice.RenderAsync();
-    return Results.Ok(new { HtmlString = template });
+    return Results.Ok(new ResultDto(template));
 });
 app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) =>
 {
     var stringBuilder = new StringBuilder();
-    var slice = RazorSlice.Create("/Slices/LoremInjectableProperties.cshtml", new LoremParams(1, 4), serviceProvider);
+    var slice = Slices.Lorem.LoremInjectableProperties.Create(new LoremParams(1, 4));
+    slice.ServiceProvider = serviceProvider;
     await slice.RenderAsync(stringBuilder);
-    return Results.Ok(new { HtmlString = stringBuilder.ToString() });
+    return Results.Ok(new ResultDto(stringBuilder.ToString()));
 });
 
-app.MapGet("/", () => Results.Extensions.RazorSlice("/slices/todos", Todos.AllTodos));
+app.MapGet("/", () => Results.Extensions.RazorSlice<Slices.Todos, Models.Todo[]>(Models.Todos.AllTodos));
 app.MapGet("/{id:int}", (int id) =>
 {
-    var todo = Todos.AllTodos.FirstOrDefault(t => t.Id == id);
+    var todo = Models.Todos.AllTodos.FirstOrDefault(t => t.Id == id);
     return todo is not null
-        ? Results.Extensions.RazorSlice("/Slices/Todo.cshtml", todo)
+        ? Results.Extensions.RazorSlice<Slices.Todo, Models.Todo>(todo)
         : Results.NotFound();
 });
 
+Console.WriteLine($"RuntimeFeature.IsDynamicCodeSupported = {RuntimeFeature.IsDynamicCodeSupported}");
+Console.WriteLine($"RuntimeFeature.IsDynamicCodeCompiled = {RuntimeFeature.IsDynamicCodeCompiled}");
+
 app.Run();
-
-struct LoremParams
-{
-    public int ParagraphCount;
-    public int ParagraphSentenceCount;
-
-    public LoremParams(int? paragraphCount, int? paragraphSentenceCount)
-    {
-        ParagraphCount = paragraphCount ?? 3;
-        ParagraphSentenceCount = paragraphSentenceCount ?? 5;
-    }
-}
-
-struct HtmlContentParams
-{
-    public bool Encode;
-
-    public HtmlContentParams(bool? encode)
-    {
-        Encode = encode ?? false;
-    }
-}

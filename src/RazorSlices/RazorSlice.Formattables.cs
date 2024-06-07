@@ -29,11 +29,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -53,11 +49,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(char value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -78,11 +70,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -102,11 +90,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(byte value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -127,11 +111,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -151,11 +131,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(short value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -176,11 +152,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -200,11 +172,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(ushort value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -225,11 +193,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -249,11 +213,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(int value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -274,11 +234,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -298,11 +254,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(uint value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -323,11 +275,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -347,11 +295,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(long value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -372,11 +316,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -396,11 +336,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(ulong value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -462,11 +398,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -486,11 +418,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(Half value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -511,11 +439,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -535,11 +459,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(float value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -560,11 +480,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -584,11 +500,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(double value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -609,11 +521,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -633,11 +541,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(decimal value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -658,11 +562,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -682,11 +582,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(DateTime value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -707,11 +603,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -731,11 +623,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(DateTimeOffset value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -756,11 +644,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -780,11 +664,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(TimeSpan value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -805,11 +685,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -829,11 +705,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(DateOnly value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -854,11 +726,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -878,11 +746,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(TimeOnly value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -903,11 +767,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value);
-#else
-            WriteSpanFormattable(value.Value);
-#endif
         }
     }
 
@@ -927,11 +787,7 @@ public abstract partial class RazorSlice
     /// <param name="value"></param>
     protected void Write(Guid value)
     {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
     }
 
     /// <summary>
@@ -952,11 +808,7 @@ public abstract partial class RazorSlice
     {
         if (value is not null)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value);
-#else
-            WriteSpanFormattable(value);
-#endif
         }
     }
 
@@ -974,11 +826,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -994,11 +842,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1014,11 +858,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1034,11 +874,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1054,11 +890,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1074,11 +906,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1094,11 +922,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1114,11 +938,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1150,11 +970,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1170,11 +986,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1190,11 +1002,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1210,11 +1018,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1230,11 +1034,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1250,11 +1050,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1270,11 +1066,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1290,11 +1082,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1310,11 +1098,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1330,11 +1114,7 @@ public abstract partial class RazorSlice
     {
         if (value.HasValue)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#else
-            WriteSpanFormattable(value.Value, format, formatProvider, htmlEncode);
-#endif
         }
         return HtmlString.Empty;
     }
@@ -1363,74 +1143,42 @@ public abstract partial class RazorSlice
         }
         if (value is char)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((char)(object)value, default, null);
-#else
-            WriteSpanFormattable((char)(object)value, default, null);
-#endif
             return true;
         }
         if (value is byte)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((byte)(object)value, default, null);
-#else
-            WriteSpanFormattable((byte)(object)value, default, null);
-#endif
             return true;
         }
         if (value is short)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((short)(object)value, default, null);
-#else
-            WriteSpanFormattable((short)(object)value, default, null);
-#endif
             return true;
         }
         if (value is ushort)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((ushort)(object)value, default, null);
-#else
-            WriteSpanFormattable((ushort)(object)value, default, null);
-#endif
             return true;
         }
         if (value is int)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((int)(object)value, default, null);
-#else
-            WriteSpanFormattable((int)(object)value, default, null);
-#endif
             return true;
         }
         if (value is uint)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((uint)(object)value, default, null);
-#else
-            WriteSpanFormattable((uint)(object)value, default, null);
-#endif
             return true;
         }
         if (value is long)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((long)(object)value, default, null);
-#else
-            WriteSpanFormattable((long)(object)value, default, null);
-#endif
             return true;
         }
         if (value is ulong)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((ulong)(object)value, default, null);
-#else
-            WriteSpanFormattable((ulong)(object)value, default, null);
-#endif
             return true;
         }
         if (value is BigInteger)
@@ -1440,101 +1188,57 @@ public abstract partial class RazorSlice
         }
         if (value is Half)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((Half)(object)value, default, null);
-#else
-            WriteSpanFormattable((Half)(object)value, default, null);
-#endif
             return true;
         }
         if (value is float)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((float)(object)value, default, null);
-#else
-            WriteSpanFormattable((float)(object)value, default, null);
-#endif
             return true;
         }
         if (value is double)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((double)(object)value, default, null);
-#else
-            WriteSpanFormattable((double)(object)value, default, null);
-#endif
             return true;
         }
         if (value is decimal)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((decimal)(object)value, default, null);
-#else
-            WriteSpanFormattable((decimal)(object)value, default, null);
-#endif
             return true;
         }
         if (value is DateTime)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((DateTime)(object)value, default, null);
-#else
-            WriteSpanFormattable((DateTime)(object)value, default, null);
-#endif
             return true;
         }
         if (value is DateTimeOffset)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((DateTimeOffset)(object)value, default, null);
-#else
-            WriteSpanFormattable((DateTimeOffset)(object)value, default, null);
-#endif
             return true;
         }
         if (value is TimeSpan)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((TimeSpan)(object)value, default, null);
-#else
-            WriteSpanFormattable((TimeSpan)(object)value, default, null);
-#endif
             return true;
         }
         if (value is DateOnly)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((DateOnly)(object)value, default, null);
-#else
-            WriteSpanFormattable((DateOnly)(object)value, default, null);
-#endif
             return true;
         }
         if (value is TimeOnly)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((TimeOnly)(object)value, default, null);
-#else
-            WriteSpanFormattable((TimeOnly)(object)value, default, null);
-#endif
             return true;
         }
         if (value is Guid)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((Guid)(object)value, default, null);
-#else
-            WriteSpanFormattable((Guid)(object)value, default, null);
-#endif
             return true;
         }
         if (value is Version)
         {
-#if NET8_0_OR_GREATER
             WriteUtf8SpanFormattable((Version)(object)value, default, null);
-#else
-            WriteSpanFormattable((Version)(object)value, default, null);
-#endif
             return true;
         }
         return false;

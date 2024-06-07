@@ -1,4 +1,4 @@
-﻿using RazorSlices.Samples.WebApp.Slices;
+﻿using RazorSlices.Samples.WebApp.Slices.Lorem;
 using System.Text;
 
 namespace RazorSlices.Samples.WebApp.Services;

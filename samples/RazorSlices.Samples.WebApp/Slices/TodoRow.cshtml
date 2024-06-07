@@ -1,7 +1,0 @@
-﻿@inherits RazorSlice<Todo>
-<tr class="@(Model.IsComplete ? "complete" : null)">
-    <td>@Model.Id</td>
-    <td><a href="@Model.Id">@Model.Title</a></td>
-    <td>@Model.DueBy</td>
-    <td>@(Model.IsComplete ? "Completed" : "Incomplete")</td>
-</tr>

@@ -1,16 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageTags>ASP.NET Web MinimalApis IResult Razor templating templates</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <LangVersion>preview</LangVersion>
     <AnalysisMode>Recommended</AnalysisMode>
     <AnalysisModeReliability>All</AnalysisModeReliability>
     <AnalysisModePerformance>All</AnalysisModePerformance>
     <AnalysisModeSecurity>All</AnalysisModeSecurity>
+    <IsAotCompatible>true</IsAotCompatible>
+    <Configurations>Debug;Release;Benchmarks</Configurations>
+    <AssemblyName Condition=" '$(Configuration)' == 'Benchmarks' ">RazorSlices.ForBenchmarks</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Benchmarks' ">
+    <Optimize>True</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +29,14 @@
     <None Include="..\..\.editorconfig" Link=".editorconfig" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <InternalsVisibleTo Include="RazorSlices.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference the source generator just to ensure it's built but don't reference its output -->
+    <ProjectReference Include="..\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="None" ReferenceOutputAssembly="false" Private="true" />
+    <!-- Include source generator assembly in this project's package output -->
+    <None Include="@(ProjectReference->'%(RootDir)%(Directory)\bin\$(Configuration)\netstandard2.0\%(Filename).dll')" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,27 +1,30 @@
-﻿using System.Buffers;
+﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
+using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Internal;
-using Microsoft.AspNetCore.Razor.TagHelpers;
 
 namespace RazorSlices;
 
 /// <summary>
-/// Base class for a Razor Slice template.
+/// Base class for a Razor Slice template. Inherit from this class or <see cref="RazorSlice{TModel}"/> in your <c>.cshtml</c> files using the <c>@inherit</c> directive.
 /// </summary>
+/// <seealso cref="RazorSlice{TModel}"/>
 public abstract partial class RazorSlice : IDisposable
 {
+    private const int _autoFlushThreshold = 1_024 * 16; // Auto-flush after each slice rendering if unflushed bytes is over 16 KB
+
+    private static readonly FlushResult _noFlushResult = new(false, false);
+
     private IServiceProvider? _serviceProvider;
     private HtmlEncoder _htmlEncoder = HtmlEncoder.Default;
-    private IBufferWriter<byte>? _bufferWriter;
+    private PipeWriter? _pipeWriter;
     private TextWriter? _textWriter;
-    private Utf8BufferTextWriter? _utf8BufferTextWriter;
-    private Func<CancellationToken, ValueTask>? _outputFlush;
-    private Dictionary<string, Func<Task>>? _sectionWriters;
+    private Utf8PipeTextWriter? _utf8BufferTextWriter;
 
     /// <summary>
     /// Gets or sets the <see cref="IServiceProvider"/> used to resolve services for injectable properties.
@@ -42,32 +45,80 @@ public abstract partial class RazorSlice : IDisposable
     /// <summary>
     /// A token to monitor for cancellation requests.
     /// </summary>
-    public CancellationToken CancellationToken { get; private set; }
+    public CancellationToken CancellationToken { get; protected set; }
+
+    /// <summary>
+    /// Gets or sets a delegate used to initialize the template class before <see cref="ExecuteAsync"/> is called.
+    /// </summary>
+    internal Action<RazorSlice, IServiceProvider?, HttpContext?>? Initialize { get; set; }
 
     /// <summary>
     /// Implemented by the generated template class.
     /// </summary>
     /// <remarks>
     /// This method should not be called directly. Call
-    /// <see cref="RenderAsync(IBufferWriter{byte}, Func{CancellationToken, ValueTask}?, HtmlEncoder?, CancellationToken)"/> or
+    /// <see cref="RenderAsync(PipeWriter, HtmlEncoder?, CancellationToken)"/> or
     /// <see cref="RenderAsync(TextWriter, HtmlEncoder?, CancellationToken)"/> instead to render the template.
     /// </remarks>
     /// <returns>A <see cref="Task"/> representing the execution of the template.</returns>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public abstract Task ExecuteAsync();
 
+    internal Task ExecuteAsyncImpl()
+    {
+        if (Initialize is not null)
+        {
+            Initialize(this, _serviceProvider, HttpContext);
+        }
+
+        return ExecuteAsync();
+    }
+
     /// <summary>
-    /// Renders the template to the specified <see cref="IBufferWriter{T}"/>.
+    /// Renders the template to the specified <see cref="PipeWriter"/>.
     /// </summary>
-    /// <param name="bufferWriter">The <see cref="IBufferWriter{T}"/> to render the template to.</param>
-    /// <param name="flushAsync">An optional delegate that flushes the <see cref="IBufferWriter{T}"/>.</param>
+    /// <param name="pipeWriter">The <see cref="PipeWriter"/> to render the template to.</param>
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
-    public ValueTask RenderAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync = null, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
+    public ValueTask RenderAsync(PipeWriter pipeWriter, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(bufferWriter);
+        ArgumentNullException.ThrowIfNull(pipeWriter);
 
-        return RenderToBufferWriterAsync(bufferWriter, flushAsync, htmlEncoder, cancellationToken);
+        var pipe = FlushTrackingPipeWriter.Create(pipeWriter);
+
+        ValueTask renderTask;
+        try
+        {
+            renderTask = RenderToPipeWriterAsync(pipe, htmlEncoder, cancellationToken);
+        }
+        catch (Exception)
+        {
+            FlushTrackingPipeWriter.Return(pipe);
+            throw;
+        }
+
+        if (!renderTask.IsCompletedSuccessfully)
+        {
+            // Go async
+            return AwaitRenderTaskAndReturnPipe(renderTask, pipe);
+        }
+
+        FlushTrackingPipeWriter.Return(pipe);
+
+        return ValueTask.CompletedTask;
+    }
+
+    private static async ValueTask AwaitRenderTaskAndReturnPipe(ValueTask renderTask, PipeWriter pipe)
+    {
+        try
+        {
+            await renderTask;
+        }
+        finally
+        {
+            FlushTrackingPipeWriter.Return(pipe);
+        }
     }
 
     /// <summary>
@@ -85,59 +136,110 @@ public abstract partial class RazorSlice : IDisposable
         return RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
     }
 
-    [MemberNotNull(nameof(_bufferWriter))]
-    internal ValueTask RenderToBufferWriterAsync(IBufferWriter<byte> bufferWriter, Func<CancellationToken, ValueTask>? flushAsync, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+    [MemberNotNull(nameof(_pipeWriter))]
+    private ValueTask RenderToPipeWriterAsync(PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken, bool renderLayout = true)
     {
-        // TODO: Render via layout if LayoutAttribute is set
+        Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a PipeWriter");
 
-        _bufferWriter = bufferWriter;
+        _pipeWriter = pipeWriter;
         _textWriter = null;
-        _outputFlush = flushAsync;
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        var executeTask = ExecuteAsync();
-
-        if (executeTask.HandleSynchronousCompletion())
+        if (renderLayout && this is IUsesLayout useLayout)
         {
-            return ValueTask.CompletedTask;
+            return RenderViaLayout(RenderToPipeWriterAsync, useLayout, _pipeWriter, htmlEncoder, cancellationToken);
         }
-        return new ValueTask(executeTask);
 
-        // TODO: Should we explicitly flush here if flushAsync is not null?
+        var executeTask = ExecuteAsyncImpl();
+
+        if (!executeTask.HandleSynchronousCompletion())
+        {
+            // Go async
+            return AwaitExecuteTaskFlushAndDispose(this, executeTask);
+        }
+
+        Dispose();
+
+        return AutoFlush().GetAsValueTask();
     }
 
-    [MemberNotNull(nameof(_textWriter), nameof(_outputFlush))]
-    internal ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+    [MemberNotNull(nameof(_textWriter))]
+    private ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken, bool renderLayout = true)
     {
-        // TODO: Render via layout if LayoutAttribute is set
+        Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a TextWriter");
 
-        _bufferWriter = null;
+        _pipeWriter = null;
         _textWriter = textWriter;
-        _outputFlush = (ct) =>
-        {
-#if NET8_0_OR_GREATER
-            var flushTask = textWriter.FlushAsync(ct);
-#else
-            var flushTask = textWriter.FlushAsync();
-#endif
-            if (flushTask.IsCompletedSuccessfully)
-            {
-                return ValueTask.CompletedTask;
-            }
-            return AwaitOutputFlushTask(flushTask);
-        };
-
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        var executeTask = ExecuteAsync();
-
-        if (executeTask.IsCompletedSuccessfully)
+        if (renderLayout && this is IUsesLayout useLayout)
         {
-            return ValueTask.CompletedTask;
+            return RenderViaLayout(RenderToTextWriterAsync, useLayout, textWriter, htmlEncoder, cancellationToken);
         }
-        return new ValueTask(executeTask);
+
+        var executeTask = ExecuteAsyncImpl();
+
+        if (!executeTask.IsCompletedSuccessfully)
+        {
+            // Go async
+            return AwaitExecuteTaskFlushAndDispose(this, executeTask);
+        }
+
+        Dispose();
+
+        // REVIEW: call AutoFlush here?
+
+        return ValueTask.CompletedTask;
+    }
+
+    private static ValueTask RenderToPipeWriterAsync(RazorSlice razorSlice, PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+        => razorSlice.RenderToPipeWriterAsync(pipeWriter, htmlEncoder, cancellationToken);
+
+    private static ValueTask RenderToTextWriterAsync(RazorSlice razorSlice, TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+        => razorSlice.RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
+
+    private ValueTask RenderViaLayout<TWriter>(Func<RazorSlice, TWriter, HtmlEncoder?, CancellationToken, ValueTask> render, IUsesLayout usesLayout, TWriter writer, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+    {
+        var layoutSlice = usesLayout.CreateLayoutImpl();
+
+        if (layoutSlice is IRazorLayoutSlice razorLayoutSlice and RazorSlice)
+        {
+            razorLayoutSlice.ContentSlice = this;
+            CopySliceState(this, (RazorSlice)razorLayoutSlice);
+
+            return render(layoutSlice, writer, htmlEncoder, cancellationToken);
+        }
+
+        throw new InvalidOperationException($"Layout slices must inherit from {nameof(RazorLayoutSlice)} or {nameof(RazorLayoutSlice)}<TModel>.");
+    }
+
+    internal static void CopySliceState(RazorSlice source, RazorSlice destination)
+    {
+        destination.HttpContext = source.HttpContext;
+        // Avoid setting the service provider directly from our ServiceProvider property so it can be lazily initialized from HttpContext.RequestServices
+        // only if needed
+        destination.ServiceProvider = source._serviceProvider;
+    }
+
+    internal static async ValueTask<HtmlString> AwaitRenderTask(Task renderTask)
+    {
+        await renderTask;
+        return HtmlString.Empty;
+    }
+
+    private ValueTask<FlushResult> AutoFlush()
+    {
+        Debug.Assert(_pipeWriter is null || _pipeWriter.CanGetUnflushedBytes, "PipeWriter must support unflushed bytes to auto-flush.");
+
+        if (_pipeWriter is not null && _pipeWriter.UnflushedBytes >= _autoFlushThreshold)
+        {
+            Debug.WriteLine($"Auto-flushing slice of type '{GetType().Name}' to a PipeWriter");
+            return _pipeWriter.FlushAsync(CancellationToken);
+        }
+
+        return ValueTask.FromResult(_noFlushResult);
     }
 
     private static async ValueTask AwaitOutputFlushTask(Task flushTask)
@@ -145,424 +247,55 @@ public abstract partial class RazorSlice : IDisposable
         await flushTask;
     }
 
-    /// <summary>
-    /// Indicates whether <see cref="FlushAsync"/> will actually flush the underlying output during rendering.
-    /// </summary>
-    protected bool CanFlush => _outputFlush is not null;
+    private static async ValueTask AwaitExecuteTaskFlushAndDispose(RazorSlice slice, Task executeTask)
+    {
+        await executeTask;
+        await slice.AutoFlush();
+        slice.Dispose();
+    }
 
     /// <summary>
-    /// Attempts to flush the underlying output the template is being rendered to. Check <see cref="CanFlush"/> to determine if
-    /// the output will actually be flushed or not before calling this method.
+    /// Attempts to flush the underlying output the template is being rendered to.
     /// </summary>
     /// <returns>A <see cref="ValueTask"/> representing the flush operation.</returns>
     protected ValueTask<HtmlString> FlushAsync()
     {
-        if (!CanFlush || _outputFlush is null)
+        if (_pipeWriter is not null)
         {
+            var pipeWriterFlushTask = _pipeWriter.FlushAsync(CancellationToken);
+            if (!pipeWriterFlushTask.IsCompletedSuccessfully)
+            {
+                // Go async
+                return AwaitPipeWriterFlushAsyncTask(pipeWriterFlushTask);
+            }
+
+            return ValueTask.FromResult(HtmlString.Empty);
+        }
+        else if (_textWriter is not null)
+        {
+            var textWriterFlushTask = _textWriter.FlushAsync(CancellationToken);
+            if (!textWriterFlushTask.IsCompletedSuccessfully)
+            {
+                // Go async
+                return AwaitTextWriterFlushAsyncTask(textWriterFlushTask);
+            }
+
             return ValueTask.FromResult(HtmlString.Empty);
         }
 
-#pragma warning disable CA2012 // Use ValueTasks correctly: The ValueTask is observed in code below
-        var flushTask = _outputFlush(CancellationToken);
-#pragma warning restore CA2012
-
-        if (flushTask.HandleSynchronousCompletion())
-        {
-            return ValueTask.FromResult(HtmlString.Empty);
-        }
-
-        return AwaitFlushAsyncTask(flushTask);
+        throw new UnreachableException();
     }
 
-    private static async ValueTask<HtmlString> AwaitFlushAsyncTask(ValueTask flushTask)
+    private static async ValueTask<HtmlString> AwaitPipeWriterFlushAsyncTask(ValueTask<FlushResult> flushTask)
     {
         await flushTask;
         return HtmlString.Empty;
     }
 
-    /// <summary>
-    /// Defines a section that can be rendered on-demand via <see cref="RenderSectionAsync(string, bool)"/>.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method
-    /// for each use of the <c>@section</c> directive in your .cshtml file.
-    /// </remarks>
-    /// <param name="name">The name of the section.</param>
-    /// <param name="section">The section delegate.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> or <paramref name="section"/> is <c>null</c>.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when a section with this name is already defined.</exception>
-    protected virtual void DefineSection(string name, Func<Task> section)
+    private static async ValueTask<HtmlString> AwaitTextWriterFlushAsyncTask(Task flushTask)
     {
-        ArgumentNullException.ThrowIfNull(name);
-        ArgumentNullException.ThrowIfNull(section);
-
-        _sectionWriters ??= new();
-
-        if (_sectionWriters.ContainsKey(name))
-        {
-            throw new InvalidOperationException("Section already defined.");
-        }
-        _sectionWriters[name] = section;
-    }
-
-    /// <summary>
-    /// Renders the section with the specified name.
-    /// </summary>
-    /// <param name="sectionName">The section name.</param>
-    /// <param name="required">Whether the section is required or not.</param>
-    /// <returns>A <see cref="ValueTask{TResult}"/> representing the rendering of the section.</returns>
-    /// <exception cref="ArgumentException">Thrown when no section with name <paramref name="sectionName"/> has been defined by the slice being rendered.</exception>
-    /// <exception cref="NotImplementedException"></exception>
-    protected ValueTask<HtmlString> RenderSectionAsync(string sectionName, bool required)
-    {
-        var sectionDefined = _sectionWriters?.ContainsKey(sectionName) != true;
-        if (required && !sectionDefined)
-        {
-            throw new ArgumentException($"The section '{sectionName}' has not been declared by the slice being rendered.");
-        }
-        else if (!required && !sectionDefined)
-        {
-            return ValueTask.FromResult(HtmlString.Empty);
-        }
-
-        throw new NotImplementedException("Haven't implemented layouts yet, but will!");
-    }
-
-    /// <summary>
-    /// Writes a string value to the output without HTML encoding it.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all blocks of HTML in your .cshtml file.
-    /// </remarks>
-    /// <param name="value">The value to write to the output.</param>
-    protected void WriteLiteral(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return;
-        }
-
-        _bufferWriter?.WriteHtml(value.AsSpan());
-        _textWriter?.Write(value);
-    }
-
-    /// <summary>
-    /// Writes the string representation of the provided object to the output without HTML encoding it.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all blocks of HTML in your .cshtml file.
-    /// </remarks>
-    /// <param name="value">The value to write to the output.</param>
-    protected void WriteLiteral<T>(T? value)
-    {
-#if NET8_0_OR_GREATER
-        if (value is IUtf8SpanFormattable)
-        {
-            WriteUtf8SpanFormattable((IUtf8SpanFormattable)(object)value, htmlEncode: false);
-            return;
-        }
-#endif
-        if (value is ISpanFormattable)
-        {
-            WriteSpanFormattable((ISpanFormattable)(object)value, htmlEncode: false);
-            return;
-        }
-        WriteLiteral(value?.ToString());
-    }
-
-    /// <summary>
-    /// Writes a buffer of UTF8 bytes to the output without HTML encoding it.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all blocks of HTML in your .cshtml file.
-    /// </para>
-    /// <para>
-    /// NOTE: We'd need a tweak to the Razor compiler to to have it support emitting <see cref="WriteLiteral(ReadOnlySpan{byte})"/> calls with UTF8 string literals
-    ///       i.e. https://github.com/dotnet/razor/issues/8429
-    /// </para>
-    /// </remarks>
-    /// <param name="value">The value to write to the output.</param>
-    protected void WriteLiteral(ReadOnlySpan<byte> value)
-    {
-        if (value.Length == 0)
-        {
-            return;
-        }
-
-        _bufferWriter?.Write(value);
-        _textWriter?.WriteUtf8(value);
-    }
-
-    /// <summary>
-    /// Writes a <see cref="bool"/> value to the output.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all matching Razor expressions in your .cshtml file.
-    /// </para>
-    /// <para>
-    /// To manually write out a value, use <see cref="WriteBool"/> instead, e.g. <c>@WriteBool(todo.Complete)</c>
-    /// </para>
-    /// </remarks>
-    /// <param name="value"></param>
-    protected void Write(bool? value) => WriteBool(value);
-
-    /// <summary>
-    /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all matching Razor expressions in your .cshtml file.
-    /// </remarks>
-    /// <param name="value">The value to write to the output.</param>
-    protected void Write(byte[] value) => Write(value.AsSpan());
-
-    /// <summary>
-    /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all matching Razor expressions in your .cshtml file.
-    /// </remarks>
-    /// <param name="value">The value to write to the output.</param>
-    protected void Write(ReadOnlySpan<byte> value)
-    {
-        if (value.Length == 0)
-        {
-            return;
-        }
-
-        _bufferWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
-        _textWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
-    }
-
-    /// <summary>
-    /// Writes the specified <see cref="HtmlString"/> value to the output without HTML encoding it again.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
-    /// all matching Razor expressions in your .cshtml file.
-    /// </para>
-    /// <para>
-    /// To manually write out a value, use <see cref="WriteHtml{T}(T)"/> instead,
-    /// e.g. <c>@WriteHtml(myCustomHtmlString)</c>
-    /// </para>
-    /// </remarks>
-    /// <param name="htmlString">The <see cref="HtmlString"/> value to write to the output.</param>
-    protected void Write(HtmlString htmlString)
-    {
-        if (htmlString is not null && htmlString != HtmlString.Empty)
-        {
-            WriteHtml(htmlString);
-        }
-    }
-
-    /// <summary>
-    /// Writes the specified <see cref="IHtmlContent"/> value to the output without HTML encoding it again.
-    /// </summary>
-    /// <param name="htmlContent">The <see cref="IHtmlContent"/> value to write to the output.</param>
-    protected void Write(IHtmlContent? htmlContent)
-    {
-        if (htmlContent is not null)
-        {
-            WriteHtml(htmlContent);
-        }
-    }
-
-    /// <summary>
-    /// Writes the specified value to the output after HTML encoding it.
-    /// </summary>
-    /// <param name="value">The value to write to the output.</param>
-    protected void Write(string? value)
-    {
-        if (!string.IsNullOrEmpty(value))
-        {
-            Write(value.AsSpan());
-        }
-    }
-
-    /// <summary>
-    /// Writes the specified value to the output after HTML encoding it.
-    /// </summary>
-    /// <param name="value">The value to write to the output.</param>
-    protected void Write(ReadOnlySpan<char> value)
-    {
-        if (value.Length > 0)
-        {
-            _bufferWriter?.HtmlEncodeAndWrite(value, _htmlEncoder);
-            _textWriter?.HtmlEncodeAndWrite(value, _htmlEncoder);
-        }
-    }
-
-    /// <summary>
-    /// Writes the specified <typeparamref name="T"/> to the output.
-    /// </summary>
-    /// <remarks>
-    /// You generally shouldn't call this method directly. The Razor compiler will emit calls to the most appropriate overload of
-    /// the <c>Write</c> method for all Razor expressions in your .cshtml file, e.g. <c>@someVariable</c>.
-    /// </remarks>
-    /// <param name="value">The <typeparamref name="T"/> to write to the output.</param>
-    protected void Write<T>(T? value)
-    {
-        WriteValue(value);
-    }
-
-    /// <summary>
-    /// Writes a <see cref="bool"/> value to the output.
-    /// </summary>
-    /// <param name="value">The value to write to the output.</param>
-    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteBool(todo.Completed)</c></returns>
-    protected HtmlString WriteBool(bool? value)
-    {
-        if (value.HasValue)
-        {
-            _bufferWriter?.Write(value.Value);
-            _textWriter?.Write(value.Value);
-        }
+        await flushTask;
         return HtmlString.Empty;
-    }
-
-    /// <summary>
-    /// Write the specified <see cref="ISpanFormattable"/> value to the output with the specified format and optional <see cref="IFormatProvider" />.
-    /// </summary>
-    /// <param name="formattable">The value to write to the output.</param>
-    /// <param name="format">The format to use when writing the value to the output. Defaults to the default format for the value's type if not provided.</param>
-    /// <param name="formatProvider">The <see cref="IFormatProvider" /> to use when writing the value to the output. Defaults to <see cref="CultureInfo.CurrentCulture"/> if <c>null</c>.</param>
-    /// <param name="htmlEncode">Whether to HTML encode the value or not. Defaults to <c>true</c>.</param>
-    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteSpanFormattable(item.DueBy, "d")</c></returns>
-    protected HtmlString WriteSpanFormattable<T>(T? formattable, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null, bool htmlEncode = true)
-        where T : ISpanFormattable
-    {
-        if (formattable is not null)
-        {
-            var htmlEncoder = htmlEncode ? _htmlEncoder : NullHtmlEncoder.Default;
-            _bufferWriter?.HtmlEncodeAndWriteSpanFormattable(formattable, htmlEncoder, format, formatProvider);
-            _textWriter?.HtmlEncodeAndWriteSpanFormattable(formattable, htmlEncoder, format, formatProvider);
-        }
-
-        return HtmlString.Empty;
-    }
-
-#if NET8_0_OR_GREATER
-    /// <summary>
-    /// Write the specified <see cref="IUtf8SpanFormattable"/> value to the output with the specified format and optional <see cref="IFormatProvider" />.
-    /// </summary>
-    /// <param name="formattable">The value to write to the output.</param>
-    /// <param name="format">The format to use when writing the value to the output. Defaults to the default format for the value's type if not provided.</param>
-    /// <param name="formatProvider">The <see cref="IFormatProvider" /> to use when writing the value to the output. Defaults to <see cref="CultureInfo.CurrentCulture"/> if <c>null</c>.</param>
-    /// <param name="htmlEncode">Whether to HTML encode the value or not. Defaults to <c>true</c>.</param>
-    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteUtf8SpanFormattable(item.DueBy, "d")</c></returns>
-    protected HtmlString WriteUtf8SpanFormattable<T>(T? formattable, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null, bool htmlEncode = true)
-        where T : IUtf8SpanFormattable
-    {
-        if (formattable is not null)
-        {
-            var htmlEncoder = htmlEncode ? _htmlEncoder : NullHtmlEncoder.Default;
-            _bufferWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
-            _textWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
-        }
-
-        return HtmlString.Empty;
-    }
-#endif
-
-    /// <summary>
-    /// Writes the specified <see cref="IHtmlContent"/> value to the output.
-    /// </summary>
-    /// <param name="htmlContent">The <see cref="IHtmlContent"/> value to write to the output.</param>
-    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtmlContent(myCustomHtmlContent)</c></returns>
-    protected HtmlString WriteHtml<T>(T htmlContent)
-        where T : IHtmlContent
-    {
-        if (htmlContent is not null)
-        {
-            if (_bufferWriter is not null)
-            {
-                _utf8BufferTextWriter ??= Utf8BufferTextWriter.Get(_bufferWriter);
-                htmlContent.WriteTo(_utf8BufferTextWriter, _htmlEncoder);
-            }
-            if (_textWriter is not null)
-            {
-                htmlContent.WriteTo(_textWriter, _htmlEncoder);
-            }
-        }
-
-        return HtmlString.Empty;
-    }
-
-    /// <summary>
-    /// Writes the specified <see cref="HtmlString"/> value to the output.
-    /// </summary>
-    /// <param name="htmlString">The <see cref="HtmlString"/> value to write to the output.</param>
-    /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtml(myCustomHtmlContent)</c></returns>
-    protected HtmlString WriteHtml(HtmlString htmlString)
-    {
-        if (htmlString is not null && htmlString != HtmlString.Empty)
-        {
-            _bufferWriter?.WriteHtml(htmlString.Value);
-            _textWriter?.Write(htmlString.Value);
-        }
-
-        return HtmlString.Empty;
-    }
-
-    private void WriteValue<T>(T value)
-    {
-        if (value is null)
-        {
-            return;
-        }
-
-        // Dispatch to the most appropriately typed method
-        if (TryWriteFormattableValue(value))
-        {
-            return;
-        }
-
-        if (value is string)
-        {
-            Write((string)(object)value);
-        }
-        else if (value is byte[])
-        {
-            Write(((byte[])(object)value).AsSpan());
-        }
-        // Handle derived types (this currently results in value types being boxed)
-#if NET8_0_OR_GREATER
-        else if (value is IUtf8SpanFormattable)
-        {
-            WriteUtf8SpanFormattable((IUtf8SpanFormattable)(object)value, default, null);
-        }
-#endif
-        else if (value is ISpanFormattable)
-        {
-            WriteSpanFormattable((ISpanFormattable)(object)value, default, null);
-        }
-        else if (value is HtmlString)
-        {
-            WriteHtml((HtmlString)(object)value);
-        }
-        else if (value is IHtmlContent)
-        {
-            WriteHtml((IHtmlContent)(object)value);
-        }
-#if NET8_0_OR_GREATER
-        else if (value is Enum)
-        {
-            WriteSpanFormattable((Enum)(object)value);
-        }
-#endif
-        // Fallback to ToString()
-        else
-        {
-            Write(value?.ToString());
-        }
     }
 
     /// <summary>
@@ -578,8 +311,17 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     public virtual void Dispose()
     {
+        Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
+
+        if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
+        {
+            Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
+            contentSlice.Dispose();
+        }
         ReturnPooledObjects();
         GC.SuppressFinalize(this);
+
+        Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -587,7 +329,7 @@ public abstract partial class RazorSlice : IDisposable
     {
         if (_utf8BufferTextWriter is not null)
         {
-            Utf8BufferTextWriter.Return(_utf8BufferTextWriter);
+            Utf8PipeTextWriter.Return(_utf8BufferTextWriter);
         }
     }
 }

@@ -1,0 +1,42 @@
+﻿@using System.IO
+@using System.Text.Encodings.Web
+
+@inherits RazorSliceHttpResult<HtmlContentParams>
+@implements IUsesLayout<_LoremLayout, LayoutModel>
+
+@{
+    var content = new LoremHtmlContent { HtmlEncode = Model.Encode };
+}
+
+@content
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = "Lorem Ipsum (IHtmlContent)" };
+
+    protected override Task ExecuteSectionAsync(string name)
+    {
+        if (name == "lorem-header")
+        {
+            <p class="text-info">This page renders a custom <code>IHtmlContent</code> type that contains lorem ipsum content.</p>
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public class LoremHtmlContent : IHtmlContent
+    {
+        public bool HtmlEncode { get; set; }
+
+        public void WriteTo(TextWriter writer, HtmlEncoder encoder)
+        {
+            if (HtmlEncode)
+            {
+                writer.Write(encoder.Encode(PageContent.Html));
+            }
+            else
+            {
+                writer.Write(PageContent.Html);
+            }
+        }
+    }
+}
