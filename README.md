@@ -53,7 +53,7 @@
 1. Add a minimal API to return the slice in your *Program.cs*:
 
     ``` c#
-    app.MapGet("/hello", () => Results.Extensions.RazorSlice<MyApp.Slices.Hello>(DateTime.Now));
+    app.MapGet("/hello", () => Results.Extensions.RazorSlice<MyApp.Slices.Hello, DateTime>(DateTime.Now));
     ```
 
 ## Installation
