@@ -18,9 +18,17 @@ public static class RazorSliceFactory
 {
     private static readonly HashSet<string> ExcludedServiceNames =
         new(StringComparer.OrdinalIgnoreCase) { "IModelExpressionProvider", "IUrlHelper", "IViewComponentHelper", "IJsonHelper", "IHtmlHelper`1" };
+    private static readonly PropertyInfo _requestServicesProperty = typeof(HttpContext).GetProperty(nameof(HttpContext.RequestServices))
+        ?? throw new InvalidOperationException("Could not find HttpContext.RequestServices. Likely a bug in Razor Slices itself.");
+    private static readonly MethodInfo _getServiceMethod = typeof(IServiceProvider).GetMethod(nameof(IServiceProvider.GetService))
+        ?? throw new InvalidOperationException("Could not find IServiceProvider.GetService. Likely a bug in Razor Slices itself.");
+    private static readonly MethodInfo _getRequiredServiceMethod = typeof(ServiceProviderServiceExtensions).GetMethod(nameof(ServiceProviderServiceExtensions.GetRequiredService), [typeof(IServiceProvider), typeof(Type)])
+        ?? throw new InvalidOperationException("Could not find ServiceProviderServiceExtensions.GetRequirdService. Likely a bug in Razor Slices itself.");
+
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)]
     private static readonly Type _razorSliceType = typeof(RazorSlice);
-    private static readonly PropertyInfo _razorSliceInitializeProperty = _razorSliceType.GetProperty(nameof(RazorSlice.Initialize))!;
+    private static readonly PropertyInfo _razorSliceInitializeProperty = _razorSliceType.GetProperty(nameof(RazorSlice.Initialize))
+        ?? throw new InvalidOperationException("Could not find RazorSlice.Initialize property. Likely a bug in Razor Slices itself.");
     private static readonly ConstructorInfo _ioeCtor = typeof(InvalidOperationException).GetConstructor([typeof(string)])!;
     private static readonly NullabilityInfoContext _nullabilityContext = new();
     private static readonly Action<RazorSlice, IServiceProvider?, HttpContext?> _emptyInit = (_, __, ___) => { };
@@ -94,53 +102,74 @@ public static class RazorSliceFactory
     }
 
     [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for initializing slices")]
-    private static Expression<Action<RazorSlice, IServiceProvider?>> GetExpressionInitAction(SliceDefinition sliceDefinition)
+    private static Expression<Action<RazorSlice, IServiceProvider?, HttpContext?>> GetExpressionInitAction(SliceDefinition sliceDefinition)
     {
         if (!sliceDefinition.InjectableProperties.Any) throw new InvalidOperationException("Shouldn't call GetExpressionInitAction if there's no injectable properties.");
 
         // Make a delegate like:
         //
-        // (RazorSlice slice, IServiceProvider? sp) =>
+        // (RazorSlice slice, IServiceProvider? sp, HttpContext? httpContext) =>
         // {
-        //     if (sp is null) throw new InvalidOperationException("Cannot initialize @inject properties of slice because the ServiceProvider property is null.");
+        //     var services = sp;
+        //     if (services == null && httpContext != null)
+        //     {
+        //         services = httpContext.RequestServices;
+        //     }
+        //     if (services == null) throw new InvalidOperationException("Cannot initialize @inject properties of slice because the ServiceProvider property is null.");
         //     var s = (MySlice)slice;
-        //     s.SomeProp = (SomeService)sp.GetService(typeof(SomeService));
-        //     s.NextProp = (SomeOtherService)sp.GetRequiredService(typeof(SomeOtherService));
+        //     s.SomeProp = (SomeService)services.GetService(typeof(SomeService));
+        //     s.NextProp = (SomeOtherService)services.GetRequiredService(typeof(SomeOtherService));
         // }
 
         var sliceParam = Expression.Parameter(_razorSliceType, "slice");
         var spParam = Expression.Parameter(typeof(IServiceProvider), "sp");
+        var httpContextParam = Expression.Parameter(typeof(HttpContext), "httpContext");
+        var servicesVar = Expression.Variable(typeof(IServiceProvider), "services");
         var castSliceVar = Expression.Variable(sliceDefinition.SliceType, "s");
 
         var body = new List<Expression>
         {
+            // var services = sp;
+            Expression.Assign(servicesVar, spParam),
+            // if
             Expression.IfThen(
-                Expression.Equal(spParam, Expression.Constant(null)),
+                Expression.And(
+                    // services == null
+                    Expression.Equal(servicesVar, Expression.Constant(null)),
+                    // httpContext != null
+                    Expression.NotEqual(httpContextParam, Expression.Constant(null))),
+                // services = httpContext.RequestServices
+                Expression.Assign(servicesVar, Expression.MakeMemberAccess(httpContextParam, _requestServicesProperty))),
+            Expression.IfThen(
+                // services == null
+                Expression.Equal(servicesVar, Expression.Constant(null)),
+                // throw new InvalidOperationException
                 Expression.Throw(Expression.New(_ioeCtor, Expression.Constant("Cannot initialize @inject properties of slice because the ServiceProvider property is null.")))),
+            // var s = (MySlice)slice;
             Expression.Assign(castSliceVar, Expression.Convert(sliceParam, sliceDefinition.SliceType))
         };
 
-        var getServiceMethod = typeof(IServiceProvider).GetMethod("GetService")!;
         foreach (var ip in sliceDefinition.InjectableProperties.Nullable)
         {
+            // s.SomeProp = (SomeService)services.GetService(typeof(SomeService));
             var propertyAccess = Expression.MakeMemberAccess(castSliceVar, ip);
-            var getServiceCall = Expression.Call(spParam, getServiceMethod, Expression.Constant(ip.PropertyType));
+            var getServiceCall = Expression.Call(servicesVar, _getServiceMethod, Expression.Constant(ip.PropertyType));
             body.Add(Expression.Assign(propertyAccess, Expression.Convert(getServiceCall, ip.PropertyType)));
         }
 
-        var getRequiredServiceMethod = typeof(ServiceProviderServiceExtensions).GetMethod("GetRequiredService", [typeof(IServiceProvider), typeof(Type)])!;
         foreach (var ip in sliceDefinition.InjectableProperties.NonNullable)
         {
+            // s.SomeProp = (SomeService)services.GetRequiredService(typeof(SomeService));
             var propertyAccess = Expression.MakeMemberAccess(castSliceVar, ip);
-            var getServiceCall = Expression.Call(null, getRequiredServiceMethod, spParam, Expression.Constant(ip.PropertyType));
+            var getServiceCall = Expression.Call(null, _getRequiredServiceMethod, servicesVar, Expression.Constant(ip.PropertyType));
             body.Add(Expression.Assign(propertyAccess, Expression.Convert(getServiceCall, ip.PropertyType)));
         }
 
-        return Expression.Lambda<Action<RazorSlice, IServiceProvider?>>(
+        return Expression.Lambda<Action<RazorSlice, IServiceProvider?, HttpContext?>>(
             body: Expression.Block(
-                variables: [castSliceVar],
+                variables: [servicesVar, castSliceVar],
                 body),
-            parameters: [sliceParam, spParam]);
+            parameters: [sliceParam, spParam, httpContextParam]);
     }
 
     [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",

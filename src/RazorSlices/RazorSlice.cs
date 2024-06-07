@@ -50,7 +50,11 @@ public abstract partial class RazorSlice : IDisposable
     /// <summary>
     /// Gets or sets a delegate used to initialize the template class before <see cref="ExecuteAsync"/> is called.
     /// </summary>
-    internal Action<RazorSlice, IServiceProvider?, HttpContext?>? Initialize { get; set; }
+    /// <remarks>
+    /// This property should not be interacted with directly. It's used by the Razor Slices infrastructure.
+    /// </remarks>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public Action<RazorSlice, IServiceProvider?, HttpContext?>? Initialize { get; set; }
 
     /// <summary>
     /// Implemented by the generated template class.
@@ -176,7 +180,7 @@ public abstract partial class RazorSlice : IDisposable
 
         if (renderLayout && this is IUsesLayout useLayout)
         {
-            return RenderViaLayout(RenderToTextWriterAsync, useLayout, textWriter, htmlEncoder, cancellationToken);
+            return RenderViaLayout(RenderToTextWriterAsync, useLayout, _textWriter, htmlEncoder, cancellationToken);
         }
 
         var executeTask = ExecuteAsyncImpl();
