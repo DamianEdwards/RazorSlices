@@ -58,7 +58,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.Benchmarks.Razo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.ProfilingHarness", "tests\RazorSlices.ProfilingHarness\RazorSlices.ProfilingHarness.csproj", "{411668E2-F59E-4A94-A735-D30D0BE80F28}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RazorSlices.Samples.WebApp.Tests", "tests\RazorSlices.Samples.WebApp.Tests\RazorSlices.Samples.WebApp.Tests.csproj", "{DB898E27-4DE9-4B56-A61F-0199266AF439}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.Samples.WebApp.Tests", "tests\RazorSlices.Samples.WebApp.Tests\RazorSlices.Samples.WebApp.Tests.csproj", "{DB898E27-4DE9-4B56-A61F-0199266AF439}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -147,7 +147,6 @@ Global
 		{411668E2-F59E-4A94-A735-D30D0BE80F28}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{411668E2-F59E-4A94-A735-D30D0BE80F28}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DB898E27-4DE9-4B56-A61F-0199266AF439}.Benchmarks|Any CPU.ActiveCfg = Debug|Any CPU
-		{DB898E27-4DE9-4B56-A61F-0199266AF439}.Benchmarks|Any CPU.Build.0 = Debug|Any CPU
 		{DB898E27-4DE9-4B56-A61F-0199266AF439}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DB898E27-4DE9-4B56-A61F-0199266AF439}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB898E27-4DE9-4B56-A61F-0199266AF439}.Release|Any CPU.ActiveCfg = Release|Any CPU
