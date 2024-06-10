@@ -50,6 +50,57 @@ public static class RazorSliceFactory
         return false;
     }
 
+    //[UnconditionalSuppressMessage("", "IL2062")]
+//    internal static (Type LayoutType, Type? LayoutModelType) GetLayoutTypes(
+//        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
+//        Type sliceType)
+//    {
+//        if (!sliceType.IsAssignableTo(typeof(RazorSlice)))
+//        {
+//            throw new ArgumentException($"Razor slice of type {sliceType} does not inherit from {nameof(RazorSlice)}. Likely a bug in Razor Slices itself.", nameof(sliceType));
+//        }
+
+//        if (!sliceType.IsAssignableTo(typeof(IUsesLayout)))
+//        {
+//            throw new ArgumentException($"Razor Slice of type {sliceType} does not use a layout. Likely a bug in Razor Slices itself.", nameof(sliceType));
+//        }
+
+//        // Create instance of the slice in order to create an instance of its layout whose types can be inspected
+//        //using var sliceInstance = (RazorSlice)Activator.CreateInstance(sliceType)!;
+//        //using var layoutInstance = ((IUsesLayout)sliceInstance).CreateLayoutImpl();
+//        //var layoutType = layoutInstance.GetType();
+
+//        // Get generic IUsesLayout interfaces implemented
+//        var layoutInterfaces = sliceType.GetInterfaces().Where(i => i.IsAssignableTo(typeof(IUsesLayout)) && i.IsGenericType).ToArray();
+//        var layoutInterface = layoutInterfaces.OrderByDescending(t => t.GetGenericArguments().Length).First();
+//        var genericArgs = layoutInterface.GetGenericArguments();
+//        var layoutProxyType = genericArgs[0];
+//        var layoutModelType = genericArgs.Length > 1 ? genericArgs[1] : null;
+
+//#pragma warning disable IL2062 // The parameter of method has a DynamicallyAccessedMembersAttribute, but the value passed to it can not be statically analyzed.
+//        // This is safe as the properties will be preserved
+//        return (GetLayoutType(layoutProxyType), layoutModelType);
+//#pragma warning restore IL2062
+//    }
+
+//    private static Type GetLayoutType(
+//        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
+//        Type layoutProxyType)
+//    {
+//        if (!layoutProxyType.IsAssignableTo(typeof(IRazorSliceProxy)))
+//        {
+//            throw new ArgumentException($"Layout slice proxy type is not of type {nameof(IRazorSliceProxy)}. Likely a bug in Razor Slices itself.", nameof(layoutProxyType));
+//        }
+
+//        var layoutSliceTypeProperty = layoutProxyType
+//            .GetProperty("SliceType", BindingFlags.Public | BindingFlags.Static)
+//            ?? throw new InvalidOperationException($"Public static property 'SliceType' on layout proxy type {layoutProxyType} not found. Likely a bug in Razor Slices itself.");
+
+//        var layoutSliceType = (Type)layoutSliceTypeProperty.GetValue(null)!;
+
+//        return layoutSliceType;
+//    }
+
     internal static (bool Any, PropertyInfo[] Nullable, PropertyInfo[] NonNullable) GetInjectableProperties(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
         Type sliceType)

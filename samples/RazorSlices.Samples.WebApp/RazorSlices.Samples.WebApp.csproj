@@ -8,11 +8,15 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PublishAot>true</PublishAot>
-    <!--<PublishTrimmed>true</PublishTrimmed>-->
+    <!--<PublishAot>true</PublishAot>-->
+    <PublishTrimmed>true</PublishTrimmed>
     <!--<PublishSingleFile>true</PublishSingleFile>-->
     <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
   </PropertyGroup>
+
+  <ItemGroup Condition=" '$(PublishAot)' == 'true' or '$(PublishTrimmed)' == 'true' ">
+      <TrimmerRootAssembly Include="RazorSlices" />
+  </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\..\src\RazorSlices\RazorSlices.csproj" />

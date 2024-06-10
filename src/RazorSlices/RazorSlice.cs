@@ -89,26 +89,27 @@ public abstract partial class RazorSlice : IDisposable
     {
         ArgumentNullException.ThrowIfNull(pipeWriter);
 
-        var pipe = FlushTrackingPipeWriter.Create(pipeWriter);
+        //var pipe = FlushTrackingPipeWriter.Create(pipeWriter);
 
         ValueTask renderTask;
-        try
-        {
-            renderTask = RenderToPipeWriterAsync(pipe, htmlEncoder, cancellationToken);
-        }
-        catch (Exception)
-        {
-            FlushTrackingPipeWriter.Return(pipe);
-            throw;
-        }
+        renderTask = RenderToPipeWriterAsync(pipeWriter, htmlEncoder, cancellationToken);
+        //try
+        //{
+        //    renderTask = RenderToPipeWriterAsync(pipeWriter, htmlEncoder, cancellationToken);
+        //}
+        //catch (Exception)
+        //{
+        //    FlushTrackingPipeWriter.Return(pipe);
+        //    throw;
+        //}
 
         if (!renderTask.IsCompletedSuccessfully)
         {
             // Go async
-            return AwaitRenderTaskAndReturnPipe(renderTask, pipe);
+            return AwaitRenderTaskAndReturnPipe(renderTask, pipeWriter);
         }
 
-        FlushTrackingPipeWriter.Return(pipe);
+        //FlushTrackingPipeWriter.Return(pipe);
 
         return ValueTask.CompletedTask;
     }
@@ -121,7 +122,7 @@ public abstract partial class RazorSlice : IDisposable
         }
         finally
         {
-            FlushTrackingPipeWriter.Return(pipe);
+            //FlushTrackingPipeWriter.Return(pipe);
         }
     }
 
@@ -150,12 +151,13 @@ public abstract partial class RazorSlice : IDisposable
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        if (renderLayout && this is IUsesLayout useLayout)
-        {
-            return RenderViaLayout(RenderToPipeWriterAsync, useLayout, _pipeWriter, htmlEncoder, cancellationToken);
-        }
+        //if (renderLayout && this is IUsesLayout useLayout)
+        //{
+        //    return RenderViaLayout(RenderToPipeWriterAsync, useLayout, _pipeWriter, htmlEncoder, cancellationToken);
+        //}
 
-        var executeTask = ExecuteAsyncImpl();
+        //var executeTask = ExecuteAsyncImpl();
+        var executeTask = ExecuteAsync();
 
         if (!executeTask.HandleSynchronousCompletion())
         {
@@ -165,7 +167,8 @@ public abstract partial class RazorSlice : IDisposable
 
         Dispose();
 
-        return AutoFlush().GetAsValueTask();
+        return ValueTask.CompletedTask;
+        //return AutoFlush().GetAsValueTask();
     }
 
     [MemberNotNull(nameof(_textWriter))]
@@ -208,6 +211,12 @@ public abstract partial class RazorSlice : IDisposable
     {
         var layoutSlice = usesLayout.CreateLayoutImpl();
 
+        // This cast is safe because it's checked in the constructor of the SliceDefinition
+        //((IRazorLayoutSlice)layoutSlice).ContentSlice = this;
+        //CopySliceState(this, layoutSlice);
+
+        //return render(layoutSlice, writer, htmlEncoder, cancellationToken);
+
         if (layoutSlice is IRazorLayoutSlice razorLayoutSlice and RazorSlice)
         {
             razorLayoutSlice.ContentSlice = this;
@@ -246,15 +255,10 @@ public abstract partial class RazorSlice : IDisposable
         return ValueTask.FromResult(_noFlushResult);
     }
 
-    private static async ValueTask AwaitOutputFlushTask(Task flushTask)
-    {
-        await flushTask;
-    }
-
     private static async ValueTask AwaitExecuteTaskFlushAndDispose(RazorSlice slice, Task executeTask)
     {
         await executeTask;
-        await slice.AutoFlush();
+        //await slice.AutoFlush();
         slice.Dispose();
     }
 
@@ -317,11 +321,11 @@ public abstract partial class RazorSlice : IDisposable
     {
         Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
 
-        if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
-        {
-            Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
-            contentSlice.Dispose();
-        }
+        //if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
+        //{
+        //    Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
+        //    contentSlice.Dispose();
+        //}
         ReturnPooledObjects();
         GC.SuppressFinalize(this);
 

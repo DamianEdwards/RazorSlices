@@ -11,14 +11,14 @@ using RazorSlices.Benchmarks.RazorClassLibrary.Local;
 using RazorSlices.Benchmarks.RazorClassLibrary.PreviousVersion;
 using RazorSlices.Benchmarks.WebApp;
 
-//BenchmarkRunner.Run<RazorSlicesBenchmarks>();
-BenchmarkRunner.Run<RazorSlicesAppBenchmarks>();
+BenchmarkRunner.Run<RazorSlicesBenchmarks>();
+//BenchmarkRunner.Run<RazorSlicesAppBenchmarks>();
 
 [MemoryDiagnoser, Config(typeof(Config))]
 public class RazorSlicesBenchmarks
 {
     private Pipe _pipe = new();
-    private readonly int _iterations = 1000;
+    private readonly int _iterations = 1_000_000;
 
     [IterationSetup]
     public void Setup()

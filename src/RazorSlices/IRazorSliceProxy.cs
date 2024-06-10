@@ -9,6 +9,11 @@
 /// </remarks>
 public interface IRazorSliceProxy
 {
+    ///// <summary>
+    ///// Gets the type of the <see cref="RazorSlice"/>.
+    ///// </summary>
+    //Type SliceType { get; }
+
     /// <summary>
     /// Creates a new <see cref="RazorSlice"/> instance.
     /// </summary>

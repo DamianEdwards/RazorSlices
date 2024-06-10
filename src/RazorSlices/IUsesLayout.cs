@@ -11,6 +11,8 @@ namespace RazorSlices;
 [EditorBrowsable(EditorBrowsableState.Never)] // Hide from IntelliSense.
 public interface IUsesLayout
 {
+    abstract static internal Type GetLayoutType();
+
     /// <summary>
     /// Do not use. Required by the Razor Slices infrastrucutre.
     /// </summary>
@@ -36,6 +38,8 @@ public interface IUsesLayout<TLayout> : IUsesLayout
     /// </summary>
     /// <returns>The layout Razor Slice.</returns>
     public RazorSlice CreateLayout() => TLayout.CreateSlice();
+
+    static Type IUsesLayout.GetLayoutType() => typeof(TLayout);
 
     RazorSlice IUsesLayout.CreateLayoutImpl() => CreateLayout();
 }

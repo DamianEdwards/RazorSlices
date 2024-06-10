@@ -4,22 +4,34 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace RazorSlices.Samples.WebApp.Tests;
 
-public class WebAppTests
+public class WebAppTests : IDisposable
 {
+    private readonly WebApplicationFactory<Program> _waf;
+    private readonly HttpClient _httpClient;
+
+    public WebAppTests()
+    {
+        _waf = new();
+        _httpClient = _waf.CreateClient();
+    }
+
     [Theory]
     [MemberData(nameof(EndpointDetails))]
     public async Task WafHosted_EndpointsRenderOK(string path, string shouldContain, string expectedMediaType)
     {
-        var waf = new WebApplicationFactory<Program>();
-        using var httpClient = waf.CreateClient();
-
-        var response = await httpClient.GetAsync(path);
+        using var response = await _httpClient.GetAsync(path);
 
         response.EnsureSuccessStatusCode();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(expectedMediaType, response.Content.Headers.ContentType?.MediaType);
         Assert.Contains(shouldContain, await response.Content.ReadAsStringAsync());
+    }
+
+    public void Dispose()
+    {
+        _httpClient.Dispose();
+        _waf.Dispose();
     }
 
     public static object[][] EndpointDetails => [

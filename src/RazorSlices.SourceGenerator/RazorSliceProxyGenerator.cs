@@ -150,16 +150,22 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                     {
                         [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, TypeName, "{{assemblyName}}")]
                         private const string TypeName = "AspNetCoreGeneratedDocument.{{generatedTypeName}}, {{assemblyName}}";
-                        [global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All)]
-                        private static readonly global::System.Type _sliceType = global::System.Type.GetType(TypeName)
-                            ?? throw new global::System.InvalidOperationException($"Razor view type '{TypeName}' was not found. This is likely a bug in the RazorSlices source generator.");
-                        private static readonly global::RazorSlices.SliceDefinition _sliceDefinition = new(_sliceType);
+                        //[global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All)]
+                        //private static readonly global::System.Type _sliceType = global::System.Type.GetType(TypeName)
+                        //    ?? throw new global::System.InvalidOperationException($"Razor view type '{TypeName}' was not found. This is likely a bug in the RazorSlices source generator.");
+                        private static readonly global::RazorSlices.SliceDefinition _sliceDefinition = new(SliceType, "{{relativeFilePath.Replace(@"\", @"\\")}}");
 
                         /// <summary>
-                        /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> .
+                        /// Gets the type of the Razor Slice.
                         /// </summary>
-                        public static global::RazorSlices.RazorSlice Create()
-                            => global::{{rootNamespace}}.RazorSlicesGenericFactory.CreateSlice<global::{{fullNamespace}}.{{className}}>();
+                        [global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All)]
+                        public static global::System.Type SliceType => global::System.Type.GetType(TypeName)!;
+
+                        /// <summary>
+                        /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c>.
+                        /// </summary>
+                        public static global::RazorSlices.RazorSlice Create() => _sliceDefinition.CreateSlice();
+                        //    => global::{{rootNamespace}}.RazorSlicesGenericFactory.CreateSlice<global::{{fullNamespace}}.{{className}}>();
 
                         /// <summary>
                         /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> with the given model.
