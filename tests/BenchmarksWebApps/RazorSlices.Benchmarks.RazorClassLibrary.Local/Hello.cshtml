@@ -4,6 +4,10 @@
     <title>Hello</title>
 </head>
 <body>
-    <p>Hello, World! The time is @TimeOnly.FromDateTime(DateTime.Now)</p>
+    <p>Hello, World! The time is @TimeOnly.FromDateTime(_dateTime)</p>
 </body>
 </html>
+
+@functions {
+    private static DateTime _dateTime = DateTime.Now;
+}

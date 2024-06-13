@@ -2,29 +2,56 @@
 using System.IO.Pipelines;
 using RazorSlices.Benchmarks.RazorClassLibrary.Local;
 
-var iterations = 1000;
 var memoryPool = MemoryPool<byte>.Shared;
-var pipe = new Pipe(new(memoryPool, pauseWriterThreshold: 0) { });
 
 Console.WriteLine("Warming up");
 
-for (int i = 0; i < iterations; i++)
-{
-    await RenderSlice(pipe);
-}
+var warmupCt = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+var warmupLoop = new RenderLoop(memoryPool, warmupCt.Token);
+await warmupLoop.Run();
 
-Console.WriteLine("Press ENTER to run test");
+var ct = new CancellationTokenSource();
+var loopCount = Environment.ProcessorCount;
+var loops = new List<RenderLoop>(loopCount);
+
+Console.WriteLine($"Press ENTER to start {loopCount} loops");
 Console.ReadLine();
 
-for (int i = 0; i < iterations; i++)
+for (int i = 0; i < loopCount; i++)
 {
-    await RenderSlice(pipe);
+    loops.Add(new(memoryPool, ct.Token));
 }
 
-async ValueTask RenderSlice(Pipe pipe)
+var allLoopsTask = Task.WhenAll(loops.Select(l => Task.Run(l.Run, ct.Token)));
+
+Console.WriteLine("Press ENTER to stop loops");
+Console.ReadLine();
+
+ct.Cancel();
+
+Console.Write("Waiting for loops to exit...");
+await allLoopsTask;
+Console.WriteLine("Done!");
+
+
+class RenderLoop(MemoryPool<byte> memoryPool, CancellationToken cancellationToken)
 {
-    await LocalVersion.RenderHello(pipe.Writer);
-    await pipe.Writer.CompleteAsync();
-    await pipe.Reader.CompleteAsync();
-    pipe.Reset();
+    private readonly Pipe _pipe = new(new(memoryPool, pauseWriterThreshold: 0) { });
+    private readonly CancellationToken _cancellationToken = cancellationToken;
+
+    public async Task Run()
+    {
+        while (!_cancellationToken.IsCancellationRequested)
+        {
+            await RenderSlice(_pipe, _cancellationToken);
+        }
+    }
+
+    static ValueTask RenderSlice(Pipe pipe, CancellationToken cancellationToken = default)
+    {
+        return LocalVersion.RenderHello(pipe.Writer, cancellationToken);
+        //await pipe.Writer.CompleteAsync();
+        //await pipe.Reader.CompleteAsync();
+        //pipe.Reset();
+    }
 }

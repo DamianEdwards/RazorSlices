@@ -68,7 +68,7 @@ internal static class PipeWriterHtmlExtensions
             pipeWriter.Advance(waitingToAdvance);
         }
 
-        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IpipeWriter HTML writing extensions");
+        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in PipeWriter HTML writing extensions");
     }
 
     public static void HtmlEncodeAndWriteSpanFormattable<T>(this PipeWriter pipeWriter, T? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
@@ -221,7 +221,7 @@ internal static class PipeWriterHtmlExtensions
 
         ArrayPool<char>.Shared.Return(rentedBuffer);
 
-        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IpipeWriter HTML writing extensions");
+        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in PipeWriter HTML writing extensions");
     }
 
     private static void HtmlEncodeAndWriteSmall(PipeWriter pipeWriter, ReadOnlySpan<char> textSpan, HtmlEncoder htmlEncoder)
@@ -245,7 +245,7 @@ internal static class PipeWriterHtmlExtensions
             textSpan = textSpan[charsConsumed..];
         }
 
-        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in IpipeWriter HTML writing extensions");
+        Debug.Assert(encodeStatus == OperationStatus.Done, "Bad math in PipeWriter HTML writing extensions");
     }
 
     public static void WriteHtml(this PipeWriter pipeWriter, ReadOnlySpan<char> html)
@@ -293,7 +293,7 @@ internal static class PipeWriterHtmlExtensions
             pipeWriter.Advance(waitingToAdvance);
         }
 
-        Debug.Assert(status == OperationStatus.Done, "Bad math in IpipeWriter HTML writing extensions");
+        Debug.Assert(status == OperationStatus.Done, "Bad math in PipeWriter HTML writing extensions");
     }
 
     private static readonly int TrueStringLength = bool.TrueString.Length;
