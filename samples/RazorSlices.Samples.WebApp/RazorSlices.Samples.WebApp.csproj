@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!--<PublishAot>true</PublishAot>-->
-    <PublishTrimmed>true</PublishTrimmed>
+    <PublishAot>true</PublishAot>
+    <!--<PublishTrimmed>true</PublishTrimmed>-->
     <!--<PublishSingleFile>true</PublishSingleFile>-->
     <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
   </PropertyGroup>
