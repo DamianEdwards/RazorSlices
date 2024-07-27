@@ -1,0 +1,15 @@
+﻿@inherits RazorSliceHttpResult<List<Models.Todo>>
+
+<table class="table" id="todo-table">
+    <tr>
+        <th>Id</th>
+        <th>Title</th>
+        <th>Due by</th>
+        <th>Status</th>
+        <th></th>
+    </tr>
+    @foreach (var todo in Model)
+    {
+        @await RenderPartialAsync(_Todo.Create(todo))
+    }
+</table>

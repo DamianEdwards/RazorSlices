@@ -35,7 +35,7 @@ public class Todo
 
 internal static class Todos
 {
-    public readonly static Todo[] AllTodos =
+    public readonly static List<Todo> AllTodos =
         [
             new() { Id = 1, TitleUtf8 = "Wash the dishes."u8.ToArray(), IsComplete = true },
             new() { Id = 2, TitleUtf8 = "Dry the dishes."u8.ToArray(), IsComplete = true },

@@ -6,6 +6,7 @@ using RazorSlices.Samples.WebApp.Services;
 using Models = RazorSlices.Samples.WebApp.Models;
 using Slices = RazorSlices.Samples.WebApp.Slices;
 using LibrarySlices = RazorSlices.Samples.RazorClassLibrary.Slices;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,13 +58,44 @@ app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) 
     return Results.Ok(new ResultDto(stringBuilder.ToString()));
 });
 
-app.MapGet("/", () => Results.Extensions.RazorSlice<Slices.Todos, Models.Todo[]>(Models.Todos.AllTodos));
+app.MapGet("/", () => Results.Extensions.RazorSlice<Slices.Todos, List<Models.Todo>>(Models.Todos.AllTodos));
 app.MapGet("/{id:int}", (int id) =>
 {
     var todo = Models.Todos.AllTodos.FirstOrDefault(t => t.Id == id);
     return todo is not null
         ? Results.Extensions.RazorSlice<Slices.Todo, Models.Todo>(todo)
         : Results.NotFound();
+});
+
+
+var htmxTodos = app.MapGroup("/htmx-todo");
+var renderTodoTable = () => Results.Extensions.RazorSlice<Slices.HtmxTodos._Todos, List<Models.Todo>>(Models.Todos.AllTodos);
+htmxTodos.MapGet("/", () => Results.Extensions.RazorSlice<Slices.HtmxTodos.TodoIndex, List<Models.Todo>>(Models.Todos.AllTodos));
+htmxTodos.MapPost("/", ([FromForm] string title) => {
+    var maxId = Models.Todos.AllTodos.Select(x => x.Id).DefaultIfEmpty(0).Max();
+    Models.Todos.AllTodos.Add(new Models.Todo { Id = maxId + 1, Title = title });
+    return renderTodoTable();
+}).DisableAntiforgery();
+htmxTodos.MapPut("/{id:int}/toggle-complete", (int id) => {
+    var todo = Models.Todos.AllTodos.FirstOrDefault(t => t.Id == id);
+    if (todo is null)
+    {
+        return Results.NotFound();
+    }
+
+    todo.IsComplete = !todo.IsComplete;
+    return renderTodoTable();
+});
+htmxTodos.MapDelete("/{id:int}", (int id) =>
+{
+    var todo = Models.Todos.AllTodos.FirstOrDefault(t => t.Id == id);
+    if (todo is null)
+    {
+        return Results.NotFound();
+    }
+
+    Models.Todos.AllTodos.Remove(todo);
+    return renderTodoTable();
 });
 
 Console.WriteLine($"RuntimeFeature.IsDynamicCodeSupported = {RuntimeFeature.IsDynamicCodeSupported}");

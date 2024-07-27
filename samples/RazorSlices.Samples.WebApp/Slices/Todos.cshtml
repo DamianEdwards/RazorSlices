@@ -1,4 +1,4 @@
-﻿@inherits RazorSliceHttpResult<Models.Todo[]>
+﻿@inherits RazorSliceHttpResult<List<Models.Todo>>
 @implements IUsesLayout<_Layout, LayoutModel>
 
 <h1 class="mt-5">Todos</h1>
@@ -16,5 +16,5 @@
 </table>
 
 @functions {
-    public LayoutModel LayoutModel => new() { Title = $"Todos ({Model.Length})" };
+    public LayoutModel LayoutModel => new() { Title = $"Todos ({Model.Count})" };
 }
