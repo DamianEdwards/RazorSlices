@@ -5,6 +5,7 @@
 <form
     hx-post="/htmx-todo"
     hx-target="#todo-table"
+    hx-on::after-request="this.reset()"
 >
     <input type="text" name="title" />
     <button>Add</button>
