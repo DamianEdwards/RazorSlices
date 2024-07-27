@@ -8,7 +8,6 @@
         <div class="form-check form-switch">
             <input
                 hx-put="/htmx-todo/@Model.Id/toggle-complete"
-                hx-target="#todo-table"
                 class="form-check-input"
                 type="checkbox"
                 checked=@(Model.IsComplete ? "checked" : null)
@@ -18,7 +17,6 @@
     <td>
         <button
             hx-delete="/htmx-todo/@Model.Id"
-            hx-target="#todo-table"
             type="button"
             class="btn btn-secondary"
         >
