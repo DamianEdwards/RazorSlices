@@ -303,6 +303,15 @@ public abstract partial class RazorSlice : IDisposable
         return HtmlString.Empty;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void ReturnPooledObjects()
+    {
+        if (_utf8BufferTextWriter is not null)
+        {
+            Utf8PipeTextWriter.Return(_utf8BufferTextWriter);
+        }
+    }
+
     /// <summary>
     /// Disposes the instance. Overriding implementations should ensure they call <c>base.Dispose()</c> after performing their
     /// custom dispose logic, e.g.:
@@ -316,32 +325,8 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     public virtual void Dispose()
     {
-        
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void ReturnPooledObjects()
-    {
-        if (_utf8BufferTextWriter is not null)
-        {
-            Utf8PipeTextWriter.Return(_utf8BufferTextWriter);
-        }
-    }
-
-    public virtual void Dispose()
-    {
-        Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
-
-        if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
-        {
-            Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
-            contentSlice.Dispose();
-        }
-        
         GC.SuppressFinalize(this);
         DisposeInternal();
-        
-        Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
     }
 
     private void DisposeInternal()
@@ -351,9 +336,19 @@ public abstract partial class RazorSlice : IDisposable
             return;
         }
 
+        Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
+
+        if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
+        {
+            Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
+            contentSlice.Dispose();
+        }
+        
         ReturnPooledObjects();
 
         _disposed = true;
+
+        Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
     }
 
     ~RazorSlice()
