@@ -25,6 +25,7 @@ public abstract partial class RazorSlice : IDisposable
     private PipeWriter? _pipeWriter;
     private TextWriter? _textWriter;
     private Utf8PipeTextWriter? _utf8BufferTextWriter;
+    private bool _disposed;
 
     /// <summary>
     /// Gets or sets the <see cref="IServiceProvider"/> used to resolve services for injectable properties.
@@ -315,17 +316,7 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     public virtual void Dispose()
     {
-        Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
-
-        if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
-        {
-            Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
-            contentSlice.Dispose();
-        }
-        ReturnPooledObjects();
-        GC.SuppressFinalize(this);
-
-        Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
+        
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -335,5 +326,38 @@ public abstract partial class RazorSlice : IDisposable
         {
             Utf8PipeTextWriter.Return(_utf8BufferTextWriter);
         }
+    }
+
+    public virtual void Dispose()
+    {
+        Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
+
+        if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
+        {
+            Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
+            contentSlice.Dispose();
+        }
+        
+        GC.SuppressFinalize(this);
+        DisposeInternal();
+        
+        Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
+    }
+
+    private void DisposeInternal()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        ReturnPooledObjects();
+
+        _disposed = true;
+    }
+
+    ~RazorSlice()
+    {
+        DisposeInternal();
     }
 }
