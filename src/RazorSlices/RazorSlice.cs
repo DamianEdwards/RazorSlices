@@ -25,6 +25,7 @@ public abstract partial class RazorSlice : IDisposable
     private PipeWriter? _pipeWriter;
     private TextWriter? _textWriter;
     private Utf8PipeTextWriter? _utf8BufferTextWriter;
+    private bool _disposed;
 
     /// <summary>
     /// Gets or sets the <see cref="IServiceProvider"/> used to resolve services for injectable properties.
@@ -302,6 +303,15 @@ public abstract partial class RazorSlice : IDisposable
         return HtmlString.Empty;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void ReturnPooledObjects()
+    {
+        if (_utf8BufferTextWriter is not null)
+        {
+            Utf8PipeTextWriter.Return(_utf8BufferTextWriter);
+        }
+    }
+
     /// <summary>
     /// Disposes the instance. Overriding implementations should ensure they call <c>base.Dispose()</c> after performing their
     /// custom dispose logic, e.g.:
@@ -315,6 +325,17 @@ public abstract partial class RazorSlice : IDisposable
     /// </summary>
     public virtual void Dispose()
     {
+        GC.SuppressFinalize(this);
+        DisposeInternal();
+    }
+
+    private void DisposeInternal()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
         Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
 
         if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
@@ -322,18 +343,19 @@ public abstract partial class RazorSlice : IDisposable
             Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
             contentSlice.Dispose();
         }
+        
         ReturnPooledObjects();
-        GC.SuppressFinalize(this);
+
+        _disposed = true;
 
         Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void ReturnPooledObjects()
+    /// <summary>
+    /// Finalizer.
+    /// </summary>
+    ~RazorSlice()
     {
-        if (_utf8BufferTextWriter is not null)
-        {
-            Utf8PipeTextWriter.Return(_utf8BufferTextWriter);
-        }
+        DisposeInternal();
     }
 }
