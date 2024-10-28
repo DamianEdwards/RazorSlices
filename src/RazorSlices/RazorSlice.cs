@@ -351,6 +351,9 @@ public abstract partial class RazorSlice : IDisposable
         Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
     }
 
+    /// <summary>
+    /// Finalizer.
+    /// </summary>
     ~RazorSlice()
     {
         DisposeInternal();
