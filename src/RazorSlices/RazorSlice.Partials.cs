@@ -87,6 +87,10 @@ public partial class RazorSlice
         {
             renderPartialTask = child.RenderToTextWriterAsync(_textWriter, _htmlEncoder, CancellationToken, renderLayout: false);
         }
+        else if (_bufferWriter is not null)
+        {
+            renderPartialTask = child.RenderToBufferWriterAsync(_bufferWriter, _htmlEncoder, CancellationToken, renderLayout: false);
+        }
 #pragma warning restore CA2012
         else
         {

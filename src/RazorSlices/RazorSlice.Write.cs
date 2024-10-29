@@ -25,6 +25,7 @@ public partial class RazorSlice
 
         _pipeWriter?.WriteHtml(value.AsSpan());
         _textWriter?.Write(value);
+        _bufferWriter?.WriteHtml(value.AsSpan());
     }
 
     /// <summary>
@@ -75,6 +76,7 @@ public partial class RazorSlice
 
         _pipeWriter?.Write(value);
         _textWriter?.WriteUtf8(value);
+        _bufferWriter?.Write(value);
     }
 
     /// <summary>
@@ -119,6 +121,7 @@ public partial class RazorSlice
 
         _pipeWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
         _textWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
+        _bufferWriter?.HtmlEncodeAndWriteUtf8(value, _htmlEncoder);
     }
 
     /// <summary>
@@ -177,6 +180,7 @@ public partial class RazorSlice
         {
             _pipeWriter?.HtmlEncodeAndWrite(value, _htmlEncoder);
             _textWriter?.HtmlEncodeAndWrite(value, _htmlEncoder);
+            _bufferWriter?.HtmlEncodeAndWrite(value, _htmlEncoder);
         }
     }
 
@@ -204,6 +208,7 @@ public partial class RazorSlice
         {
             _pipeWriter?.Write(value.Value);
             _textWriter?.Write(value.Value);
+            _bufferWriter?.Write(value.Value);
         }
         return HtmlString.Empty;
     }
@@ -224,6 +229,7 @@ public partial class RazorSlice
             var htmlEncoder = htmlEncode ? _htmlEncoder : NullHtmlEncoder.Default;
             _pipeWriter?.HtmlEncodeAndWriteSpanFormattable(formattable, htmlEncoder, format, formatProvider);
             _textWriter?.HtmlEncodeAndWriteSpanFormattable(formattable, htmlEncoder, format, formatProvider);
+            _bufferWriter?.HtmlEncodeAndWriteSpanFormattable(formattable, htmlEncoder, format, formatProvider);
         }
 
         return HtmlString.Empty;
@@ -245,6 +251,7 @@ public partial class RazorSlice
             var htmlEncoder = htmlEncode ? _htmlEncoder : NullHtmlEncoder.Default;
             _pipeWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
             _textWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
+            _bufferWriter?.HtmlEncodeAndWriteUtf8SpanFormattable(formattable, htmlEncoder, format, formatProvider);
         }
 
         return HtmlString.Empty;
@@ -262,12 +269,17 @@ public partial class RazorSlice
         {
             if (_pipeWriter is not null)
             {
-                _utf8BufferTextWriter ??= Utf8PipeTextWriter.Get(_pipeWriter);
-                htmlContent.WriteTo(_utf8BufferTextWriter, _htmlEncoder);
+                _utf8PipeTextWriter ??= Utf8PipeTextWriter.Get(_pipeWriter);
+                htmlContent.WriteTo(_utf8PipeTextWriter, _htmlEncoder);
             }
-            if (_textWriter is not null)
+            else if (_textWriter is not null)
             {
                 htmlContent.WriteTo(_textWriter, _htmlEncoder);
+            }
+            else if (_bufferWriter is not null)
+            {
+                _utf8BufferTextWriter ??= Utf8BufferTextWriter.Get(_bufferWriter);
+                htmlContent.WriteTo(_utf8BufferTextWriter, _htmlEncoder);
             }
         }
 
@@ -285,6 +297,7 @@ public partial class RazorSlice
         {
             _pipeWriter?.WriteHtml(htmlString.Value);
             _textWriter?.Write(htmlString.Value);
+            _bufferWriter?.WriteHtml(htmlString.Value);
         }
 
         return HtmlString.Empty;
@@ -305,6 +318,7 @@ public partial class RazorSlice
         {
             _pipeWriter?.WriteHtml(htmlString.AsSpan());
             _textWriter?.Write(htmlString);
+            _bufferWriter?.WriteHtml(htmlString.AsSpan());
         }
 
         return HtmlString.Empty;
