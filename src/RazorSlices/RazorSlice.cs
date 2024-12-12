@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
-using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
@@ -27,7 +26,6 @@ public abstract partial class RazorSlice : IDisposable
     private HtmlEncoder _htmlEncoder = HtmlEncoder.Default;
     private PipeWriter? _pipeWriter;
     private TextWriter? _textWriter;
-    private Utf8PipeTextWriter? _utf8BufferTextWriter;
     private bool _disposed;
 
     /// <summary>
@@ -342,15 +340,6 @@ public abstract partial class RazorSlice : IDisposable
         return HtmlString.Empty;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void ReturnPooledObjects()
-    {
-        if (_utf8BufferTextWriter is not null)
-        {
-            Utf8PipeTextWriter.Return(_utf8BufferTextWriter);
-        }
-    }
-
     /// <summary>
     /// Disposes the instance. Overriding implementations should ensure they call <c>base.Dispose()</c> after performing their
     /// custom dispose logic, e.g.:
@@ -382,8 +371,6 @@ public abstract partial class RazorSlice : IDisposable
             Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
             contentSlice.Dispose();
         }
-        
-        ReturnPooledObjects();
 
         _disposed = true;
 

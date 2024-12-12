@@ -1,12 +1,9 @@
 ﻿using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Internal;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using System.Buffers;
-using System.Diagnostics;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 
 namespace RazorSlices;
 
@@ -262,82 +259,99 @@ public partial class RazorSlice
     protected HtmlString WriteHtml<T>(T htmlContent)
         where T : IHtmlContent
     {
-        if (htmlContent is not null)
+#pragma warning disable CA2000 // Dispose objects before losing scope: Utf8PipeTextWriter is returned to the pool in the finally block
+        TextWriter textWriter = _textWriter ?? Utf8PipeTextWriter.Get(_pipeWriter!);
+#pragma warning restore CA2000
+        var faulted = false;
+
+        try
         {
             if (htmlContent is HelperResult helperResult)
             {
+                // A templated Razor delegate is being rendered: https://learn.microsoft.com/aspnet/core/mvc/views/razor#templated-razor-delegates
                 // HelperResult captures the generated async templated delegate and blocks synchronously when calling it!
-                // This is not ideal for performance, but it's the best we can do without changing the Razor compiler (writes are synchronous).
+                // This is not ideal for performance and in our case breaks the optimization used by Utf8PipeTextWriter which
+                // is cached in a thread static, but it can't be helped without changing the Razor compiler (writes are synchronous).
                 // However we can access the captured delegate, invoke it to get the Task and detect the case where it hasn't
-                // completed (i.e. has gone async) and in that case log a warning.
-                var textWriter = _pipeWriter is not null ? _utf8BufferTextWriter ??= Utf8PipeTextWriter.Get(_pipeWriter) : _textWriter!;
+                // completed (i.e. has gone async) and in that case throw an exception.
                 var actionResult = helperResult.WriteAction(textWriter);
+
                 if (!actionResult.IsCompleted)
                 {
-                    if (Debugger.IsAttached && Debugger.IsLogging())
-                    {
-                        Debugger.Log(0, "RazorSlices", """
+                    // NOTE: There's still a chance here that the Task run asynchronously but is completed by the time we check it (albeit it's a small window)
+                    //       and in that case it's very likely the Utf8PipeTextWriter will fault as it can't handle cross-thread writes (pooled via thread static).
+                    //       I don't think this causes any issues as the exception will be thrown and the request will fail, but it's worth noting.
 
-                            ----------------------------
-                            !!! RazorSlices Warning !!!
-                            ----------------------------
-                            The WriteAction of a HelperResult instance has gone async but will be synchonously waited on (sync-over-async).
-                            This can cause performance and scale issues.
-                            Consider using async templated methods instead of async templated Razor delegates, i.e.:
+                    throw new InvalidOperationException("""
+                        ----------------------------
+                        !!! Razor Slices Error !!!
+                        ----------------------------
+                        The WriteAction of a HelperResult instance has gone async but will be synchronously waited on (sync-over-async).
+                        This causes performance and scale issues and is not supported in Razor Slices.
+                        This happens when a templated Razor delegate does async work (i.e. has `@await SomethingAsync()` in it).
+                        Use async templated methods instead of async templated Razor delegates. They have the advantage of supporting
+                        regular method features too like generics and multiple parameters!
 
-                                Do this:
+                        Do this:
 
-                                ```
-                                @await TemplatedMethod(DateTime.Now);
+                        ```
+                        <div>
+                            @await TemplatedMethod(DateTime.Now);
+                        </div>
 
-                                @functions {
-                                    private async Task<HtmlContent> TemplatedMethod<T>(T data)
-                                    {
-                                        await SomeAsyncThing();
-                                        <p>
-                                            The following data was passed: @data
-                                        </p>
-                                    }
-                                }
-                                ```
+                        @functions {
+                            private async Task<HtmlContent> TemplatedMethod<T>(T data, IHtmlContent? htmlPrefix = null)
+                            {
+                                @htmlPrefix
+                                <p>
+                                    @await SomeAsyncThing();
+                                    The following data was passed: @data
+                                </p>
 
-                                Instead of doing this:
+                                // Returning HtmlContent.Empty makes it possible to call this using a Razor expression instead of a block
+                                return HtmlContent.Empty;
+                            }
+                        }
+                        ```
 
-                                ```
-                                @{
-                                    Func<object, HelperResult> templatedRazorDelegate = @<p>
-                                        @{await SomeAsyncThing()}
-                                        Hello! The following value was passed in: @item
-                                    </p>;
-                                }
+                        Instead of doing this:
 
-                                @templatedRazorDelegate(DateTime.Now)
-                                ```
+                        ```
+                        @{
+                            Func<object, HelperResult> templatedRazorDelegate = @<p>
+                                @{ await SomeAsyncThing(); }
+                                Hello! The following value was passed: @item
+                            </p>;
+                        }
 
-                            ----------------------------
-
-
-                            """);
-                    }
+                        <div>
+                            @templatedRazorDelegate(DateTime.Now)
+                        </div>
+                        ```
+                        """);
                 }
+
                 actionResult.GetAwaiter().GetResult();
-                if (_utf8BufferTextWriter is not null)
-                {
-                    _utf8BufferTextWriter.Flush();
-                }
             }
             else
             {
-                if (_pipeWriter is not null)
+                htmlContent?.WriteTo(textWriter, _htmlEncoder);
+            }
+        }
+        catch
+        {
+            faulted = true;
+            throw;
+        }
+        finally
+        {
+            if (textWriter is Utf8PipeTextWriter utf8PipeTextWriter)
+            {
+                if (!faulted)
                 {
-                    _utf8BufferTextWriter ??= Utf8PipeTextWriter.Get(_pipeWriter);
-                    htmlContent.WriteTo(_utf8BufferTextWriter, _htmlEncoder);
-                    _utf8BufferTextWriter.Flush();
+                    utf8PipeTextWriter.Flush();
                 }
-                if (_textWriter is not null)
-                {
-                    htmlContent.WriteTo(_textWriter, _htmlEncoder);
-                }
+                Utf8PipeTextWriter.Return(utf8PipeTextWriter);
             }
         }
 

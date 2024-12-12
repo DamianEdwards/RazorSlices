@@ -27,6 +27,7 @@ public class WebAppTests
         ["/1", "Wash the dishes", MediaTypeNames.Text.Html],
         ["/encoding", "{&#x27;antiForgery&#x27;", MediaTypeNames.Text.Html],
         ["/unicode", "🐻", MediaTypeNames.Text.Html],
+        ["/templated", "This is from a partial with a templated model", MediaTypeNames.Text.Html],
         ["/library", "This slice was loaded from a referenced Razor Class Library!", MediaTypeNames.Text.Html],
         ["/render-to-string", "htmlString", MediaTypeNames.Application.Json],
         ["/render-to-stringbuilder", "htmlString", MediaTypeNames.Application.Json],
