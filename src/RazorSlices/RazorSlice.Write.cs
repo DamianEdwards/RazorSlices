@@ -1,8 +1,12 @@
 ﻿using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Internal;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using System.Buffers;
+using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace RazorSlices;
 
@@ -260,14 +264,80 @@ public partial class RazorSlice
     {
         if (htmlContent is not null)
         {
-            if (_pipeWriter is not null)
+            if (htmlContent is HelperResult helperResult)
             {
-                _utf8BufferTextWriter ??= Utf8PipeTextWriter.Get(_pipeWriter);
-                htmlContent.WriteTo(_utf8BufferTextWriter, _htmlEncoder);
+                // HelperResult captures the generated async templated delegate and blocks synchronously when calling it!
+                // This is not ideal for performance, but it's the best we can do without changing the Razor compiler (writes are synchronous).
+                // However we can access the captured delegate, invoke it to get the Task and detect the case where it hasn't
+                // completed (i.e. has gone async) and in that case log a warning.
+                var textWriter = _pipeWriter is not null ? _utf8BufferTextWriter ??= Utf8PipeTextWriter.Get(_pipeWriter) : _textWriter!;
+                var actionResult = helperResult.WriteAction(textWriter);
+                if (!actionResult.IsCompleted)
+                {
+                    if (Debugger.IsAttached && Debugger.IsLogging())
+                    {
+                        Debugger.Log(0, "RazorSlices", """
+
+                            ----------------------------
+                            !!! RazorSlices Warning !!!
+                            ----------------------------
+                            The WriteAction of a HelperResult instance has gone async but will be synchonously waited on (sync-over-async).
+                            This can cause performance and scale issues.
+                            Consider using async templated methods instead of async templated Razor delegates, i.e.:
+
+                                Do this:
+
+                                ```
+                                @await TemplatedMethod(DateTime.Now);
+
+                                @functions {
+                                    private async Task<HtmlContent> TemplatedMethod<T>(T data)
+                                    {
+                                        await SomeAsyncThing();
+                                        <p>
+                                            The following data was passed: @data
+                                        </p>
+                                    }
+                                }
+                                ```
+
+                                Instead of doing this:
+
+                                ```
+                                @{
+                                    Func<object, HelperResult> templatedRazorDelegate = @<p>
+                                        @{await SomeAsyncThing()}
+                                        Hello! The following value was passed in: @item
+                                    </p>;
+                                }
+
+                                @templatedRazorDelegate(DateTime.Now)
+                                ```
+
+                            ----------------------------
+
+
+                            """);
+                    }
+                }
+                actionResult.GetAwaiter().GetResult();
+                if (_utf8BufferTextWriter is not null)
+                {
+                    _utf8BufferTextWriter.Flush();
+                }
             }
-            if (_textWriter is not null)
+            else
             {
-                htmlContent.WriteTo(_textWriter, _htmlEncoder);
+                if (_pipeWriter is not null)
+                {
+                    _utf8BufferTextWriter ??= Utf8PipeTextWriter.Get(_pipeWriter);
+                    htmlContent.WriteTo(_utf8BufferTextWriter, _htmlEncoder);
+                    _utf8BufferTextWriter.Flush();
+                }
+                if (_textWriter is not null)
+                {
+                    htmlContent.WriteTo(_textWriter, _htmlEncoder);
+                }
             }
         }
 

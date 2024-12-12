@@ -41,6 +41,7 @@ app.MapGet("/lorem-stream", async (HttpResponse httpResponse) =>
 });
 app.MapGet("/encoding", () => Results.Extensions.RazorSlice<Slices.Encoding>());
 app.MapGet("/unicode", () => Results.Extensions.RazorSlice<Slices.Unicode>());
+app.MapGet("/templated", () => Results.Extensions.RazorSlice<Slices.Templated>());
 app.MapGet("/library", () => Results.Extensions.RazorSlice<LibrarySlices.FromLibrary>());
 app.MapGet("/render-to-string", async () =>
 {

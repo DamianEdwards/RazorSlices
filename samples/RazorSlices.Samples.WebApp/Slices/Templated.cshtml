@@ -1,0 +1,58 @@
+﻿@using Microsoft.AspNetCore.Html
+@using Microsoft.AspNetCore.Mvc.Razor
+
+@inherits RazorSliceHttpResult
+@implements IUsesLayout<_Layout, LayoutModel>
+
+@{
+    Func<object, HelperResult> tmpl = @<p>
+        Hello from a templated Razor delegate! The following value was passed in: @item
+    </p>;
+    Func<object, HelperResult> asyncTmpl = @<p>
+        @{await Task.Delay(16);}
+        Hello from an async templated Razor delegate! The following value was passed in: @item
+    </p>;
+}
+
+<h1 class="mt-5">@Title()</h1>
+
+<div>
+    <p>This is from the page. What follows is from rendering the templated delegate declared on this page:</p>
+    <div>
+        @tmpl(DateTime.Now)
+    </div>
+</div>
+
+<div>
+    <p>This is from the page. What follows is from rendering the async templated delegate declared on this page:</p>
+    <div>
+        @asyncTmpl(DateTime.Now)
+    </div>
+</div>
+
+@await RenderPartialAsync(_TemplatedPartial.Create(tmpl))
+
+@await RenderPartialAsync(_TemplatedPartial.Create(asyncTmpl))
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = Title() };
+
+    static string Title() => "Templated Razor Delegates";
+
+    private IHtmlContent Content()
+    {
+        <div>
+
+        </div>
+        return HtmlString.Empty;
+    }
+
+    private async Task<IHtmlContent> AsyncContent()
+    {
+        await Task.Delay(16);
+        <div>
+
+        </div>
+        return HtmlString.Empty;
+    }
+}
