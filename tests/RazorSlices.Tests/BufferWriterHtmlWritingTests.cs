@@ -12,7 +12,7 @@ public class BufferWriterHtmlWritingTests
     private static readonly TimeSpan _timeout = Debugger.IsAttached ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(5000);
 
     [Fact]
-    public async ValueTask HtmlEncodeAndWrite_DoesNotEncodeTextWhenPassedNullEncoder()
+    public async Task HtmlEncodeAndWrite_DoesNotEncodeTextWhenPassedNullEncoder()
     {
         var bufferStream = new MemoryStream(512);
         var pipeWriter = PipeWriter.Create(bufferStream);
@@ -27,7 +27,7 @@ public class BufferWriterHtmlWritingTests
     }
 
     [Fact]
-    public async ValueTask HtmlEncodeAndWrite_DoesNotEncodeTextThatRequiresNoEncoding()
+    public async Task HtmlEncodeAndWrite_DoesNotEncodeTextThatRequiresNoEncoding()
     {
         var bufferStream = new MemoryStream(512);
         var pipeWriter = PipeWriter.Create(bufferStream);
@@ -42,7 +42,7 @@ public class BufferWriterHtmlWritingTests
     }
 
     [Fact]
-    public async ValueTask HtmlEncodeAndWrite_EncodesSimpleText()
+    public async Task HtmlEncodeAndWrite_EncodesSimpleText()
     {
         var bufferStream = new MemoryStream(512);
         var pipeWriter = PipeWriter.Create(bufferStream);

@@ -25,6 +25,9 @@
             @(await RenderPartialAsync<_FooterLinks>()) |
             @await RenderSectionAsync("footer-links")
             <a href="https://github.com/DamianEdwards/RazorSlices"><span class="text-muted">RazorSlices</span></a>
+            <p class="text-muted small">
+                @System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription
+            </p>
         </div>
     </footer>
 </body>
