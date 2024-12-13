@@ -140,8 +140,7 @@ The library is still new and features are being actively added.
     @tmpl(DateTime.Now)
     ```
 
-    > [!IMPORTANT]
-    > Async templated Razor delegates are **NOT** supported and will throw an exception at runtime.
+    **NOTE: Async templated Razor delegates are *NOT* supported and will throw an exception at runtime**
 
 - DI-activated properties via `@inject`
 - Rendering slices from slices (aka partials) via `@(await RenderPartialAsync<MyPartial>())`
@@ -196,7 +195,7 @@ The library is still new and features are being actively added.
       }
       ```
 
-    **Note: The `@section` directive is not supported as it's incompatible with the rendering approach of Razor Slices**
+    **NOTE: The `@section` directive is not supported as it's incompatible with the rendering approach of Razor Slices**
 
 - Asynchronous rendering, i.e. the template can contain `await` statements, e.g. `@await WriteTheThing()`
 - Writing UTF8 `byte[]` values directly to the output
