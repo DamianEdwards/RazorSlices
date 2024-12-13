@@ -6,6 +6,7 @@ using RazorSlices.Samples.WebApp.Services;
 using Models = RazorSlices.Samples.WebApp.Models;
 using Slices = RazorSlices.Samples.WebApp.Slices;
 using LibrarySlices = RazorSlices.Samples.RazorClassLibrary.Slices;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,12 +60,12 @@ app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) 
 });
 
 app.MapGet("/", () => Results.Extensions.RazorSlice<Slices.Todos, Models.Todo[]>(Models.Todos.AllTodos));
-app.MapGet("/{id:int}", (int id) =>
+app.MapGet("/{id:int}", Results<RazorSliceHttpResult<Models.Todo>, NotFound> (int id) =>
 {
     var todo = Models.Todos.AllTodos.FirstOrDefault(t => t.Id == id);
     return todo is not null
-        ? Results.Extensions.RazorSlice<Slices.Todo, Models.Todo>(todo)
-        : Results.NotFound();
+        ? TypedResults.Extensions.RazorSlice<Slices.Todo, Models.Todo>(todo)
+        : TypedResults.NotFound();
 });
 
 Console.WriteLine($"RuntimeFeature.IsDynamicCodeSupported = {RuntimeFeature.IsDynamicCodeSupported}");
