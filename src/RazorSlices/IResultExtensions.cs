@@ -1,4 +1,5 @@
 ﻿using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Http.HttpResults;
 using RazorSlices;
 
 namespace Microsoft.AspNetCore.Http;
@@ -15,14 +16,14 @@ public static class RazorSlicesExtensions
     /// <param name="_"></param>
     /// <param name="statusCode"></param>
     /// <returns>An <see cref="IRazorSliceHttpResult"/> that can be rendered to the response.</returns>
-    public static IRazorSliceHttpResult RazorSlice<TSliceProxy>(this IResultExtensions _, int statusCode = StatusCodes.Status200OK)
+    public static RazorSliceHttpResult RazorSlice<TSliceProxy>(this IResultExtensions _, int statusCode = StatusCodes.Status200OK)
         where TSliceProxy : IRazorSliceProxy
     {
 #pragma warning disable CA2000 // Dispose objects before losing scope: IResult will get disposed by ASP.NET Core
         var razorSlice = TSliceProxy.CreateSlice();
 #pragma warning restore CA2000 // Dispose objects before losing scope
 
-        if (razorSlice is IRazorSliceHttpResult razorSliceHttpResult)
+        if (razorSlice is RazorSliceHttpResult razorSliceHttpResult)
         {
             // Set the default HtmlEncoder if it's not set to avoid looking it up from the DI container and paying the cost of the request services scope.
             razorSliceHttpResult.HtmlEncoder ??= HtmlEncoder.Default;
@@ -42,14 +43,14 @@ public static class RazorSlicesExtensions
     /// <param name="model"></param>
     /// <param name="statusCode"></param>
     /// <returns>An <see cref="IRazorSliceHttpResult"/> that can be rendered to the response.</returns>
-    public static IRazorSliceHttpResult RazorSlice<TSliceProxy, TModel>(this IResultExtensions _, TModel model, int statusCode = StatusCodes.Status200OK)
+    public static RazorSliceHttpResult<TModel> RazorSlice<TSliceProxy, TModel>(this IResultExtensions _, TModel model, int statusCode = StatusCodes.Status200OK)
         where TSliceProxy : IRazorSliceProxy
     {
 #pragma warning disable CA2000 // Dispose objects before losing scope: IResult will get disposed by ASP.NET Core
         var razorSlice = TSliceProxy.CreateSlice(model);
 #pragma warning restore CA2000 // Dispose objects before losing scope
         
-        if (razorSlice is IRazorSliceHttpResult razorSliceHttpResult)
+        if (razorSlice is RazorSliceHttpResult<TModel> razorSliceHttpResult)
         {
             // Set the default HtmlEncoder if it's not set to avoid looking it up from the DI container and paying the cost of the request services scope.
             razorSliceHttpResult.HtmlEncoder ??= HtmlEncoder.Default;
@@ -61,10 +62,15 @@ public static class RazorSlicesExtensions
     }
 
     private static RazorSliceHttpResultWrapper WrapRazorSliceWithHttpResult(RazorSlice razorSlice, int statusCode)
-    {
-        return new RazorSliceHttpResultWrapper(razorSlice)
+        => new(razorSlice)
         {
             StatusCode = statusCode
         };
-    }
+
+    private static RazorSliceHttpResultWrapper<TModel> WrapRazorSliceWithHttpResult<TModel>(RazorSlice<TModel> razorSlice, int statusCode)
+        => new(razorSlice)
+        {
+            Model = razorSlice.Model,
+            StatusCode = statusCode
+        };
 }
