@@ -1,0 +1,13 @@
+﻿@using Microsoft.AspNetCore.Mvc.Razor
+@inherits RazorSlice<Func<object?, HelperResult>>
+<div>
+    <p>This is from a partial with a templated model. What follows is from the templated delegate passed in as the model:</p>
+    <figure>
+        <blockquote class="blockquote">
+            @Model(DateTime.Now)
+        </blockquote>
+        <figcaption class="blockquote-footer">
+            Rendered by the templated delegate
+        </figcaption>
+    </figure>
+</div>

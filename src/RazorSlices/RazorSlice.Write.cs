@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Internal;
+using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using System.Buffers;
 using System.Globalization;
@@ -250,6 +251,11 @@ public partial class RazorSlice
         return HtmlString.Empty;
     }
 
+    private static bool IsTaskFromAsyncMethod(Task task)
+    {
+        return task.GetType().FullName is { } fullName && fullName.StartsWith(nameof(System.Runtime.CompilerServices.AsyncTaskMethodBuilder), StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// Writes the specified <see cref="IHtmlContent"/> value to the output.
     /// </summary>
@@ -258,16 +264,105 @@ public partial class RazorSlice
     protected HtmlString WriteHtml<T>(T htmlContent)
         where T : IHtmlContent
     {
-        if (htmlContent is not null)
+#pragma warning disable CA2000 // Dispose objects before losing scope: Utf8PipeTextWriter is returned to the pool in the finally block
+        TextWriter textWriter = _textWriter ?? Utf8PipeTextWriter.Get(_pipeWriter!);
+#pragma warning restore CA2000
+        var faulted = false;
+
+        try
         {
-            if (_pipeWriter is not null)
+            if (htmlContent is HelperResult helperResult)
             {
-                _utf8BufferTextWriter ??= Utf8PipeTextWriter.Get(_pipeWriter);
-                htmlContent.WriteTo(_utf8BufferTextWriter, _htmlEncoder);
+                // A templated Razor delegate is being rendered: https://learn.microsoft.com/aspnet/core/mvc/views/razor#templated-razor-delegates
+                // HelperResult captures the generated async templated delegate and blocks synchronously when calling it!
+                // This is not ideal for performance and in our case breaks the optimization used by Utf8PipeTextWriter which
+                // is cached in a thread static, but it can't be helped without changing the Razor compiler (writes are synchronous).
+                // However we can access the captured delegate, invoke it to get the Task and detect the case where it hasn't
+                // completed (i.e. has gone async) and in that case throw an exception.
+                var actionResult = helperResult.WriteAction(textWriter);
+
+#if DEBUG
+                // Force a small delay when debugging to make it easier to create scenario where method is async but has already completed
+                Thread.Sleep(20);
+#endif
+
+                // If the Task is not completed or it's from a generated async method (i.e. one with an 'await' in it) throw an exception
+                if (!actionResult.IsCompleted || IsTaskFromAsyncMethod(actionResult))
+                {
+                    // NOTE: There's still a chance here that the Task run asynchronously but is completed by the time we check it (albeit it's a small window)
+                    //       and in that case it's very likely the Utf8PipeTextWriter will fault as it can't handle cross-thread writes (pooled via thread static).
+                    //       I don't think this causes any issues as the exception will be thrown and the request will fail, but it's worth noting.
+
+                    throw new InvalidOperationException("""
+                        ----------------------------
+                        !!! Razor Slices Error !!!
+                        ----------------------------
+                        The WriteAction of a HelperResult instance returned a Task from an async templated Razor delegate.
+                        This causes performance and scale issues and is not supported in Razor Slices.
+                        This happens when a templated Razor delegate does async work (i.e. has `@await SomethingAsync()` in it).
+                        Use async templated methods instead of async templated Razor delegates. They have the advantage of supporting
+                        regular method features too like generics and multiple parameters!
+
+                        Do this:
+
+                        ```
+                        <div>
+                            @await TemplatedMethod(DateTime.Now);
+                        </div>
+
+                        @functions {
+                            private async Task<HtmlContent> TemplatedMethod<T>(T data, IHtmlContent? htmlPrefix = null)
+                            {
+                                @htmlPrefix
+                                <p>
+                                    @await SomeAsyncThing();
+                                    The following data was passed: @data
+                                </p>
+
+                                // Returning HtmlContent.Empty makes it possible to call this using a Razor expression instead of a block
+                                return HtmlContent.Empty;
+                            }
+                        }
+                        ```
+
+                        Instead of doing this:
+
+                        ```
+                        @{
+                            Func<object, HelperResult> templatedRazorDelegate = @<p>
+                                @{ await SomeAsyncThing(); }
+                                Hello! The following value was passed: @item
+                            </p>;
+                        }
+
+                        <div>
+                            @templatedRazorDelegate(DateTime.Now)
+                        </div>
+                        ```
+                        """);
+                }
+
+                actionResult.GetAwaiter().GetResult();
             }
-            if (_textWriter is not null)
+            else
             {
-                htmlContent.WriteTo(_textWriter, _htmlEncoder);
+                htmlContent?.WriteTo(textWriter, _htmlEncoder);
+            }
+        }
+        catch
+        {
+            faulted = true;
+            throw;
+        }
+        finally
+        {
+            if (textWriter is Utf8PipeTextWriter utf8PipeTextWriter)
+            {
+                if (!faulted)
+                {
+                    utf8PipeTextWriter.Flush();
+                }
+                Utf8PipeTextWriter.Return(utf8PipeTextWriter);
             }
         }
 

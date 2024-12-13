@@ -72,7 +72,7 @@ public partial class RazorSlice
 
     internal ValueTask<HtmlString> RenderChildSliceAsync(RazorSlice child)
     {
-        Debug.WriteLine($"Rendering child slice of type '{child.GetType().Name}' from layout slice of type '{GetType().Name}'");
+        Debug.WriteLine($"Rendering child slice of type '{child.GetType().Name}' from parent slice of type '{GetType().Name}'");
 
         CopySliceState(this, child);
 

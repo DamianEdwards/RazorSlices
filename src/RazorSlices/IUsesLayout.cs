@@ -24,7 +24,7 @@ public interface IUsesLayout
 /// Use this interface to specify the layout type for a Razor Slice, e.g:
 /// <example>
 /// <code>
-/// @inherits IUseLayout&lt;_Layout[]&gt;
+/// @implements IUseLayout&lt;_Layout[]&gt;
 /// </code>
 /// </example>
 /// </remarks>
@@ -47,7 +47,7 @@ public interface IUsesLayout<TLayout> : IUsesLayout
 /// Use this interface to specify the layout type for a Razor Slice, e.g:
 /// <example>
 /// <code>
-/// @inherits IUseLayout&lt;_Layout[], LayoutModel&gt;
+/// @implements IUseLayout&lt;_Layout[], LayoutModel&gt;
 /// </code>
 /// </example>
 /// </remarks>

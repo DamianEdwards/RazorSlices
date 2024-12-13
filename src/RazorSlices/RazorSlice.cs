@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
-using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
@@ -20,11 +19,13 @@ public abstract partial class RazorSlice : IDisposable
 
     private static readonly FlushResult _noFlushResult = new(false, false);
 
+    // Used to support nested writers emitted by the Razor compiler when using templated razor delegates
+    private Stack<(PipeWriter?, TextWriter?)>? _writerStack;
+
     private IServiceProvider? _serviceProvider;
     private HtmlEncoder _htmlEncoder = HtmlEncoder.Default;
     private PipeWriter? _pipeWriter;
     private TextWriter? _textWriter;
-    private Utf8PipeTextWriter? _utf8BufferTextWriter;
     private bool _disposed;
 
     /// <summary>
@@ -77,6 +78,42 @@ public abstract partial class RazorSlice : IDisposable
         }
 
         return ExecuteAsync();
+    }
+
+    /// <summary>
+    /// Puts a text writer on the stack.
+    /// </summary>
+    /// <remarks>
+    /// This method should not be interacted with directly. It's used by the Razor Slices infrastructure.
+    /// </remarks>
+    /// <param name="writer"></param>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    protected void PushWriter(TextWriter writer)
+    {
+        Debug.WriteLine($"Pushing current writers to stack. Now rendering to passed {writer.GetType().Name}.");
+
+        _writerStack ??= new();
+        _writerStack.Push((_pipeWriter, _textWriter));
+
+        _textWriter = writer;
+        _pipeWriter = null;
+    }
+
+    /// <summary>
+    /// Retrieves a text writer from the stack.
+    /// </summary>
+    /// <remarks>
+    /// This method should not be interacted with directly. It's used by the Razor Slices infrastructure.
+    /// </remarks>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    protected void PopWriter()
+    {
+        Debug.Assert(_writerStack is not null, "No writer to pop from the stack. PushWriter should have been called first.");
+        Debug.Assert(_textWriter is not null, $"{nameof(_textWriter)} should not be null!");
+        Debug.Assert(_pipeWriter is null, $"{nameof(_pipeWriter)} should be null!");
+
+        (_pipeWriter, _textWriter) = _writerStack.Pop();
+        Debug.WriteLine($"Popping previous writers off stack. Now rendering to {(_pipeWriter is not null ? "PipeWriter" : "TextWriter")}.");
     }
 
     /// <summary>
@@ -303,15 +340,6 @@ public abstract partial class RazorSlice : IDisposable
         return HtmlString.Empty;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void ReturnPooledObjects()
-    {
-        if (_utf8BufferTextWriter is not null)
-        {
-            Utf8PipeTextWriter.Return(_utf8BufferTextWriter);
-        }
-    }
-
     /// <summary>
     /// Disposes the instance. Overriding implementations should ensure they call <c>base.Dispose()</c> after performing their
     /// custom dispose logic, e.g.:
@@ -343,8 +371,6 @@ public abstract partial class RazorSlice : IDisposable
             Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
             contentSlice.Dispose();
         }
-        
-        ReturnPooledObjects();
 
         _disposed = true;
 
