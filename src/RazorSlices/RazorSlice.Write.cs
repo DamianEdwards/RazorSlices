@@ -251,6 +251,11 @@ public partial class RazorSlice
         return HtmlString.Empty;
     }
 
+    private static bool IsTaskFromAsyncMethod(Task task)
+    {
+        return task.GetType().FullName is { } fullName && fullName.StartsWith(nameof(System.Runtime.CompilerServices.AsyncTaskMethodBuilder), StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// Writes the specified <see cref="IHtmlContent"/> value to the output.
     /// </summary>
@@ -276,7 +281,13 @@ public partial class RazorSlice
                 // completed (i.e. has gone async) and in that case throw an exception.
                 var actionResult = helperResult.WriteAction(textWriter);
 
-                if (!actionResult.IsCompleted)
+#if DEBUG
+                // Force a small delay when debugging to make it easier to create scenario where method is async but has already completed
+                Thread.Sleep(20);
+#endif
+
+                // If the Task is not completed or it's from a generated async method (i.e. one with an 'await' in it) throw an exception
+                if (!actionResult.IsCompleted || IsTaskFromAsyncMethod(actionResult))
                 {
                     // NOTE: There's still a chance here that the Task run asynchronously but is completed by the time we check it (albeit it's a small window)
                     //       and in that case it's very likely the Utf8PipeTextWriter will fault as it can't handle cross-thread writes (pooled via thread static).
@@ -286,7 +297,7 @@ public partial class RazorSlice
                         ----------------------------
                         !!! Razor Slices Error !!!
                         ----------------------------
-                        The WriteAction of a HelperResult instance has gone async but will be synchronously waited on (sync-over-async).
+                        The WriteAction of a HelperResult instance returned a Task from an async templated Razor delegate.
                         This causes performance and scale issues and is not supported in Razor Slices.
                         This happens when a templated Razor delegate does async work (i.e. has `@await SomethingAsync()` in it).
                         Use async templated methods instead of async templated Razor delegates. They have the advantage of supporting

@@ -12,7 +12,7 @@
         </p>
         :
         @<p>
-            @{await Task.Delay(16);}
+            @{await Task.Yield();}
             Hello from an async templated Razor delegate! The following value was passed in: @item
         </p>;
 }
