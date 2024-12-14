@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace RazorSlices;
@@ -11,6 +12,8 @@ namespace RazorSlices;
 /// </remarks>
 public class SliceDefinition
 {
+    private readonly Type _originalSliceType;
+
     /// <summary>
     /// Creates a new instance of <see cref="SliceDefinition"/>.
     /// </summary>
@@ -22,6 +25,18 @@ public class SliceDefinition
     {
         ArgumentNullException.ThrowIfNull(sliceType);
 
+        HotReloadService.ClearCacheEvent += ReplaceSliceType;
+
+        _originalSliceType = sliceType;
+        Initialize(sliceType);
+        Factory = RazorSliceFactory.GetSliceFactory(this);
+    }
+
+    [MemberNotNull(nameof(SliceType))]
+    private void Initialize(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
+        Type sliceType)
+    {
         SliceType = sliceType;
         HasModel = RazorSliceFactory.IsModelSlice(SliceType);
         ModelProperty = SliceType.GetProperty("Model");
@@ -30,36 +45,50 @@ public class SliceDefinition
         Factory = RazorSliceFactory.GetSliceFactory(this);
     }
 
+    private void ReplaceSliceType(Type[]? changedTypes)
+    {
+        var started = Stopwatch.GetTimestamp();
+
+        if (HotReloadService.TryGetUpdatedType(changedTypes, _originalSliceType, out var updatedSliceType))
+        {
+            Debug.Write($"Hot reloading slice of type '{_originalSliceType.Name}'... ");
+
+            Initialize(updatedSliceType);
+
+            Debug.WriteLine($"done! It took {Stopwatch.GetElapsedTime(started).TotalMilliseconds}ms");
+        }
+    }
+
     /// <summary>
     /// Gets the type of the slice.
     /// </summary>
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
-    public Type SliceType { get; }
+    public Type SliceType { get; private set; }
 
     /// <summary>
     /// Gets whether this slice has a model.
     /// </summary>
-    public bool HasModel { get; }
+    public bool HasModel { get; private set; }
 
     /// <summary>
     /// Gets the information about the model property for the slice if it has a model.
     /// </summary>
-    public PropertyInfo? ModelProperty { get; }
+    public PropertyInfo? ModelProperty { get; private set; }
 
     /// <summary>
     /// Gets the model type for the slice if it has a model.
     /// </summary>
-    public Type? ModelType { get; }
+    public Type? ModelType { get; private set; }
 
     /// <summary>
     /// Gets details of the injectable properties for the slice.
     /// </summary>
-    public (bool Any, PropertyInfo[] Nullable, PropertyInfo[] NonNullable) InjectableProperties { get; }
+    public (bool Any, PropertyInfo[] Nullable, PropertyInfo[] NonNullable) InjectableProperties { get; private set; }
 
     /// <summary>
     /// Gets the factory delegate for creating instances of the slice.
     /// </summary>
-    public Delegate Factory { get; }
+    public Delegate Factory { get; private set; }
 
     /// <summary>
     /// Creates a new instance of the slice this definition represents.
