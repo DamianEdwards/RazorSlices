@@ -45,12 +45,21 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>RazorSlice.Formattables.tt</DependentUpon>
     </Compile>
+    <Compile Update="Utf8TextWriterTemplate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Utf8TextWriterTemplate.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>
     <None Update="RazorSlice.Formattables.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>RazorSlice.Formattables.cs</LastGenOutput>
+    </None>
+    <None Update="Utf8TextWriterTemplate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Utf8TextWriterTemplate.cs</LastGenOutput>
     </None>
   </ItemGroup>
 

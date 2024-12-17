@@ -26,7 +26,7 @@ public abstract partial class RazorSlice : IDisposable
     private PipeWriter? _pipeWriter;
     private TextWriter? _textWriter;
     private IBufferWriter<byte>? _bufferWriter;
-    private Utf8PipeTextWriter? _utf8PipeTextWriter;
+    private Utf8PipeWriterTextWriter? _utf8PipeTextWriter;
     private Utf8BufferTextWriter? _utf8BufferTextWriter;
     private Func<CancellationToken, ValueTask<FlushResult>>? _outputFlush;
     private bool _disposed;
@@ -404,7 +404,7 @@ public abstract partial class RazorSlice : IDisposable
     {
         if (_utf8PipeTextWriter is not null)
         {
-            Utf8PipeTextWriter.Return(_utf8PipeTextWriter);
+            Utf8PipeWriterTextWriter.Return(_utf8PipeTextWriter);
         }
     }
 

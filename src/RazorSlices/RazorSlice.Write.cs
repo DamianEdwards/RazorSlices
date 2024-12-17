@@ -269,7 +269,7 @@ public partial class RazorSlice
         {
             if (_pipeWriter is not null)
             {
-                _utf8PipeTextWriter ??= Utf8PipeTextWriter.Get(_pipeWriter);
+                _utf8PipeTextWriter ??= Utf8PipeWriterTextWriter.Get(_pipeWriter);
                 htmlContent.WriteTo(_utf8PipeTextWriter, _htmlEncoder);
             }
             else if (_textWriter is not null)
