@@ -26,6 +26,7 @@ public abstract partial class RazorSlice : IDisposable
     private HtmlEncoder _htmlEncoder = HtmlEncoder.Default;
     private PipeWriter? _pipeWriter;
     private TextWriter? _textWriter;
+    private bool _initialized;
     private bool _disposed;
 
     /// <summary>
@@ -72,10 +73,7 @@ public abstract partial class RazorSlice : IDisposable
 
     internal Task ExecuteAsyncImpl()
     {
-        if (Initialize is not null)
-        {
-            Initialize(this, _serviceProvider, HttpContext);
-        }
+        EnsureInitialized();
 
         return ExecuteAsync();
     }
@@ -248,6 +246,7 @@ public abstract partial class RazorSlice : IDisposable
 
         if (layoutSlice is IRazorLayoutSlice razorLayoutSlice and RazorSlice)
         {
+            EnsureInitialized();
             razorLayoutSlice.ContentSlice = this;
             CopySliceState(this, (RazorSlice)razorLayoutSlice);
 
@@ -269,6 +268,16 @@ public abstract partial class RazorSlice : IDisposable
     {
         await renderTask;
         return HtmlString.Empty;
+    }
+
+    private void EnsureInitialized()
+    {
+        if (!_initialized && Initialize is not null)
+        {
+            Debug.WriteLine($"Initializing slice of type '{GetType().Name}'. {nameof(_serviceProvider)} is currently {(_serviceProvider is null ? "null" : "not null")}.");
+            Initialize(this, _serviceProvider, HttpContext);
+            _initialized = true;
+        }
     }
 
     private ValueTask<FlushResult> AutoFlush()
