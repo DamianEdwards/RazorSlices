@@ -1,5 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <!-- Reference the props that would be brought in when consuming the RazorSlices package -->
+  <Import Project="..\..\..\src\RazorSlices\build\RazorSlices.props" />
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -16,5 +19,8 @@
     <ProjectReference Include="..\..\..\src\RazorSlices\RazorSlices.csproj" />
     <ProjectReference Include="..\..\..\src\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <!-- Reference the targets that would be brought in when consuming the RazorSlices package -->
+  <Import Project="..\..\..\src\RazorSlices\build\RazorSlices.targets" />
 
 </Project>
