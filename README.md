@@ -56,6 +56,17 @@
     app.MapGet("/hello", () => Results.Extensions.RazorSlice<MyApp.Slices.Hello, DateTime>(DateTime.Now));
     ```
 
+1. **Optional:** By default, all *.cshtml* files in your project are treated as Razor Slices. You can change this by setting the `GenerateRazorSlice` metadata to `false` for `RazorSliceGenerate` items in your project file, e.g.:
+
+    ``` xml
+    <ItemGroup>
+        <!-- Don't treat .cshtml files in Views or Pages directory as Razor Slices -->
+        <RazorSliceGenerate Include="Views\**\*.cshtml;Pages\**\*.cshtml" GenerateRazorSlice="false" />
+    </ItemGroup>
+    ```
+
+    This will prevent the Razor Slices source generator from generating proxy types for *.cshtml* files in the *Views* and *Pages* directories in your project.
+
 ## Installation
 
 ### NuGet Releases

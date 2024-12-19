@@ -1,6 +1,0 @@
-<Project>
-  <ItemGroup>
-    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="GenerateRazorSlice" />
-    <CompilerVisibleItemMetadata Include="RazorSliceGenerate" MetadataName="GenerateRazorSlice" />
-  </ItemGroup>
-</Project>
