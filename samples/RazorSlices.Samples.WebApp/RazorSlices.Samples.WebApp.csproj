@@ -17,9 +17,15 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="GenerateRazorSlice" />
+    <CompilerVisibleItemMetadata Include="RazorSliceGenerate" MetadataName="GenerateRazorSlice" />
+
     <ProjectReference Include="..\..\src\RazorSlices\RazorSlices.csproj" />
     <ProjectReference Include="..\RazorSlices.Samples.RazorClassLibrary\RazorSlices.Samples.RazorClassLibrary.csproj" />
     <ProjectReference Include="..\..\src\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+
+    <RazorSliceGenerate Include="**\*.cshtml" GenerateRazorSlice="true" />
+    <AdditionalFiles Include="@(RazorSliceGenerate)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -29,7 +29,18 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         var texts = context.AdditionalTextsProvider
             .Where(text => text.Path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase)
                            && !text.Path.EndsWith("_ViewImports.cshtml", StringComparison.OrdinalIgnoreCase)
-                           && !text.Path.EndsWith("_ViewStart.cshtml", StringComparison.OrdinalIgnoreCase));
+                           && !text.Path.EndsWith("_ViewStart.cshtml", StringComparison.OrdinalIgnoreCase))
+            .Combine(context.AnalyzerConfigOptionsProvider)
+            .Select((pair, _) =>
+            {
+                var (additionalText, optionsProvider) = pair;
+                var generateSlice = optionsProvider.GetOptions(additionalText).TryGetValue("build_metadata.AdditionalFiles.GenerateRazorSlice", out var generateRazorSliceValue)
+                        && bool.TryParse(generateRazorSliceValue, out var result) && result;
+
+                return (additionalText, generateSlice);
+            })
+            .Where(file => file.generateSlice)
+            .Select((file, _) => file.additionalText);
 
         // (() projectInfo, texts)
         var combined = projectInfo.Combine(texts.Collect());
