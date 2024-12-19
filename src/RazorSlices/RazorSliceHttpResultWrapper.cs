@@ -1,27 +1,28 @@
-﻿using System.Text.Encodings.Web;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace RazorSlices;
 
-internal sealed class RazorSliceHttpResultWrapper(RazorSlice razorSlice) : IRazorSliceHttpResult, IDisposable
+internal sealed class RazorSliceHttpResultWrapper(RazorSlice razorSlice) : RazorSliceHttpResult, IResult
 {
-    public int? StatusCode { get; set; } = StatusCodes.Status200OK;
-
-    int? IStatusCodeHttpResult.StatusCode => StatusCode;
-
-    public string ContentType => "text/html; charset=utf-8";
-
-    public HtmlEncoder? HtmlEncoder { get; set; }
+    public override Task ExecuteAsync() => razorSlice.ExecuteAsync();
 
     /// <inheritdoc />
     Task IResult.ExecuteAsync(HttpContext httpContext)
     {
         razorSlice.HttpContext = httpContext;
-        return RazorSliceHttpResultHelpers.ExecuteAsync(razorSlice, httpContext, HtmlEncoder, StatusCode ?? StatusCodes.Status200OK, ContentType);
+        return RazorSliceHttpResultHelpers.ExecuteAsync(razorSlice, httpContext, HtmlEncoder, StatusCode, ContentType);
     }
+}
 
-    public void Dispose()
+internal sealed class RazorSliceHttpResultWrapper<TModel>(RazorSlice<TModel> razorSlice) : RazorSliceHttpResult<TModel>, IResult
+{
+    public override Task ExecuteAsync() => razorSlice.ExecuteAsync();
+
+    /// <inheritdoc />
+    Task IResult.ExecuteAsync(HttpContext httpContext)
     {
-        razorSlice.Dispose();
+        razorSlice.HttpContext = httpContext;
+        return RazorSliceHttpResultHelpers.ExecuteAsync(razorSlice, httpContext, HtmlEncoder, StatusCode, ContentType);
     }
 }

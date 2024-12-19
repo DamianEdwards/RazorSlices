@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
+using Xunit.Abstractions;
 
 namespace RazorSlices.Samples.WebApp.PublishTests;
 
@@ -13,17 +14,20 @@ public class ProjectBuilder
     private PublishResult? _publishResult = null;
     private long? _appStarted = null;
 
-    public ProjectBuilder(string projectName, PublishScenario scenario)
+    public ProjectBuilder(string projectName, PublishScenario scenario, ITestOutputHelper? testOutput = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(projectName);
 
         ProjectName = projectName;
         PublishScenario = scenario;
+        TestOutput = testOutput;
     }
 
     public string ProjectName { get; }
 
     public PublishScenario PublishScenario { get; }
+
+    public ITestOutputHelper? TestOutput { get; }
 
     public PublishResult? PublishResult => _publishResult;
 
@@ -47,7 +51,7 @@ public class ProjectBuilder
         var runId = Enum.GetName(PublishScenario);
         _publishResult = PublishScenario switch
         {
-            PublishScenario.Default => Publish(ProjectName, framework: framework, runId: runId),
+            PublishScenario.Default => PublishDefault(ProjectName, framework: framework, runId: runId, testOutput: TestOutput),
             PublishScenario.NoAppHost => Publish(ProjectName, framework: framework, useAppHost: false, runId: runId),
             PublishScenario.ReadyToRun => Publish(ProjectName, framework: framework, readyToRun: true, runId: runId),
             PublishScenario.SelfContained => Publish(ProjectName, framework: framework, selfContained: true, trimLevel: TrimLevel.None, runId: runId),
@@ -192,6 +196,21 @@ public class ProjectBuilder
         return [.. result];
     }
 
+    private static PublishResult PublishDefault(
+        string projectName,
+        string configuration = "Release",
+        string framework = "net8.0",
+        string? runId = null,
+        ITestOutputHelper? testOutput = null)
+    {
+        var args = new List<string>
+        {
+            "--runtime", RuntimeInformation.RuntimeIdentifier
+        };
+
+        return PublishImpl(projectName, configuration, framework, args, runId, testOutput);
+    }
+
     private static PublishResult Publish(
         string projectName,
         string configuration = "Release",
@@ -278,7 +297,7 @@ public class ProjectBuilder
         return PublishImpl(projectName, configuration, framework, args, runId);
     }
 
-    private static PublishResult PublishImpl(string projectName, string configuration = "Release", string framework = "net8.0", IEnumerable<string>? args = null, string? runId = null)
+    private static PublishResult PublishImpl(string projectName, string configuration = "Release", string framework = "net8.0", IEnumerable<string>? args = null, string? runId = null, ITestOutputHelper? testOutput = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(projectName);
 
@@ -308,7 +327,9 @@ public class ProjectBuilder
             cmdArgs.AddRange(args);
         }
 
-        var publishOutput = DotNetCli.Publish(cmdArgs);
+        var publishOutput = DotNetCli.Publish(cmdArgs, testOutput);
+
+        testOutput?.WriteLine(publishOutput);
 
         var appFilePath = Path.Join(outputDir, projectName);
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

@@ -56,6 +56,17 @@
     app.MapGet("/hello", () => Results.Extensions.RazorSlice<MyApp.Slices.Hello, DateTime>(DateTime.Now));
     ```
 
+1. **Optional:** By default, all *.cshtml* files in your project are treated as Razor Slices. You can change this by setting the `GenerateRazorSlice` metadata to `false` for `RazorSliceGenerate` items in your project file, e.g.:
+
+    ``` xml
+    <ItemGroup>
+        <!-- Don't treat .cshtml files in Views or Pages directory as Razor Slices -->
+        <RazorSliceGenerate Include="Views\**\*.cshtml;Pages\**\*.cshtml" GenerateRazorSlice="false" />
+    </ItemGroup>
+    ```
+
+    This will prevent the Razor Slices source generator from generating proxy types for *.cshtml* files in the *Views* and *Pages* directories in your project.
+
 ## Installation
 
 ### NuGet Releases
@@ -101,7 +112,7 @@ The library is still new and features are being actively added.
   - [Looping](https://learn.microsoft.com/aspnet/core/mvc/views/razor#looping-for-foreach-while-and-do-while), e.g. `@for`, `@foreach`, `@while`, `@do`
   - [Code blocks](https://learn.microsoft.com/aspnet/core/mvc/views/razor#razor-code-blocks), e.g. `@{ var someThing = someOtherThing; }`
   - [Conditional attribute rendering](https://learn.microsoft.com/aspnet/core/mvc/views/razor#conditional-attribute-rendering)
-  - Functions, e.g.
+  - [Functions](https://learn.microsoft.com/aspnet/core/mvc/views/razor#functions):
 
     ```cshtml
     @functions {
@@ -109,8 +120,8 @@ The library is still new and features are being actively added.
         private int DoAThing() => 123;
     }
     ```
-  
-  - [Templated Razor delegates](https://learn.microsoft.com/aspnet/core/mvc/views/razor#templated-razor-delegates), e.g.
+
+  - [Templated Razor methods](https://learn.microsoft.com/aspnet/core/mvc/views/razor#code-try-48), e.g.
 
     ```cshtml
     @inherits RazorSlice<Todo>
@@ -125,6 +136,22 @@ The library is still new and features are being actively added.
         }
     }
     ```
+
+  - [Templated Razor delegates](https://learn.microsoft.com/aspnet/core/mvc/views/razor#templated-razor-delegates), e.g.
+
+    ```cshtml
+    @inherits RazorSlice<Todo>
+
+    @{
+        var tmpl = @<div>
+            This is a templated Razor delegate. The following value was passed in: @item
+        </div>;
+    }
+
+    @tmpl(DateTime.Now)
+    ```
+
+    **NOTE: Async templated Razor delegates are *NOT* supported and will throw an exception at runtime**
 
 - DI-activated properties via `@inject`
 - Rendering slices from slices (aka partials) via `@(await RenderPartialAsync<MyPartial>())`
@@ -179,7 +206,7 @@ The library is still new and features are being actively added.
       }
       ```
 
-    **Note: The `@section` directive is not supported as it's incompatible with the rendering approach of Razor Slices**
+    **NOTE: The `@section` directive is not supported as it's incompatible with the rendering approach of Razor Slices**
 
 - Asynchronous rendering, i.e. the template can contain `await` statements, e.g. `@await WriteTheThing()`
 - Writing UTF8 `byte[]` values directly to the output

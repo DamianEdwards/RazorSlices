@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Html;
+﻿using System.Diagnostics;
+using Microsoft.AspNetCore.Html;
 
 namespace RazorSlices;
 
@@ -37,7 +38,10 @@ public abstract class RazorLayoutSlice : RazorSlice, IRazorLayoutSlice
 
         if (ContentSlice is not null)
         {
+            Debug.WriteLine($"Rendering section '{sectionName}' on child slice of type '{ContentSlice.GetType().Name}' from layout slice of type '{GetType().Name}'");
+
             var renderTask = ContentSlice.ExecuteSectionAsync(sectionName);
+
             if (!renderTask.HandleSynchronousCompletion())
             {
                 return AwaitRenderTask(renderTask);

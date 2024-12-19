@@ -7,14 +7,14 @@ namespace Microsoft.AspNetCore.Http.HttpResults;
 /// A <see cref="RazorSlice" /> template that is also an <see cref="IResult" /> so it can be directly returned from
 /// a route handler delegate. When executed it will render the template to the response.
 /// </summary>
-public abstract class RazorSliceHttpResult : RazorSlice, IRazorSliceHttpResult
+public abstract class RazorSliceHttpResult : RazorSlice, IResult, IStatusCodeHttpResult, IContentTypeHttpResult
 {
     /// <summary>
     /// Gets or sets the HTTP status code. Defaults to <see cref="StatusCodes.Status200OK"/>
     /// </summary>
     public int StatusCode { get; set; } = StatusCodes.Status200OK;
 
-    int? IRazorSliceHttpResult.StatusCode { get => StatusCode; set => StatusCode = value ?? StatusCodes.Status200OK; }
+    int? IStatusCodeHttpResult.StatusCode { get => StatusCode; }
 
     /// <summary>
     /// Gets the content type: <c>text/html; charset=utf-8</c>

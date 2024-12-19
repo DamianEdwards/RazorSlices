@@ -6,9 +6,17 @@ using RazorSlices.Samples.WebApp.Services;
 using Models = RazorSlices.Samples.WebApp.Models;
 using Slices = RazorSlices.Samples.WebApp.Slices;
 using LibrarySlices = RazorSlices.Samples.RazorClassLibrary.Slices;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
+#if DEBUG
+// Use the default builder during inner-loop so Hot Reload works
 var builder = WebApplication.CreateBuilder(args);
+#else
+// Use the slim builder for Release builds
+var builder = WebApplication.CreateSlimBuilder(args);
+builder.WebHost.UseKestrelHttpsConfiguration();
+#endif
 
 builder.Services.AddWebEncoders();
 builder.Services.AddSingleton<LoremService>();
@@ -21,6 +29,16 @@ var app = builder.Build();
 
 app.UseStatusCodePages();
 app.UseStaticFiles();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+    if (Environment.GetEnvironmentVariable("ENABLE_RESPONSE_BUFFERING") == "true")
+    {
+        // Enable response buffering middleware to allow for response interception during local development
+        app.UseResponseBuffering();
+    }
+}
 
 app.MapGet("/lorem", () => Results.Redirect("/lorem-static"));
 app.MapGet("/lorem-static", () => Results.Extensions.RazorSlice<Slices.Lorem.LoremStatic>());
@@ -42,6 +60,7 @@ app.MapGet("/lorem-stream", async (HttpResponse httpResponse) =>
 });
 app.MapGet("/encoding", () => Results.Extensions.RazorSlice<Slices.Encoding>());
 app.MapGet("/unicode", () => Results.Extensions.RazorSlice<Slices.Unicode>());
+app.MapGet("/templated", (bool async = false) => Results.Extensions.RazorSlice<Slices.Templated, bool>(async));
 app.MapGet("/library", () => Results.Extensions.RazorSlice<LibrarySlices.FromLibrary>());
 app.MapGet("/render-to-string", async () =>
 {
@@ -59,12 +78,12 @@ app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) 
 });
 
 app.MapGet("/", () => Results.Extensions.RazorSlice<Slices.Todos, List<Models.Todo>>(Models.Todos.AllTodos));
-app.MapGet("/{id:int}", (int id) =>
+app.MapGet("/{id:int}", Results<RazorSliceHttpResult<Models.Todo>, NotFound> (int id) =>
 {
     var todo = Models.Todos.AllTodos.FirstOrDefault(t => t.Id == id);
     return todo is not null
-        ? Results.Extensions.RazorSlice<Slices.Todo, Models.Todo>(todo)
-        : Results.NotFound();
+        ? TypedResults.Extensions.RazorSlice<Slices.Todo, Models.Todo>(todo)
+        : TypedResults.NotFound();
 });
 
 

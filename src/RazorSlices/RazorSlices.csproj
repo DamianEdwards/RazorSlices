@@ -25,18 +25,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include=".\build\**\*.*" Pack="true" PackagePath="build" />
     <None Include="..\..\.editorconfig" Link=".editorconfig" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
     <InternalsVisibleTo Include="RazorSlices.Tests" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Reference the source generator just to ensure it's built but don't reference its output -->
-    <ProjectReference Include="..\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="None" ReferenceOutputAssembly="false" Private="true" />
-    <!-- Include source generator assembly in this project's package output -->
-    <None Include="@(ProjectReference->'%(RootDir)%(Directory)\bin\$(Configuration)\netstandard2.0\%(Filename).dll')" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -53,5 +47,17 @@
       <LastGenOutput>RazorSlice.Formattables.cs</LastGenOutput>
     </None>
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference the source generator just to ensure it's built but don't reference its output -->
+    <ProjectReference Include="..\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="SourceGeneratorAssemblyPath" ReferenceOutputAssembly="false" Private="true" />
+  </ItemGroup>
+
+  <!-- Include source generator assembly in this project's package output -->
+  <Target Name="IncludeSourceGeneratorInPackage" AfterTargets="ResolveProjectReferences">
+      <ItemGroup>
+        <None Include="@(SourceGeneratorAssemblyPath -> '%(Identity)')" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+      </ItemGroup>
+  </Target>
 
 </Project>
