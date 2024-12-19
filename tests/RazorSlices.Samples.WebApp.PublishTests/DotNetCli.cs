@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Xunit.Abstractions;
 
 namespace RazorSlices.Samples.WebApp.PublishTests;
 
@@ -13,12 +14,12 @@ public class DotNetCli
         return RunCommand("clean", args);
     }
 
-    public static string Publish(IEnumerable<string> args)
+    public static string Publish(IEnumerable<string> args, ITestOutputHelper? testOutput =  null)
     {
-        return RunCommand("publish", args);
+        return RunCommand("publish", args, testOutput);
     }
 
-    private static string RunCommand(string commandName, IEnumerable<string> args)
+    private static string RunCommand(string commandName, IEnumerable<string> args, ITestOutputHelper? testOutput = null)
     {
         var process = new Process
         {
@@ -38,9 +39,9 @@ public class DotNetCli
         }
 
         var cmdLine = $"{process.StartInfo.FileName} {string.Join(' ', process.StartInfo.ArgumentList)}";
-        Console.WriteLine("Running dotnet CLI with cmd line:");
-        Console.WriteLine(cmdLine);
-        Console.WriteLine();
+        testOutput?.WriteLine("Running dotnet CLI with cmd line:");
+        testOutput?.WriteLine(cmdLine);
+        testOutput?.WriteLine("");
 
         if (!process.Start())
         {

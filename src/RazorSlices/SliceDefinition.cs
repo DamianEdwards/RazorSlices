@@ -12,6 +12,7 @@ namespace RazorSlices;
 /// </remarks>
 public class SliceDefinition
 {
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
     private readonly Type _originalSliceType;
 
     /// <summary>
@@ -25,7 +26,10 @@ public class SliceDefinition
     {
         ArgumentNullException.ThrowIfNull(sliceType);
 
-        HotReloadService.ClearCacheEvent += ReplaceSliceType;
+        if (HotReloadService.IsSupported)
+        {
+            HotReloadService.ClearCacheEvent += ReplaceSliceType;
+        }
 
         _originalSliceType = sliceType;
         Initialize(sliceType);
@@ -45,6 +49,9 @@ public class SliceDefinition
         Factory = RazorSliceFactory.GetSliceFactory(this);
     }
 
+    [UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2067",
+        Justification = "This method should only be called when a type is updated by the Hot Reload service and thus is fine for it to be" +
+                        "trimmed during publish as Hot Reload doesn't run after publish anyway.")]
     private void ReplaceSliceType(Type[]? changedTypes)
     {
         var started = Stopwatch.GetTimestamp();

@@ -1,0 +1,12 @@
+<Project>
+  <ItemGroup>
+    <!-- By default, include all *.cshtml files in the project for Razor Slice generation, except those already added by the project & _ViewImports.cshtml, _ViewStart.cshtml -->
+    <RazorSliceGenerate Include="**\*.cshtml" Exclude="@(RazorSliceGenerate);**\_ViewImports.cshtml;**\_ViewStart.cshtml" GenerateRazorSlice="true" />
+
+    <!-- Make the RazorSliceGenerate items visible to the source generator via AdditionalFiles -->
+    <AdditionalFiles Include="@(RazorSliceGenerate)" />
+
+    <!-- Make the RazorSliceGenerate item type and GenerateRazorSlice item metadata visible to the source generator -->
+    <CompilerVisibleItemMetadata Include="RazorSliceGenerate" MetadataName="GenerateRazorSlice" />
+  </ItemGroup>
+</Project>

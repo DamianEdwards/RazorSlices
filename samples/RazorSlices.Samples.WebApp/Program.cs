@@ -8,7 +8,14 @@ using Slices = RazorSlices.Samples.WebApp.Slices;
 using LibrarySlices = RazorSlices.Samples.RazorClassLibrary.Slices;
 using Microsoft.AspNetCore.Http.HttpResults;
 
+#if DEBUG
+// Use the default builder during inner-loop so Hot Reload works
 var builder = WebApplication.CreateBuilder(args);
+#else
+// Use the slim builder for Release builds
+var builder = WebApplication.CreateSlimBuilder(args);
+builder.WebHost.UseKestrelHttpsConfiguration();
+#endif
 
 builder.Services.AddWebEncoders();
 builder.Services.AddSingleton<LoremService>();
