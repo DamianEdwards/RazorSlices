@@ -23,8 +23,6 @@
     <ProjectReference Include="..\..\src\RazorSlices\RazorSlices.csproj" />
     <ProjectReference Include="..\RazorSlices.Samples.RazorClassLibrary\RazorSlices.Samples.RazorClassLibrary.csproj" />
     <ProjectReference Include="..\..\src\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-
-    <!-- Don't treat .cshtml files in Views or Pages directory as Razor Slices -->
   </ItemGroup>
 
   <ItemGroup>
