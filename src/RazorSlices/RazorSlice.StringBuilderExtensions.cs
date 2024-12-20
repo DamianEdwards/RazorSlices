@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Encodings.Web;
+using Microsoft.Extensions.ObjectPool;
 
 namespace RazorSlices;
 
@@ -8,6 +9,9 @@ namespace RazorSlices;
 /// </summary>
 public static class RazorSliceStringBuilderExtensions
 {
+    // Pooled builders are initialized with a capacity of 256 & only kept if their capacity <=4096 chars when returned to the pool
+    private static readonly ObjectPool<StringBuilder> _stringBuilderPool = new DefaultObjectPoolProvider().CreateStringBuilderPool(256, 4 * 1024);
+
     /// <summary>
     /// Renders the template to the specified <see cref="StringBuilder"/>.
     /// </summary>
@@ -31,7 +35,7 @@ public static class RazorSliceStringBuilderExtensions
     /// <returns>The template rendered to a <see cref="string"/>.</returns>
     public static ValueTask<string> RenderAsync(this RazorSlice slice, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
-        var sb = new StringBuilder();
+        var sb = _stringBuilderPool.Get();
         var task = slice.RenderAsync(sb, htmlEncoder, cancellationToken);
 
         if (task.IsCompletedSuccessfully)
@@ -39,7 +43,9 @@ public static class RazorSliceStringBuilderExtensions
 #pragma warning disable CA1849 // Call async methods when in an async method: task is already completed
             task.GetAwaiter().GetResult();
 #pragma warning restore CA1849
-            return ValueTask.FromResult(sb.ToString());
+            var result = sb.ToString();
+            _stringBuilderPool.Return(sb);
+            return ValueTask.FromResult(result);
         }
 
         return AwaitRenderTask(task, sb);
@@ -48,6 +54,10 @@ public static class RazorSliceStringBuilderExtensions
     private static async ValueTask<string> AwaitRenderTask(ValueTask task, StringBuilder sb)
     {
         await task;
-        return sb.ToString();
+
+        var result = sb.ToString();
+        _stringBuilderPool.Return(sb);
+
+        return result;
     }
 }
