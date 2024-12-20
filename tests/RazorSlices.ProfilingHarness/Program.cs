@@ -24,7 +24,7 @@ for (int i = 0; i < iterations; i++)
 
 static ValueTask<string> RenderSliceToString()
 {
-    return LocalVersion.RenderHello();
+    return LocalVersion.RenderReusableHello();
 }
 
 static async ValueTask RenderSlice(Pipe pipe)

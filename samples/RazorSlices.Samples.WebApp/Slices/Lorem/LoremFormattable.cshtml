@@ -1,5 +1,6 @@
 ﻿@inherits RazorSliceHttpResult<LoremParams>
 @implements IUsesLayout<_LoremLayout, LayoutModel>
+@implements IRazorReusableSlice
 
 @{
     var content = new LoremContent { ParagraphCount = Model.ParagraphCount };

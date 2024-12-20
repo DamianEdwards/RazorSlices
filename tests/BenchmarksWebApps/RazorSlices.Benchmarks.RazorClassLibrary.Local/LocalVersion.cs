@@ -15,4 +15,10 @@ public static class LocalVersion
         var slice = Hello.Create();
         return slice.RenderAsync();
     }
+
+    public static ValueTask<string> RenderReusableHello()
+    {
+        var slice = ReusableHello.Create();
+        return slice.RenderAsync();
+    }
 }

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
@@ -14,6 +15,8 @@ public class SliceDefinition
 {
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
     private readonly Type _originalSliceType;
+
+    private ConcurrentQueue<RazorSlice>? _reusableInstances;
 
     /// <summary>
     /// Creates a new instance of <see cref="SliceDefinition"/>.
@@ -42,6 +45,7 @@ public class SliceDefinition
         Type sliceType)
     {
         SliceType = sliceType;
+        IsReusable = sliceType.IsAssignableTo(typeof(IRazorReusableSlice));
         HasModel = RazorSliceFactory.IsModelSlice(SliceType);
         ModelProperty = SliceType.GetProperty("Model");
         ModelType = ModelProperty?.PropertyType;
@@ -60,6 +64,7 @@ public class SliceDefinition
         {
             Debug.Write($"Hot reloading slice of type '{_originalSliceType.Name}'... ");
 
+            _reusableInstances = null;
             Initialize(updatedSliceType);
 
             Debug.WriteLine($"done! It took {Stopwatch.GetElapsedTime(started).TotalMilliseconds}ms");
@@ -98,13 +103,18 @@ public class SliceDefinition
     public Delegate Factory { get; private set; }
 
     /// <summary>
+    /// 
+    /// </summary>
+    public bool IsReusable { get; private set; }
+
+    /// <summary>
     /// Creates a new instance of the slice this definition represents.
     /// </summary>
     /// <returns>The slice instance.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the slice requires a model.</exception>
     public RazorSlice CreateSlice() => HasModel
         ? throw new InvalidOperationException($"Slice {SliceType.Name} requires a model of type {ModelType?.Name}. Call Create<TModel>(TModel model) instead.")
-        : ((Func<RazorSlice>)Factory)();
+        : IsReusable ? GetReusableInstance() : ((Func<RazorSlice>)Factory)();
 
     /// <summary>
     /// Creates a new instance of the slice this definition represents with the specified model.
@@ -118,5 +128,59 @@ public class SliceDefinition
             Cannot use model of type {typeof(TModel).Name} with slice {SliceType.Name}.
             {(HasModel ? $"Ensure the model is assignable to {ModelType!.Name}" : "It is not a strongly-typed slice.")}
             """)
-        : (RazorSlice<TModel>)((Func<object, RazorSlice>)Factory)(model!);
+        : IsReusable ? GetReusableInstance(model) : (RazorSlice<TModel>)((Func<object, RazorSlice>)Factory)(model!);
+
+    private RazorSlice GetReusableInstance()
+    {
+        Debug.Assert(IsReusable);
+
+        _reusableInstances ??= new();
+
+        if (_reusableInstances.TryDequeue(out var instance))
+        {
+            return instance;
+        }
+
+        var slice = ((Func<RazorSlice>)Factory)();
+
+        Debug.Assert(slice is IRazorReusableSlice);
+        slice.ReturnAction = ReturnReusableInstance;
+
+        return slice;
+    }
+
+    private RazorSlice<TModel> GetReusableInstance<TModel>(TModel model)
+    {
+        Debug.Assert(IsReusable);
+
+        _reusableInstances ??= new();
+
+        if (_reusableInstances.TryDequeue(out var instance))
+        {
+            Debug.WriteLine($"Re-using slice instance of type '{SliceType}'");
+            return (RazorSlice<TModel>)instance;
+        }
+
+        var slice = (RazorSlice<TModel>)((Func<object, RazorSlice>)Factory)(model!);
+
+        Debug.Assert(slice is IRazorReusableSlice);
+        slice.ReturnAction = ReturnReusableInstance;
+
+        return slice;
+    }
+
+    internal void ReturnReusableInstance(RazorSlice slice)
+    {
+        Debug.Assert(IsReusable);
+        Debug.Assert(slice is IRazorReusableSlice);
+
+        if (((IRazorReusableSlice)slice).TryReset())
+        {
+            Debug.WriteLine($"Will reuse slice instance of type '{SliceType}' as the call to TryReset() returned true");
+            _reusableInstances?.Enqueue(slice);
+            return;
+        }
+
+        Debug.WriteLine($"Will not reuse slice instance of type '{SliceType}' as the call to TryReset() returned false");
+    }
 }
