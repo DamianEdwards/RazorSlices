@@ -403,9 +403,6 @@ public abstract partial class RazorSlice : IDisposable
         {
             Debug.WriteLine($"Resetting state of reusable slice of type '{GetType().Name}'");
 
-            // Allow ths slice to reset its own state
-            reusableSlice.TryReset();
-
             // Clear out our state
             _textWriter = null;
             _pipeWriter = null;
