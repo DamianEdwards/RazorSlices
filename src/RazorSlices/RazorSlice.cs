@@ -399,7 +399,7 @@ public abstract partial class RazorSlice : IDisposable
         }
 
         var reusableSlice = this as IRazorReusableSlice;
-        if (reusableSlice is { })
+        if (reusableSlice is not null)
         {
             Debug.WriteLine($"Resetting state of reusable slice of type '{GetType().Name}'");
 
@@ -415,6 +415,7 @@ public abstract partial class RazorSlice : IDisposable
             _htmlEncoder = HtmlEncoder.Default;
             HttpContext = null;
             CancellationToken = default;
+            // Model gets set by SliceDefinition.CreateSlice(model)
         }
         else if (_disposed)
         {
@@ -426,7 +427,7 @@ public abstract partial class RazorSlice : IDisposable
             Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
             contentSlice.Dispose();
 
-            if (reusableSlice is { })
+            if (reusableSlice is not null)
             {
                 layout.ContentSlice = null;
             }

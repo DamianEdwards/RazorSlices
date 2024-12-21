@@ -152,12 +152,16 @@ public class SliceDefinition
     private RazorSlice<TModel> GetReusableInstance<TModel>(TModel model)
     {
         Debug.Assert(IsReusable);
+        Debug.Assert(HasModel);
 
         _reusableInstances ??= new();
 
         if (_reusableInstances.TryDequeue(out var instance))
         {
             Debug.WriteLine($"Re-using slice instance of type '{SliceType}'");
+
+            var modelSlice = (RazorSlice<TModel>)instance;
+            modelSlice.Model = model;
             return (RazorSlice<TModel>)instance;
         }
 
