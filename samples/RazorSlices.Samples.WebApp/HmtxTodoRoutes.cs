@@ -1,10 +1,6 @@
 using RazorSlices.Samples.WebApp.Models;
 using Slices = RazorSlices.Samples.WebApp.Slices;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Antiforgery;
-using System.Collections.Generic;
-using System.Linq;
 
 public static class HtmxTodoRoutes
 {

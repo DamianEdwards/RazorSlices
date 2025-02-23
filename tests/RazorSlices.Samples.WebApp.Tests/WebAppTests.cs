@@ -6,24 +6,24 @@ namespace RazorSlices.Samples.WebApp.Tests;
 
 public class WebAppTests
 {
-    [Theory]
-    [MemberData(nameof(EndpointDetails))]
-    public async Task WafHosted_EndpointsRenderOK(string path, string shouldContain, string expectedMediaType)
-    {
-        var waf = new WebApplicationFactory<Program>();
-        using var httpClient = waf.CreateClient();
+  [Theory]
+  [MemberData(nameof(EndpointDetails))]
+  public async Task WafHosted_EndpointsRenderOK(string path, string shouldContain, string expectedMediaType)
+  {
+    var waf = new WebApplicationFactory<Program>();
+    using var httpClient = waf.CreateClient();
 
-        var response = await httpClient.GetAsync(path);
+    var response = await httpClient.GetAsync(path);
 
-        response.EnsureSuccessStatusCode();
+    response.EnsureSuccessStatusCode();
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(expectedMediaType, response.Content.Headers.ContentType?.MediaType);
-        Assert.Contains(shouldContain, await response.Content.ReadAsStringAsync());
-    }
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(expectedMediaType, response.Content.Headers.ContentType?.MediaType);
+    Assert.Contains(shouldContain, await response.Content.ReadAsStringAsync());
+  }
 
-    public static object[][] EndpointDetails => [
-        ["/", "Todos", MediaTypeNames.Text.Html],
+  public static object[][] EndpointDetails => [
+      ["/", "Todos", MediaTypeNames.Text.Html],
         ["/1", "Wash the dishes", MediaTypeNames.Text.Html],
         ["/encoding", "{&#x27;antiForgery&#x27;", MediaTypeNames.Text.Html],
         ["/unicode", "🐻", MediaTypeNames.Text.Html],
@@ -39,6 +39,8 @@ public class WebAppTests
         ["/lorem-htmlcontent", "Lorem Ipsum (IHtmlContent)", MediaTypeNames.Text.Html],
         ["/lorem-htmlcontent?encode=true", "&lt;p&gt;", MediaTypeNames.Text.Html],
         ["/lorem-injectableproperties", "Lorem Ipsum (Dependency-injected properties)", MediaTypeNames.Text.Html],
-        ["/lorem-stream", "Lorem Ipsum (Static)", MediaTypeNames.Text.Html]
-    ];
+        ["/lorem-stream", "Lorem Ipsum (Static)", MediaTypeNames.Text.Html],
+        ["/htmx-todo", "Todos using HTMX", MediaTypeNames.Text.Html]
+
+  ];
 }
