@@ -1,5 +1,6 @@
 ﻿@inherits RazorSliceHttpResult<List<Models.Todo>>
 @implements IUsesLayout<_LayoutHtmx, LayoutModel>
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
 <h1 class="mt-5">Todos</h1>
 <form
@@ -7,12 +8,14 @@
     hx-target="#todo-table"
     hx-on::after-request="this.reset()"
 >
-    <input type="text" name="title" />
-    <button>Add</button>
+
+  <input type="hidden" name="__RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
+  <input type="text" name="title" />
+  <button>Add</button>
 </form>
 
 @await RenderPartialAsync(_Todos.Create(Model))
 
 @functions {
-    public LayoutModel LayoutModel => new() { Title = $"Todos ({Model.Count})" };
+  public LayoutModel LayoutModel => new() { Title = $"Todos ({Model.Count})" };
 }
