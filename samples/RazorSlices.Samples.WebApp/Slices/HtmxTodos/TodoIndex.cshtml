@@ -8,8 +8,7 @@
     hx-target="#todo-table"
     hx-on::after-request="this.reset()"
 >
-
-  <input type="hidden" name="__RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
+  <input type="hidden" name="__RequestVerificationToken" value="@(HttpContext != null ? Antiforgery.GetAndStoreTokens(HttpContext).RequestToken : string.Empty)" />
   <input type="text" name="title" />
   <button>Add</button>
 </form>

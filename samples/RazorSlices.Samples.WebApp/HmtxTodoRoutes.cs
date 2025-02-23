@@ -20,38 +20,41 @@ public static class HtmxTodoRoutes
 
   private static IResult HandleGetIndex()
   {
-    return Results.Extensions.RazorSlice<Slices.HtmxTodos.TodoIndex, List<Todo>>(Todos.AllTodos);
+    var todos = Todos.AllTodos.Values.ToList();
+    return Results.Extensions.RazorSlice<Slices.HtmxTodos.TodoIndex, List<Todo>>(todos);
   }
 
   private static IResult HandlePostIndex([FromForm] string title)
   {
-    var maxId = Todos.AllTodos.Select(x => x.Id).DefaultIfEmpty(0).Max();
-    Todos.AllTodos.Add(new Todo { Id = maxId + 1, Title = title });
-    return Results.Extensions.RazorSlice<Slices.HtmxTodos._Todos, List<Todo>>(Todos.AllTodos);
+    var maxId = Todos.AllTodos.Keys.DefaultIfEmpty(0).Max();
+    var newTodo = new Todo { Id = maxId + 1, Title = title };
+    Todos.AllTodos.TryAdd(newTodo.Id, newTodo);
+
+    var todos = Todos.AllTodos.Values.ToList();
+    return Results.Extensions.RazorSlice<Slices.HtmxTodos._Todos, List<Todo>>(todos);
   }
 
   private static IResult HandleToggleComplete(int id)
   {
-    var todo = Todos.AllTodos.FirstOrDefault(t => t.Id == id);
-    if (todo is null)
+    if (Todos.AllTodos.TryGetValue(id, out var todo))
     {
-      return Results.NotFound();
+      todo.IsComplete = !todo.IsComplete;
+
+      var todos = Todos.AllTodos.Values.ToList();
+      return Results.Extensions.RazorSlice<Slices.HtmxTodos._Todos, List<Todo>>(todos);
     }
 
-    todo.IsComplete = !todo.IsComplete;
-    return Results.Extensions.RazorSlice<Slices.HtmxTodos._Todos, List<Todo>>(Todos.AllTodos);
+    return Results.NotFound();
   }
 
   private static IResult HandleDeleteTodo(int id)
   {
-    var todo = Todos.AllTodos.FirstOrDefault(t => t.Id == id);
-    if (todo is null)
+    if (Todos.AllTodos.TryRemove(id, out var _))
     {
-      return Results.NotFound();
+      var todos = Todos.AllTodos.Values.ToList();
+      return Results.Extensions.RazorSlice<Slices.HtmxTodos._Todos, List<Todo>>(todos);
     }
-
-    Todos.AllTodos.Remove(todo);
-    return Results.Extensions.RazorSlice<Slices.HtmxTodos._Todos, List<Todo>>(Todos.AllTodos);
+    return Results.NotFound();
   }
 
 }

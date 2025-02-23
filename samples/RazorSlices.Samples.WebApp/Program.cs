@@ -78,13 +78,16 @@ app.MapGet("/render-to-stringbuilder", async (IServiceProvider serviceProvider) 
   return Results.Ok(new ResultDto(stringBuilder.ToString()));
 });
 
-app.MapGet("/", () => Results.Extensions.RazorSlice<Slices.Todos, List<Models.Todo>>(Models.Todos.AllTodos));
+app.MapGet("/", () =>
+{
+  var todos = Models.Todos.AllTodos.Values.ToList();
+  return Results.Extensions.RazorSlice<Slices.Todos, List<Models.Todo>>(todos);
+});
 app.MapGet("/{id:int}", Results<RazorSliceHttpResult<Models.Todo>, NotFound> (int id) =>
 {
-  var todo = Models.Todos.AllTodos.FirstOrDefault(t => t.Id == id);
-  return todo is not null
-      ? TypedResults.Extensions.RazorSlice<Slices.Todo, Models.Todo>(todo)
-      : TypedResults.NotFound();
+  return Models.Todos.AllTodos.TryGetValue(id, out var todo)
+        ? TypedResults.Extensions.RazorSlice<Slices.Todo, Models.Todo>(todo)
+        : TypedResults.NotFound();
 });
 
 
