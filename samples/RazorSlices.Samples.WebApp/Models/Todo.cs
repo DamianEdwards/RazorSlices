@@ -5,33 +5,33 @@ namespace RazorSlices.Samples.WebApp.Models;
 
 public class Todo
 {
-  public int Id { get; set; }
+    public int Id { get; set; }
 
-  private byte[] _titleUtf8 = [];
-  public byte[] TitleUtf8
-  {
-    get => _titleUtf8;
-    set
+    private byte[] _titleUtf8 = [];
+    public byte[] TitleUtf8
     {
-      _titleUtf8 = value;
-      _title = null!; // _title will be set in the getter of its property
+        get => _titleUtf8;
+        set
+        {
+            _titleUtf8 = value;
+            _title = null!; // _title will be set in the getter of its property
+        }
     }
-  }
 
-  private string? _title;
-  public string Title
-  {
-    get => _title ??= _titleUtf8 is not null ? Encoding.UTF8.GetString(_titleUtf8) : string.Empty;
-    set
+    private string? _title;
+    public string Title
     {
-      _titleUtf8 = value is not null ? Encoding.UTF8.GetBytes(value) : [];
-      _title = value;
+        get => _title ??= _titleUtf8 is not null ? Encoding.UTF8.GetString(_titleUtf8) : string.Empty;
+        set
+        {
+            _titleUtf8 = value is not null ? Encoding.UTF8.GetBytes(value) : [];
+            _title = value;
+        }
     }
-  }
 
-  public DateOnly? DueBy { get; set; }
+    public DateOnly? DueBy { get; set; }
 
-  public bool IsComplete { get; set; }
+    public bool IsComplete { get; set; }
 }
 
 internal static class Todos
