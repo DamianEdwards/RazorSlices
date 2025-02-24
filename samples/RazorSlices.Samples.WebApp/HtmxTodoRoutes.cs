@@ -1,6 +1,7 @@
 using RazorSlices.Samples.WebApp.Models;
 using Slices = RazorSlices.Samples.WebApp.Slices;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Antiforgery;
 
 public static class HtmxTodoRoutes
 {
@@ -9,15 +10,21 @@ public static class HtmxTodoRoutes
     var htmxTodos = app.MapGroup("/htmx-todo");
 
     htmxTodos.MapGet("/", HandleGetIndex);
+    htmxTodos.MapGet("/create", HandleGetCreateForm);
     htmxTodos.MapPost("/", HandlePostIndex);
     htmxTodos.MapPut("/{id:int}/toggle-complete", HandleToggleComplete);
     htmxTodos.MapDelete("/{id:int}", HandleDeleteTodo);
   }
 
   private static IResult HandleGetIndex()
-  {g
+  {
     var todos = Todos.AllTodos.Values.ToList();
     return Results.Extensions.RazorSlice<Slices.HtmxTodos.TodoIndex, List<Todo>>(todos);
+  }
+  private static IResult HandleGetCreateForm(HttpContext context, IAntiforgery antiforgery)
+  {
+    var token = antiforgery.GetAndStoreTokens(context);
+    return Results.Extensions.RazorSlice<Slices.HtmxTodos._TodoCreateForm, AntiforgeryTokenSet>(token);
   }
 
   private static IResult HandlePostIndex([FromForm] string title)

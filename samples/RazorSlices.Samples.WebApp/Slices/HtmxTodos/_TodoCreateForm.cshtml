@@ -1,0 +1,8 @@
+@using Microsoft.AspNetCore.Antiforgery;
+@inherits RazorSliceHttpResult<AntiforgeryTokenSet>
+
+<form hx-post="/htmx-todo" hx-target="#todo-table" hx-on::after-request="this.reset()">
+  <input type="hidden" name="@Model.FormFieldName" value="@Model.RequestToken" />
+  <input type="text" name="title" />
+  <button>Add</button>
+</form>
