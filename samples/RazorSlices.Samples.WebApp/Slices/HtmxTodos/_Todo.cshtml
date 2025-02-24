@@ -1,6 +1,6 @@
 ﻿@inherits RazorSlice<Models.Todo>
 
-<tr class="@(Model.IsComplete ? "complete" : null)">
+<tr hx-target="this" class="@(Model.IsComplete ? "complete" : null)">
     <td>@Model.Id</td>
     <td>@Model.Title</td>
     <td>@Model.DueBy</td>
@@ -8,6 +8,7 @@
         <div class="form-check form-switch">
             <input
                 hx-put="/htmx-todo/@Model.Id/toggle-complete"
+                hx-swap="outerHTML"
                 class="form-check-input"
                 type="checkbox"
                 checked=@(Model.IsComplete ? "checked" : null)

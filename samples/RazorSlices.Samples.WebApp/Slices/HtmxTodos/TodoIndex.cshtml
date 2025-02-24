@@ -2,7 +2,11 @@
 @implements IUsesLayout<_LayoutHtmx, LayoutModel>
 
 <h1 class="mt-5">Todos using HTMX</h1>
-<div id="todo-form" hx-trigger="load" hx-get="/htmx-todo/create" hx-swap="innerHtml">
+<div
+  id="todo-form"
+  hx-trigger="load"
+  hx-get="/htmx-todo/create"
+  hx-swap="innerHtml">
 </div>
 
 @await RenderPartialAsync(_Todos.Create(Model))

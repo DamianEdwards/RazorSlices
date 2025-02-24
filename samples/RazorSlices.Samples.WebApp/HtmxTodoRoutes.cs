@@ -33,8 +33,7 @@ public static class HtmxTodoRoutes
     var newTodo = new Todo { Id = maxId + 1, Title = title };
     Todos.AllTodos.TryAdd(newTodo.Id, newTodo);
 
-    var todos = Todos.AllTodos.Values.ToList();
-    return Results.Extensions.RazorSlice<Slices.HtmxTodos._Todos, List<Todo>>(todos);
+    return Results.Extensions.RazorSlice<Slices.HtmxTodos._Todo, Todo>(newTodo);
   }
 
   private static IResult HandleToggleComplete(int id)
@@ -43,8 +42,7 @@ public static class HtmxTodoRoutes
     {
       todo.IsComplete = !todo.IsComplete;
 
-      var todos = Todos.AllTodos.Values.ToList();
-      return Results.Extensions.RazorSlice<Slices.HtmxTodos._Todos, List<Todo>>(todos);
+      return Results.Extensions.RazorSlice<Slices.HtmxTodos._Todo, Todo>(todo);
     }
 
     return Results.NotFound();
@@ -54,8 +52,7 @@ public static class HtmxTodoRoutes
   {
     if (Todos.AllTodos.TryRemove(id, out var _))
     {
-      var todos = Todos.AllTodos.Values.ToList();
-      return Results.Extensions.RazorSlice<Slices.HtmxTodos._Todos, List<Todo>>(todos);
+      return Results.Ok();
     }
     return Results.NotFound();
   }
