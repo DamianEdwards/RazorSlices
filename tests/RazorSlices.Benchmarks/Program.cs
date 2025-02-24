@@ -12,7 +12,33 @@ using RazorSlices.Benchmarks.RazorClassLibrary.PreviousVersion;
 using RazorSlices.Benchmarks.WebApp;
 
 //BenchmarkRunner.Run<RazorSlicesBenchmarks>();
-BenchmarkRunner.Run<RazorSlicesAppBenchmarks>();
+BenchmarkRunner.Run<RazorSlicesStringRendering>();
+//BenchmarkRunner.Run<RazorSlicesAppBenchmarks>();
+
+[MemoryDiagnoser, Config(typeof(Config))]
+public class RazorSlicesStringRendering
+{
+    private readonly int _iterations = 1000;
+
+    [Benchmark(Baseline = true)]
+    public async ValueTask<long> RazorSlicesHello()
+    {
+        long totalLength = 0;
+        for (int i = 0; i < _iterations; i++)
+        {
+            totalLength += (await LocalVersion.RenderHello()).Length;
+        }
+        return totalLength;
+    }
+
+    private class Config : ManualConfig
+    {
+        public Config()
+        {
+            AddJob(Job.Default.WithCustomBuildConfiguration("Benchmarks").WithId("Benchmarks"));
+        }
+    }
+}
 
 [MemoryDiagnoser, Config(typeof(Config))]
 public class RazorSlicesBenchmarks

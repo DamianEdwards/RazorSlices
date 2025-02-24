@@ -9,4 +9,10 @@ public static class LocalVersion
         var slice = Hello.Create();
         return slice.RenderAsync(pipeWriter);
     }
+
+    public static ValueTask<string> RenderHello()
+    {
+        var slice = Hello.Create();
+        return slice.RenderAsync();
+    }
 }
