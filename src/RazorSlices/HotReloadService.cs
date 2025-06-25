@@ -14,7 +14,7 @@ namespace RazorSlices;
 /// </summary>
 internal sealed class HotReloadService
 {
-    public static readonly bool IsSupported = bool.TryParse(AppContext.GetData("System.StartupHookProvider.IsSupported")?.ToString() ?? "false", out var value) && value;
+    public static readonly bool IsSupported = MetadataUpdater.IsSupported;
 
     public static event Action<Type[]?>? ClearCacheEvent;
     public static event Action<Type[]?>? UpdateApplicationEvent;
