@@ -39,6 +39,7 @@ public class WebAppTests
         ["/lorem-htmlcontent", "Lorem Ipsum (IHtmlContent)", MediaTypeNames.Text.Html],
         ["/lorem-htmlcontent?encode=true", "&lt;p&gt;", MediaTypeNames.Text.Html],
         ["/lorem-injectableproperties", "Lorem Ipsum (Dependency-injected properties)", MediaTypeNames.Text.Html],
-        ["/lorem-stream", "Lorem Ipsum (Static)", MediaTypeNames.Text.Html]
+        ["/lorem-stream", "Lorem Ipsum (Static)", MediaTypeNames.Text.Html],
+        ["/htmx-todo", "Todos using HTMX", MediaTypeNames.Text.Html]
     ];
 }
