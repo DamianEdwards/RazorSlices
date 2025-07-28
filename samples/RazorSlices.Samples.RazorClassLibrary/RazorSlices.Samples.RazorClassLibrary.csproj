@@ -9,6 +9,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <RazorSliceProxiesSealed>false</RazorSliceProxiesSealed>
   </PropertyGroup>
 
   <ItemGroup>
