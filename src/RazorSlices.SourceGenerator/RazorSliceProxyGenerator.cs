@@ -22,9 +22,13 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         var projectDirectory = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
             options.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var projectDir) ? projectDir : null);
 
-        // (Left.Left          , (Left.Right.Left     , Left.Right.Right.......))
-        // (string assemblyName, (string rootNamespace, string projectDirectory))
-        var projectInfo = assemblyName.Combine(rootNamespace.Combine(projectDirectory));
+        var sealSliceProxies = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
+            options.GlobalOptions.TryGetValue("build_property.RazorSliceProxiesSealed", out var sealSliceProxiesValue)
+                && bool.TryParse(sealSliceProxiesValue, out var result) && result);
+
+        // (Left.Left          , (Left.Right.Left.Left     , (Left.Right.Right.Left, Left.Right.Right.Right))
+        // (string assemblyName, (string rootNamespace     , (string projectDirectory, bool sealSliceProxies))
+        var projectInfo = assemblyName.Combine(rootNamespace.Combine(projectDirectory.Combine(sealSliceProxies)));
 
         var texts = context.AdditionalTextsProvider
             .Where(text => text.Path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
@@ -33,8 +37,8 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             {
                 var (additionalText, optionsProvider) = pair;
                 var textOptions = optionsProvider.GetOptions(additionalText);
-                var generateSlice = textOptions.TryGetValue("build_metadata.RazorSliceGenerate.GenerateRazorSlice", out var generateRazorSliceValue)
-                        && bool.TryParse(generateRazorSliceValue, out var result) && result;
+                var generateSlice = textOptions.TryGetValue("build_metadata.RazorGenerate.GenerateRazorSlice", out var generateRazorSliceValue)
+                                        && bool.TryParse(generateRazorSliceValue, out var result) && result;
 
                 return (additionalText, generateSlice);
             })
@@ -44,10 +48,10 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         // (() projectInfo, texts)
         var combined = projectInfo.Combine(texts.Collect());
         
-        context.RegisterSourceOutput(combined, static (spc, pair) => Execute(spc, pair.Left.Left, pair.Left.Right.Left, pair.Left.Right.Right, pair.Right));
+        context.RegisterSourceOutput(combined, static (spc, pair) => Execute(spc, pair.Left.Left, pair.Left.Right.Left, pair.Left.Right.Right.Left, pair.Left.Right.Right.Right, pair.Right));
     }
 
-    private static void Execute(SourceProductionContext context, string? assemblyName, string? rootNamespace, string? projectDirectory, ImmutableArray<AdditionalText> texts)
+    private static void Execute(SourceProductionContext context, string? assemblyName, string? rootNamespace, string? projectDirectory, bool sealSliceProxies, ImmutableArray<AdditionalText> texts)
     {
         if (string.IsNullOrEmpty(rootNamespace) || string.IsNullOrEmpty(projectDirectory))
         {
@@ -130,11 +134,13 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                     ? className
                     : $"{subNamespaceAsClassName}_{className}";
 
+                var sealedValue = sealSliceProxies ? "sealed " : "partial ";
+
                 codeBuilder.AppendLine($$"""
                     /// <summary>
                     /// Static proxy for the Razor Slice defined in <c>{{relativeFilePath}}</c>.
                     /// </summary>
-                    public sealed class {{className}} : global::RazorSlices.IRazorSliceProxy
+                    public {{ sealedValue }}class {{className}} : global::RazorSlices.IRazorSliceProxy
                     {
                         [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, TypeName, "{{assemblyName}}")]
                         private const string TypeName = "AspNetCoreGeneratedDocument.{{generatedTypeName}}, {{assemblyName}}";

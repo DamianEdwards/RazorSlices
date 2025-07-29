@@ -56,16 +56,19 @@
     app.MapGet("/hello", () => Results.Extensions.RazorSlice<MyApp.Slices.Hello, DateTime>(DateTime.Now));
     ```
 
-1. **Optional:** By default, all *.cshtml* files in your project are treated as Razor Slices. You can change this by setting the `GenerateRazorSlice` metadata to `false` for `RazorSliceGenerate` items in your project file, e.g.:
+1. **Optional:** By default, all *.cshtml* files in your project are treated as Razor Slices (excluding *_ViewImports.cshtml* and *_ViewStart.cshtml_*). You can change this by setting the `EnableDefaultRazorSlices` property to `false` and the `GenerateRazorSlice` metadata property of the desired `RazorGenerate` items to `true` in your project file, e.g.:
 
     ``` xml
+    <PropertyGroup>
+      <EnableDefaultRazorSlices>false</EnableDefaultRazorSlices>
+    </PropertyGroup>
     <ItemGroup>
-        <!-- Don't treat .cshtml files in Views or Pages directory as Razor Slices -->
-        <RazorSliceGenerate Include="Views\**\*.cshtml;Pages\**\*.cshtml" GenerateRazorSlice="false" />
+      <!-- Only treat .cshtml files in Slices directory as Razor Slices -->
+      <RazorGenerate Include="Slices\**\*.cshtml" GenerateRazorSlice="true" />
     </ItemGroup>
     ```
 
-    This will prevent the Razor Slices source generator from generating proxy types for *.cshtml* files in the *Views* and *Pages* directories in your project.
+    This will configure the Razor Slices source generator to only generate proxy types for *.cshtml* files in the *Slices* directory in your project.
 
 ## Installation
 
@@ -213,6 +216,12 @@ The library is still new and features are being actively added.
 - Rendering directly to `PipeWriter`, `Stream`, `TextWriter`, `StringBuilder`, and `string` outputs, including optimizations for not boxing struct values, zero-allocation rendering of primitives like numbers, etc. (rather than just calling `ToString()` on everything)
 - Return a slice instance directly as an `IResult` in minimal APIs via `@inherits RazorSliceHttpResult` and `Results.Extensions.RazorSlice("/Slices/Hello.cshtml")`
 - Full support for trimming and native AOT when used in conjunction with ASP.NET Core Minimal APIs
+- Generated Razor Slice proxy types are `public sealed` by default. To unseal them and make them `public partial` for your own customization, set the `RazorSliceProxiesSealed` property to `false` in your project file, e.g.:
+    ``` xml
+    <PropertyGroup>
+      <RazorSliceProxiesSealed>false</RazorSliceProxiesSealed>
+    </PropertyGroup>
+    ```
 
 ### Interested in supporting but not sure yet
 

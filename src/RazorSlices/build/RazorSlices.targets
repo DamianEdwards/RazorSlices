@@ -1,12 +1,24 @@
 <Project>
-  <ItemGroup>
-    <!-- By default, include all *.cshtml files in the project for Razor Slice generation, except those already added by the project & _ViewImports.cshtml, _ViewStart.cshtml -->
-    <RazorSliceGenerate Include="**\*.cshtml" Exclude="@(RazorSliceGenerate);**\_ViewImports.cshtml;**\_ViewStart.cshtml" GenerateRazorSlice="true" />
+  <Target Name="_CheckRazorSlicesDeps" AfterTargets="CollectPackageReferences">
+    <Error Text="Razor Slices requires Razor support for MVC to be enabled. Ensure the project is using the Microsoft.NET.Sdk.Web or Microsoft.NET.Sdk.Razor SDK and that the AddRazorSupportForMvc property is set to 'true'."
+           Condition=" '$(AddRazorSupportForMvc)' != 'true' " />
+  </Target>
+  
+  <Target Name="ResolveRazorSlicesInputs" AfterTargets="ResolveRazorGenerateInputs" DependsOnTargets="_CheckRazorSlicesDeps">
+    <ItemGroup>
+      <!-- By default, include all *.cshtml files in the project for Razor Slice generation, except those already added by the project & _ViewImports.cshtml, _ViewStart.cshtml -->
+      <RazorGenerate Update="@(RazorGenerate)"
+                     GenerateRazorSlice="true"
+                     Condition=" '$(EnableDefaultRazorSlices)' == 'true' AND
+                                 '%(Filename)' != '_ViewImports' AND
+                                 '%(Filename)' != '_ViewStart' " />
 
-    <!-- Make the RazorSliceGenerate items visible to the source generator via AdditionalFiles -->
-    <AdditionalFiles Include="@(RazorSliceGenerate)" />
+      <!-- Make the RazorGenerate items visible to the source generator via AdditionalFiles -->
+      <AdditionalFiles Include="@(RazorGenerate)" />
 
-    <!-- Make the RazorSliceGenerate item type and GenerateRazorSlice item metadata visible to the source generator -->
-    <CompilerVisibleItemMetadata Include="RazorSliceGenerate" MetadataName="GenerateRazorSlice" />
-  </ItemGroup>
+      <!-- Make the RazorGenerate item type and GenerateRazorSlice item metadata visible to the source generator -->
+      <CompilerVisibleItemMetadata Include="RazorGenerate" MetadataName="GenerateRazorSlice" />
+    </ItemGroup>
+  </Target>
+
 </Project>
