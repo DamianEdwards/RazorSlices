@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 
 namespace RazorSlices.Samples.WebApp.Models;
@@ -35,12 +36,13 @@ public class Todo
 
 internal static class Todos
 {
-    public readonly static Todo[] AllTodos =
-        [
-            new() { Id = 1, TitleUtf8 = "Wash the dishes."u8.ToArray(), IsComplete = true },
-            new() { Id = 2, TitleUtf8 = "Dry the dishes."u8.ToArray(), IsComplete = true },
-            new() { Id = 3, TitleUtf8 = "Turn the dishes over."u8.ToArray(), DueBy = DateOnly.FromDateTime(DateTime.Now), IsComplete = false },
-            new() { Id = 4, TitleUtf8 = "Walk the kangaroo."u8.ToArray(), DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
-            new() { Id = 5, TitleUtf8 = "Call Grandma."u8.ToArray(), DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
-        ];
+  public readonly static ConcurrentDictionary<int, Todo> AllTodos = new ConcurrentDictionary<int, Todo>(
+      [
+        new KeyValuePair<int, Todo>(1, new Todo { Id = 1, TitleUtf8 = "Wash the dishes."u8.ToArray(), IsComplete = true }),
+        new KeyValuePair<int, Todo>(2, new Todo { Id = 2, TitleUtf8 = "Dry the dishes."u8.ToArray(), IsComplete = true }),
+        new KeyValuePair<int, Todo>(3, new Todo { Id = 3, TitleUtf8 = "Turn the dishes over."u8.ToArray(), DueBy = DateOnly.FromDateTime(DateTime.Now), IsComplete = false }),
+        new KeyValuePair<int, Todo>(4, new Todo { Id = 4, TitleUtf8 = "Walk the kangaroo."u8.ToArray(), DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false }),
+        new KeyValuePair<int, Todo>(5, new Todo { Id = 5, TitleUtf8 = "Call Grandma."u8.ToArray(), DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false })
+      ]
+  );
 }
