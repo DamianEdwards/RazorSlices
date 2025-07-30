@@ -13,9 +13,6 @@
                                  '%(Filename)' != '_ViewImports' AND
                                  '%(Filename)' != '_ViewStart' " />
 
-      <!-- Make the RazorGenerate items visible to the source generator via AdditionalFiles -->
-      <AdditionalFiles Include="@(RazorGenerate)" />
-
       <!-- Make the RazorGenerate item type and GenerateRazorSlice item metadata visible to the source generator -->
       <CompilerVisibleItemMetadata Include="RazorGenerate" MetadataName="GenerateRazorSlice" />
     </ItemGroup>
