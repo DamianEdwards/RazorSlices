@@ -7,6 +7,10 @@
     "RazorSlices.Benchmarks.RazorClassLibrary.Local": {
       "commandName": "DebugRoslynComponent",
       "targetProject": "..\\..\\tests\\BenchmarksWebApps\\RazorSlices.Benchmarks.RazorClassLibrary.Local\\RazorSlices.Benchmarks.RazorClassLibrary.Local.csproj"
+    },
+    "RazorSlices.Samples.PagesAndSlices": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\samples\\RazorSlices.Samples.PagesAndSlices\\RazorSlices.Samples.PagesAndSlices.csproj"
     }
   }
 }
