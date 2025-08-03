@@ -60,6 +60,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.ProfilingHarnes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RazorSlices.Samples.WebApp.Tests", "tests\RazorSlices.Samples.WebApp.Tests\RazorSlices.Samples.WebApp.Tests.csproj", "{DB898E27-4DE9-4B56-A61F-0199266AF439}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RazorSlices.Samples.PagesAndSlices", "samples\RazorSlices.Samples.PagesAndSlices\RazorSlices.Samples.PagesAndSlices.csproj", "{5D322001-108F-AA8B-079B-05D05AA7F276}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Benchmarks|Any CPU = Benchmarks|Any CPU
@@ -151,6 +153,12 @@ Global
 		{DB898E27-4DE9-4B56-A61F-0199266AF439}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB898E27-4DE9-4B56-A61F-0199266AF439}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB898E27-4DE9-4B56-A61F-0199266AF439}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D322001-108F-AA8B-079B-05D05AA7F276}.Benchmarks|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D322001-108F-AA8B-079B-05D05AA7F276}.Benchmarks|Any CPU.Build.0 = Debug|Any CPU
+		{5D322001-108F-AA8B-079B-05D05AA7F276}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D322001-108F-AA8B-079B-05D05AA7F276}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D322001-108F-AA8B-079B-05D05AA7F276}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D322001-108F-AA8B-079B-05D05AA7F276}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -174,6 +182,7 @@ Global
 		{1B46D0D8-1952-4E3B-BA75-A4C12AC2F038} = {A068C539-8A03-4733-B141-4C5170E53E7B}
 		{411668E2-F59E-4A94-A735-D30D0BE80F28} = {74D410EA-ED69-4905-B8D1-A27A22A27DC9}
 		{DB898E27-4DE9-4B56-A61F-0199266AF439} = {74D410EA-ED69-4905-B8D1-A27A22A27DC9}
+		{5D322001-108F-AA8B-079B-05D05AA7F276} = {FF8BD96C-F2D4-498B-B7B5-00E521DAFCC9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C8326A4D-8BD2-44AA-B97B-56017B0CF2F2}

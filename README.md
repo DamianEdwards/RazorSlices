@@ -64,7 +64,7 @@
     </PropertyGroup>
     <ItemGroup>
       <!-- Only treat .cshtml files in Slices directory as Razor Slices -->
-      <RazorGenerate Include="Slices\**\*.cshtml" GenerateRazorSlice="true" />
+      <RazorSlice Include="Slices\**\*.cshtml" Exclude="Slices\**\_Layout.cshtml;Slices\**\_ViewImports.cshtml" />
     </ItemGroup>
     ```
 

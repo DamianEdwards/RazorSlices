@@ -4,7 +4,7 @@ public class PathHelper
 {
     public static string RepoRoot { get; } = GetRepoRoot();
     public static string ProjectsDir { get; } = Path.Combine(RepoRoot, "samples");
-    public static string ArtifactsDir { get; } = Path.Combine(RepoRoot, ".artifacts");
+    public static string ArtifactsDir { get; } = Path.Combine(RepoRoot, "artifacts");
 
     public static string GetProjectPublishDir(string projectName, string framework, string? runId)
     {

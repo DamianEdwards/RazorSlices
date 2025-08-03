@@ -9,7 +9,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <!-- BUG: Workaround for https://github.com/dotnet/runtime/issues/109958 -->
-    <NoWarn>IL3000</NoWarn>
+    <NoWarn>$(NoWarn);IL3000</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>

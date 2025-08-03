@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Reference the props that would be brought in when consuming the RazorSlices package -->
+   <Import Project="..\..\src\RazorSlices\build\RazorSlices.props" />
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <EnableDefaultRazorSlices>false</EnableDefaultRazorSlices>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RazorSlices\RazorSlices.csproj" />
+    <ProjectReference Include="..\..\src\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+      <!-- Only treat .cshtml files in Slices directory as Razor Slices -->
+      <RazorSlice Include="Slices\**\*.cshtml" Exclude="Slices\**\_Layout.cshtml;Slices\**\_ViewImports.cshtml" />
+  </ItemGroup>
+
+  <!-- Reference the targets that would be brought in when consuming the RazorSlices package -->
+  <Import Project="..\..\src\RazorSlices\build\RazorSlices.targets" />
+
+</Project>

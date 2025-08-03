@@ -5,13 +5,29 @@
   </Target>
   
   <Target Name="ResolveRazorSlicesInputs" AfterTargets="ResolveRazorGenerateInputs" DependsOnTargets="_CheckRazorSlicesDeps">
+    
+    <!-- First, collect files that should have GenerateRazorSlice=true -->
+    <ItemGroup Condition=" '$(EnableDefaultRazorSlices)' == 'true' ">
+      <_RazorGenerateWithSlice Include="@(RazorGenerate)"
+                               Condition=" '%(Filename)' != '_ViewImports' AND '%(Filename)' != '_ViewStart' " />
+    </ItemGroup>
+
+    <!-- Also include any explicitly specified RazorSlice items -->
+    <ItemGroup Condition=" '@(RazorSlice)' != '' ">
+      <_RazorGenerateWithSlice Include="@(RazorSlice)" />
+    </ItemGroup>
+
+    <!-- Remove the original RazorGenerate items that match our slice files -->
     <ItemGroup>
-      <!-- By default, include all *.cshtml files in the project for Razor Slice generation, except those already added by the project & _ViewImports.cshtml, _ViewStart.cshtml -->
-      <RazorGenerate Update="@(RazorGenerate)"
+      <RazorGenerate Remove="@(_RazorGenerateWithSlice)" />
+    </ItemGroup>
+
+    <!-- Add them back with the GenerateRazorSlice metadata -->
+    <ItemGroup>
+      <RazorGenerate Include="@(_RazorGenerateWithSlice)"
                      GenerateRazorSlice="true"
-                     Condition=" '$(EnableDefaultRazorSlices)' == 'true' AND
-                                 '%(Filename)' != '_ViewImports' AND
-                                 '%(Filename)' != '_ViewStart' " />
+                     ExcludeFromSingleFile="true"
+                     CopyToPublishDirectory="PreserveNewest" />
 
       <!-- Make the RazorGenerate item type and GenerateRazorSlice item metadata visible to the source generator -->
       <CompilerVisibleItemMetadata Include="RazorGenerate" MetadataName="GenerateRazorSlice" />
