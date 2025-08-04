@@ -29,6 +29,8 @@ public abstract partial class RazorSlice : IDisposable
     private bool _initialized;
     private bool _disposed;
 
+    internal Action<RazorSlice>? ReturnAction { get; set; }
+
     /// <summary>
     /// Gets or sets the <see cref="IServiceProvider"/> used to resolve services for injectable properties.
     /// </summary>
@@ -199,9 +201,9 @@ public abstract partial class RazorSlice : IDisposable
             return AwaitExecuteTaskFlushAndDispose(this, executeTask);
         }
 
-        Dispose();
+        //Dispose();
 
-        return AutoFlush().GetAsValueTask();
+        return AutoFlush(true).GetAsValueTask();
     }
 
     [MemberNotNull(nameof(_textWriter))]
@@ -280,29 +282,50 @@ public abstract partial class RazorSlice : IDisposable
         }
     }
 
-    private ValueTask<FlushResult> AutoFlush()
+    private ValueTask<FlushResult> AutoFlush(bool final = false)
     {
         Debug.Assert(_pipeWriter is null || _pipeWriter.CanGetUnflushedBytes, "PipeWriter must support unflushed bytes to auto-flush.");
 
         if (_pipeWriter is not null && _pipeWriter.UnflushedBytes >= _autoFlushThreshold)
         {
             Debug.WriteLine($"Auto-flushing slice of type '{GetType().Name}' to a PipeWriter");
-            return _pipeWriter.FlushAsync(CancellationToken);
+            var flushTask = _pipeWriter.FlushAsync(CancellationToken);
+
+            if (!flushTask.IsCompletedSuccessfully)
+            {
+                // Go async
+                return AwaitFlushTaskAndDispose(this, flushTask, final);
+            }
+
+            if (final)
+            {
+                Dispose();
+            }
+            return flushTask;
         }
 
+        if (final)
+        {
+            Dispose();
+        }
         return ValueTask.FromResult(_noFlushResult);
     }
 
-    private static async ValueTask AwaitOutputFlushTask(Task flushTask)
+    private static async ValueTask<FlushResult> AwaitFlushTaskAndDispose(RazorSlice slice, ValueTask<FlushResult> flushTask, bool final)
     {
-        await flushTask;
+        var result = await flushTask;
+        if (final)
+        {
+            slice.Dispose();
+        }
+        return result;
     }
 
     private static async ValueTask AwaitExecuteTaskFlushAndDispose(RazorSlice slice, Task executeTask)
     {
         await executeTask;
-        await slice.AutoFlush();
-        slice.Dispose();
+        await slice.AutoFlush(true);
+        //slice.Dispose();
     }
 
     /// <summary>
@@ -368,20 +391,50 @@ public abstract partial class RazorSlice : IDisposable
 
     private void DisposeInternal()
     {
+        Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
+
         if (_disposed)
         {
             return;
         }
 
-        Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
+        var reusableSlice = this as IRazorReusableSlice;
+        if (reusableSlice is not null)
+        {
+            Debug.WriteLine($"Resetting state of reusable slice of type '{GetType().Name}'");
 
-        if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
+            // Clear out our state
+            _textWriter = null;
+            _pipeWriter = null;
+            _writerStack = null;
+            _serviceProvider = null;
+            _initialized = false;
+            _htmlEncoder = HtmlEncoder.Default;
+            HttpContext = null;
+            CancellationToken = default;
+            // Model gets set by SliceDefinition.CreateSlice(model)
+        }
+        else if (_disposed)
+        {
+            return;
+        }
+
+        if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice } layout)
         {
             Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
             contentSlice.Dispose();
+
+            if (reusableSlice is not null)
+            {
+                layout.ContentSlice = null;
+            }
         }
 
-        _disposed = true;
+        _disposed = reusableSlice is null;
+        if (reusableSlice is not null && ReturnAction is { })
+        {
+            ReturnAction(this);
+        }
 
         Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
     }

@@ -31,6 +31,17 @@ public class RazorSlicesStringRendering
         return totalLength;
     }
 
+    [Benchmark]
+    public async ValueTask<long> RazorSlicesReusableHello()
+    {
+        long totalLength = 0;
+        for (int i = 0; i < _iterations; i++)
+        {
+            totalLength += (await LocalVersion.RenderReusableHello()).Length;
+        }
+        return totalLength;
+    }
+
     private class Config : ManualConfig
     {
         public Config()
