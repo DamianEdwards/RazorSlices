@@ -51,8 +51,8 @@ public interface IUsesLayout<TLayout> : IUsesLayout
 /// </code>
 /// </example>
 /// </remarks>
-public interface IUsesLayout<TLayout, TLayoutModel> : IUsesLayout<TLayout>
-    where TLayout : IRazorSliceProxy
+public interface IUsesLayout<TLayout, TLayoutModel> : IUsesLayout
+    where TLayout : IRazorSliceProxy<TLayoutModel>
 {
     /// <summary>
     /// Gets the layout model.
@@ -60,10 +60,10 @@ public interface IUsesLayout<TLayout, TLayoutModel> : IUsesLayout<TLayout>
     TLayoutModel LayoutModel { get; }
 
     /// <summary>
-    /// Creates a new instance of the layout Razor Slice by calling <see cref="IRazorSliceProxy.CreateSlice{TModel}(TModel)"/> on <typeparamref name="TLayout"/>.
+    /// Creates a new instance of the layout Razor Slice by calling <see cref="IRazorSliceProxy{TModel}.CreateSlice(TModel)"/> on <typeparamref name="TLayout"/>.
     /// </summary>
     /// <returns>The layout Razor Slice.</returns>
-    public new RazorSlice<TLayoutModel> CreateLayout() => TLayout.CreateSlice(LayoutModel);
+    public RazorSlice<TLayoutModel> CreateLayout() => TLayout.CreateSlice(LayoutModel);
 
     RazorSlice IUsesLayout.CreateLayoutImpl() => CreateLayout();
 }

@@ -2,13 +2,8 @@
 
 public partial class FromLibrary
 {
-    public class Model
+    public static async Task<string> ExampleCustomRenderAsync()
     {
-        public required string Message { get; init; }
-    }
-
-    public static async Task<string> ExampleCustomRenderAsync(Model model)
-    {
-        return await Create(model).RenderAsync();
+        return await Create().RenderAsync();
     }
 }

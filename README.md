@@ -48,7 +48,11 @@
     </html>
     ```
 
-    Each *.cshtml* file will have a proxy type generated for it by the Razor Slices source generator that you can use as the generic argument to the various APIs in Razor Slices for rendering slices.
+    Each *.cshtml* file will have a proxy type generated for it by the Razor Slices source generator that you can use as the generic argument to the various APIs in Razor Slices for rendering slices. The source generator detects the model type from the `@inherits` directive and generates a **strongly-typed** `Create` method:
+    - Slices **with** a model get `Create(ModelType model)` (e.g., `MyApp.Slices.Hello.Create(DateTime.Now)`)
+    - Slices **without** a model get `Create()` (e.g., `MyApp.Slices.Home.Create()`)
+
+    This provides compile-time validation that you're passing the correct model type.
 
 1. Add a minimal API to return the slice in your *Program.cs*:
 
@@ -107,7 +111,7 @@ The library is still new and features are being actively added.
 ### Currently supported
 
 - ASP.NET Core 8.0 and above
-- Strongly-typed models (via `@inherits RazorSlice<MyModel>` or `@inherits RazorSliceHttpResult<MyModel>`)
+- Strongly-typed models (via `@inherits RazorSlice<MyModel>` or `@inherits RazorSliceHttpResult<MyModel>`) with **compile-time model validation** — the source generator detects the model type from the `@inherits` directive (including `_ViewImports.cshtml` hierarchy) and generates strongly-typed `Create(MyModel model)` methods on the proxy class
 - Razor constructs:
   - [Implicit expressions](https://learn.microsoft.com/aspnet/core/mvc/views/razor#implicit-razor-expressions), e.g. `@someVariable`
   - [Explicit expressions](https://learn.microsoft.com/aspnet/core/mvc/views/razor#implicit-razor-expressions), e.g. `@(someBool ? thisThing : thatThing)`

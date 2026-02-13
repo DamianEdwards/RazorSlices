@@ -6,7 +6,7 @@
 
 @{
     var async = Model;
-    Func<object, HelperResult> tmpl = !async ?
+    Func<object?, HelperResult> tmpl = !async ?
         @<p>
             Hello from a templated Razor delegate! The following value was passed in: @item
         </p>

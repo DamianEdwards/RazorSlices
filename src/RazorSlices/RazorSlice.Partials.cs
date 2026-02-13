@@ -62,7 +62,7 @@ public partial class RazorSlice
     /// <typeparam name="TModel">The model type.</typeparam>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the tmeplate.</returns>
     protected internal ValueTask<HtmlString> RenderPartialAsync<TSlice, TModel>(TModel model)
-        where TSlice : IRazorSliceProxy
+        where TSlice : IRazorSliceProxy<TModel>
     {
 #pragma warning disable CA2000 // Dispose objects before losing scope: Disposed by RenderPartialAsyncImpl
         var slice = TSlice.CreateSlice(model);

@@ -44,7 +44,7 @@ public static class RazorSlicesExtensions
     /// <param name="statusCode"></param>
     /// <returns>An <see cref="RazorSliceHttpResult{TModel}"/> that can be rendered to the response.</returns>
     public static RazorSliceHttpResult<TModel> RazorSlice<TSliceProxy, TModel>(this IResultExtensions _, TModel model, int statusCode = StatusCodes.Status200OK)
-        where TSliceProxy : IRazorSliceProxy
+        where TSliceProxy : IRazorSliceProxy<TModel>
     {
 #pragma warning disable CA2000 // Dispose objects before losing scope: IResult will get disposed by ASP.NET Core
         var razorSlice = TSliceProxy.CreateSlice(model);
