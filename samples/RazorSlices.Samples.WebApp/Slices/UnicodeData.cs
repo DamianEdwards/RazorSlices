@@ -7,6 +7,7 @@ namespace RazorSlices.Samples.WebApp.Slices;
 /// Kept in a .cs file to work around a .NET 10 Razor compiler bug where supplementary Unicode
 /// characters (e.g., emoji, variation selectors) in .cshtml files cause @functions blocks to be
 /// incorrectly placed inside ExecuteAsync instead of as class members.
+/// BUG: https://github.com/dotnet/razor/issues/12777
 /// </summary>
 internal static class UnicodeData
 {
