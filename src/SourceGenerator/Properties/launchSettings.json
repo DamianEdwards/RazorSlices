@@ -2,15 +2,15 @@
   "profiles": {
     "RazorSlices.Samples.WebApp": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "..\\..\\samples\\RazorSlices.Samples.WebApp\\RazorSlices.Samples.WebApp.csproj"
+      "targetProject": "..\\..\\samples\\WebApp\\WebApp.csproj"
     },
     "RazorSlices.Benchmarks.RazorClassLibrary.Local": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "..\\..\\tests\\BenchmarksWebApps\\RazorSlices.Benchmarks.RazorClassLibrary.Local\\RazorSlices.Benchmarks.RazorClassLibrary.Local.csproj"
+      "targetProject": "..\\..\\tests\\BenchmarksWebApps\\Benchmarks.RazorClassLibrary.Local\\Benchmarks.RazorClassLibrary.Local.csproj"
     },
     "RazorSlices.Samples.PagesAndSlices": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "..\\..\\samples\\RazorSlices.Samples.PagesAndSlices\\RazorSlices.Samples.PagesAndSlices.csproj"
+      "targetProject": "..\\..\\samples\\PagesAndSlices\\PagesAndSlices.csproj"
     }
   }
 }

@@ -5,6 +5,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <AssemblyName>RazorSlices.Samples.WebApp</AssemblyName>
+    <RootNamespace>RazorSlices.Samples.WebApp</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
@@ -23,8 +25,8 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\src\RazorSlices\RazorSlices.csproj" />
-    <ProjectReference Include="..\RazorSlices.Samples.RazorClassLibrary\RazorSlices.Samples.RazorClassLibrary.csproj" />
-    <ProjectReference Include="..\..\src\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\RazorClassLibrary\RazorClassLibrary.csproj" />
+    <ProjectReference Include="..\..\src\SourceGenerator\SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>

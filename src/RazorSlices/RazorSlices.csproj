@@ -50,7 +50,7 @@
 
   <ItemGroup>
     <!-- Reference the source generator just to ensure it's built but don't reference its output -->
-    <ProjectReference Include="..\RazorSlices.SourceGenerator\RazorSlices.SourceGenerator.csproj" OutputItemType="SourceGeneratorAssemblyPath" ReferenceOutputAssembly="false" Private="true" />
+    <ProjectReference Include="..\SourceGenerator\SourceGenerator.csproj" OutputItemType="SourceGeneratorAssemblyPath" ReferenceOutputAssembly="false" Private="true" />
   </ItemGroup>
 
   <!-- Include source generator assembly in this project's package output -->

@@ -3,6 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RazorSlices.Benchmarks</AssemblyName>
+    <RootNamespace>RazorSlices.Benchmarks</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;Benchmarks</Configurations>
@@ -18,13 +20,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.RazorClassLibrary.Local\RazorSlices.Benchmarks.RazorClassLibrary.Local.csproj" />
-    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.RazorClassLibrary.PreviousVersion\RazorSlices.Benchmarks.RazorClassLibrary.PreviousVersion.csproj" />
-    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.Blazor\RazorSlices.Benchmarks.WebApp.Blazor.csproj" />
-    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorComponents\RazorSlices.Benchmarks.WebApp.RazorComponents.csproj" />
-    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorPages\RazorSlices.Benchmarks.WebApp.RazorPages.csproj" />
-    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorSlicesLocal\RazorSlices.Benchmarks.WebApp.RazorSlicesLocal.csproj" />
-    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion\RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.RazorClassLibrary.Local\Benchmarks.RazorClassLibrary.Local.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.RazorClassLibrary.PreviousVersion\Benchmarks.RazorClassLibrary.PreviousVersion.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.WebApp.Blazor\Benchmarks.WebApp.Blazor.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.WebApp.RazorComponents\Benchmarks.WebApp.RazorComponents.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.WebApp.RazorPages\Benchmarks.WebApp.RazorPages.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.WebApp.RazorSlicesLocal\Benchmarks.WebApp.RazorSlicesLocal.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.WebApp.RazorSlicesPreviousVersion\Benchmarks.WebApp.RazorSlicesPreviousVersion.csproj" />
   </ItemGroup>
 
 </Project>

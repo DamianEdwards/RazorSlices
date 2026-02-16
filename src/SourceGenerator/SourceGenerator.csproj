@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>RazorSlices.SourceGenerator</AssemblyName>
+    <RootNamespace>RazorSlices.SourceGenerator</RootNamespace>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IsRoslynComponent>true</IsRoslynComponent>
     <LangVersion>Latest</LangVersion>

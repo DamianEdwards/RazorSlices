@@ -29,7 +29,6 @@ static ValueTask<string> RenderSliceToString()
     return LocalVersion.RenderHello();
 }
 
-
 static async ValueTask RenderSlice(Pipe pipe)
 {
     await LocalVersion.RenderHello(pipe.Writer);

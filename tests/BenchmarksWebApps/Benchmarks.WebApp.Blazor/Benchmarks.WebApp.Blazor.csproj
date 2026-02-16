@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RazorSlices.Benchmarks.WebApp.Blazor</AssemblyName>
+    <RootNamespace>RazorSlices.Benchmarks.WebApp.Blazor</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>

@@ -9,16 +9,16 @@
 ```
 src/
   RazorSlices/                    # Main library (net8.0, ASP.NET Core framework ref)
-  RazorSlices.SourceGenerator/    # Roslyn incremental source generator (netstandard2.0)
+  SourceGenerator/                # Roslyn incremental source generator (netstandard2.0)
 samples/
-  RazorSlices.Samples.WebApp/     # Main sample app (multi-TFM: net8.0, net9.0)
-  RazorSlices.Samples.PagesAndSlices/  # Sample showing Razor Pages + Slices coexistence
-  RazorSlices.Samples.RazorClassLibrary/ # Sample Razor Class Library
+  WebApp/                         # Main sample app (multi-TFM: net8.0, net9.0)
+  PagesAndSlices/                 # Sample showing Razor Pages + Slices coexistence
+  RazorClassLibrary/              # Sample Razor Class Library
 tests/
-  RazorSlices.Tests/              # Unit tests for library
-  RazorSlices.SourceGenerator.Tests/ # Unit tests for source generator
-  RazorSlices.Samples.WebApp.Tests/  # Integration tests (WebApplicationFactory)
-  RazorSlices.Samples.WebApp.PublishTests/ # Publish/AOT tests
+  Tests/                          # Unit tests for library
+  SourceGenerator/                # Unit tests for source generator
+  Samples.WebApp/                 # Integration tests (WebApplicationFactory)
+  Samples.WebApp.PublishTests/    # Publish/AOT tests
   BenchmarksWebApps/              # Benchmark projects
 ```
 
@@ -30,10 +30,10 @@ tests/
 - `src/RazorSlices/SliceDefinition.cs` — Runtime slice factory (reflection + expression trees)
 - `src/RazorSlices/RazorSlice.cs` — Base class for all slices
 - `src/RazorSlices/RazorSlice.Partials.cs` — Partial rendering support
-- `src/RazorSlices.SourceGenerator/RazorSliceProxyGenerator.cs` — The incremental source generator
-- `src/RazorSlices.SourceGenerator/RazorDirectiveParser.cs` — Parses @inherits/@using from .cshtml
-- `src/RazorSlices.SourceGenerator/ViewImportsResolver.cs` — Hierarchical _ViewImports resolution
-- `src/RazorSlices.SourceGenerator/ModelTypeResolver.cs` — Resolves model types to FQN via Compilation
+- `src/SourceGenerator/RazorSliceProxyGenerator.cs` — The incremental source generator
+- `src/SourceGenerator/RazorDirectiveParser.cs` — Parses @inherits/@using from .cshtml
+- `src/SourceGenerator/ViewImportsResolver.cs` — Hierarchical _ViewImports resolution
+- `src/SourceGenerator/ModelTypeResolver.cs` — Resolves model types to FQN via Compilation
 - `src/RazorSlices/build/RazorSlices.props` — MSBuild properties for consumers
 - `src/RazorSlices/build/RazorSlices.targets` — MSBuild targets that configure AdditionalTexts for the generator
 - `src/Directory.Build.props` — Version and package metadata
@@ -48,11 +48,11 @@ dotnet build
 dotnet test
 
 # Run specific test project
-dotnet test tests/RazorSlices.SourceGenerator.Tests
-dotnet test tests/RazorSlices.Samples.WebApp.Tests
+dotnet test tests/SourceGenerator
+dotnet test tests/Samples.WebApp
 
 # Run the sample web app
-dotnet run --project samples/RazorSlices.Samples.WebApp
+dotnet run --project samples/WebApp
 ```
 
 ## Conventions

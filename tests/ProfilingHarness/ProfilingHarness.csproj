@@ -3,6 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RazorSlices.ProfilingHarness</AssemblyName>
+    <RootNamespace>RazorSlices.ProfilingHarness</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -12,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BenchmarksWebApps\RazorSlices.Benchmarks.RazorClassLibrary.Local\RazorSlices.Benchmarks.RazorClassLibrary.Local.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.RazorClassLibrary.Local\Benchmarks.RazorClassLibrary.Local.csproj" />
   </ItemGroup>
 
 </Project>

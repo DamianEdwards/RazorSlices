@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <AssemblyName>RazorSlices.Samples.WebApp.Tests</AssemblyName>
+    <RootNamespace>RazorSlices.Samples.WebApp.Tests</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsTestProject>true</IsTestProject>
@@ -22,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\samples\RazorSlices.Samples.WebApp\RazorSlices.Samples.WebApp.csproj" />
+    <ProjectReference Include="..\..\samples\WebApp\WebApp.csproj" />
   </ItemGroup>
 
   <ItemGroup>

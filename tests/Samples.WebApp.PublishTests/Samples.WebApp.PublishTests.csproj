@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RazorSlices.Samples.WebApp.PublishTests</AssemblyName>
+    <RootNamespace>RazorSlices.Samples.WebApp.PublishTests</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
