@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <AssemblyName>RazorSlices.Tests</AssemblyName>
-    <RootNamespace>RazorSlices.Tests</RootNamespace>
-    <ArtifactsProjectName>RazorSlices.Tests</ArtifactsProjectName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 

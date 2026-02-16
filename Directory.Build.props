@@ -4,6 +4,7 @@
     <IsPackable>false</IsPackable>
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
   </PropertyGroup>
 
 </Project>

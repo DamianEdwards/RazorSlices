@@ -1,5 +1,7 @@
 <Project>
 
+  <Import Project="..\Directory.Build.props" />
+
   <PropertyGroup>
     <VersionPrefix>0.10.0</VersionPrefix>
     <!-- VersionSuffix used for local builds -->
