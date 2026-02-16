@@ -92,7 +92,10 @@ internal static class ModelTypeResolver
     {
         var outerType = typeName.Substring(0, genericOpen).Trim();
         var genericClose = typeName.LastIndexOf('>');
-        if (genericClose <= genericOpen) return null;
+        if (genericClose <= genericOpen)
+        {
+            return null;
+        }
 
         var argsString = typeName.Substring(genericOpen + 1, genericClose - genericOpen - 1);
         var args = SplitGenericArguments(argsString);
@@ -102,7 +105,11 @@ internal static class ModelTypeResolver
         foreach (var arg in args)
         {
             var resolved = ResolveTypeExpression(arg.Trim(), usingDirectives, compilation, rootNamespace);
-            if (resolved == null) return null;
+            if (resolved is null)
+            {
+                return null;
+            }
+
             resolvedArgs.Add(resolved);
         }
 
@@ -110,14 +117,21 @@ internal static class ModelTypeResolver
         // For compilation lookup, generic types use backtick notation: Type`N
         var metadataName = outerType + "`" + args.Count;
         var resolvedOuter = ResolveSimpleType(outerType, usingDirectives, compilation, metadataName, stripGenericParams: true, rootNamespace: rootNamespace);
-        if (resolvedOuter == null) return null;
+        if (resolvedOuter is null)
+        {
+            return null;
+        }
 
         var sb = new StringBuilder();
         sb.Append(resolvedOuter);
         sb.Append('<');
         for (int i = 0; i < resolvedArgs.Count; i++)
         {
-            if (i > 0) sb.Append(", ");
+            if (i > 0)
+            {
+                sb.Append(", ");
+            }
+
             sb.Append(resolvedArgs[i]);
         }
         sb.Append(">");
@@ -155,7 +169,10 @@ internal static class ModelTypeResolver
                         expandedLookup = ud.NamespaceOrType + "." + metaSuffix;
                     }
                     var resolved = TryResolveViaCompilation(expandedType, expandedLookup, compilation, stripGenericParams);
-                    if (resolved != null) return resolved;
+                    if (resolved != null)
+                    {
+                        return resolved;
+                    }
                 }
             }
         }
@@ -163,12 +180,18 @@ internal static class ModelTypeResolver
         // 3. Try as fully-qualified name first
         var lookupName = metadataNameOverride ?? typeName;
         var result = TryResolveViaCompilation(typeName, lookupName, compilation, stripGenericParams);
-        if (result != null) return result;
+        if (result != null)
+        {
+            return result;
+        }
 
         // 4. Try with each @using namespace prefix
         foreach (var ud in usingDirectives)
         {
-            if (ud.Alias != null) continue; // Skip aliases, handled above
+            if (ud.Alias != null)
+            {
+                continue; // Skip aliases, handled above
+            }
 
             var candidateName = ud.NamespaceOrType + "." + typeName;
             var candidateLookup = metadataNameOverride != null
@@ -176,7 +199,10 @@ internal static class ModelTypeResolver
                 : candidateName;
 
             result = TryResolveViaCompilation(candidateName, candidateLookup, compilation, stripGenericParams);
-            if (result != null) return result;
+            if (result != null)
+            {
+                return result;
+            }
         }
 
         // 5. Try with implicit namespaces (System, System.Collections.Generic, etc.)
@@ -188,7 +214,10 @@ internal static class ModelTypeResolver
                 : candidateName;
 
             result = TryResolveViaCompilation(candidateName, candidateLookup, compilation, stripGenericParams);
-            if (result != null) return result;
+            if (result != null)
+            {
+                return result;
+            }
         }
 
         // 6. Try with the project's root namespace
@@ -200,7 +229,10 @@ internal static class ModelTypeResolver
                 : candidateName;
 
             result = TryResolveViaCompilation(candidateName, candidateLookup, compilation, stripGenericParams);
-            if (result != null) return result;
+            if (result != null)
+            {
+                return result;
+            }
         }
 
         return null;
@@ -244,8 +276,14 @@ internal static class ModelTypeResolver
         for (int i = 0; i < args.Length; i++)
         {
             var c = args[i];
-            if (c == '<') depth++;
-            else if (c == '>') depth--;
+            if (c == '<')
+            {
+                depth++;
+            }
+            else if (c == '>')
+            {
+                depth--;
+            }
             else if (c == ',' && depth == 0)
             {
                 result.Add(args.Substring(start, i - start));
@@ -266,13 +304,22 @@ internal static class ModelTypeResolver
         int depth = 0;
         for (int i = typeName.Length - 1; i >= 0; i--)
         {
-            if (typeName[i] == ']') depth++;
+            if (typeName[i] == ']')
+            {
+                depth++;
+            }
             else if (typeName[i] == '[')
             {
                 depth--;
-                if (depth == 0) return i;
+                if (depth == 0)
+                {
+                    return i;
+                }
             }
-            else if (depth == 0) return -1; // Non-bracket character before finding match
+            else if (depth == 0)
+            {
+                return -1; // Non-bracket character before finding match
+            }
         }
         return -1;
     }
@@ -284,7 +331,10 @@ internal static class ModelTypeResolver
     {
         for (int i = 0; i < typeName.Length; i++)
         {
-            if (typeName[i] == '<') return i;
+            if (typeName[i] == '<')
+            {
+                return i;
+            }
         }
         return -1;
     }

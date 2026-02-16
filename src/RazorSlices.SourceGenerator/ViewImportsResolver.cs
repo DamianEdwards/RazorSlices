@@ -26,13 +26,21 @@ internal static class ViewImportsResolver
         {
             var fileName = Path.GetFileName(text.Path);
             if (!string.Equals(fileName, ViewImportsFileName, StringComparison.OrdinalIgnoreCase))
+            {
                 continue;
+            }
 
             var directory = Path.GetDirectoryName(text.Path);
-            if (directory == null) continue;
+            if (directory is null)
+            {
+                continue;
+            }
 
             var sourceText = text.GetText();
-            if (sourceText == null) continue;
+            if (sourceText is null)
+            {
+                continue;
+            }
 
             var inheritsDirective = RazorDirectiveParser.ParseInheritsDirective(sourceText);
             var usingDirectives = RazorDirectiveParser.ParseUsingDirectives(sourceText);
@@ -64,7 +72,7 @@ internal static class ViewImportsResolver
 
         // Build the directory chain from project root down to the slice's directory
         var sliceDirectory = Path.GetDirectoryName(sliceFilePath);
-        if (sliceDirectory == null)
+        if (sliceDirectory is null)
         {
             return new ResolvedDirectives(sliceInherits, sliceUsings);
         }
@@ -83,7 +91,7 @@ internal static class ViewImportsResolver
                 // @using accumulates
                 accumulatedUsings.AddRange(directives.UsingDirectives);
                 // @inherits: innermost (child) wins, so keep overwriting
-                if (directives.InheritsDirective != null)
+                if (directives.InheritsDirective is not null)
                 {
                     effectiveInherits = directives.InheritsDirective;
                 }
@@ -94,7 +102,7 @@ internal static class ViewImportsResolver
         accumulatedUsings.AddRange(sliceUsings);
 
         // Slice's own @inherits wins over any _ViewImports @inherits
-        if (sliceInherits != null)
+        if (sliceInherits is not null)
         {
             effectiveInherits = sliceInherits;
         }
@@ -113,14 +121,20 @@ internal static class ViewImportsResolver
         var current = NormalizePath(targetDirectory);
 
         // Walk from target up to project root, collecting directories
-        while (current != null && current.Length >= normalizedProject.Length)
+        while (current is not null && current.Length >= normalizedProject.Length)
         {
             chain.Add(current);
             if (string.Equals(current, normalizedProject, StringComparison.OrdinalIgnoreCase))
+            {
                 break;
+            }
+
             var parent = Path.GetDirectoryName(current);
-            if (parent == null || string.Equals(parent, current, StringComparison.OrdinalIgnoreCase))
+            if (parent is null || string.Equals(parent, current, StringComparison.OrdinalIgnoreCase))
+            {
                 break;
+            }
+
             current = NormalizePath(parent);
         }
 
@@ -135,33 +149,22 @@ internal static class ViewImportsResolver
     }
 }
 
-internal readonly struct ViewImportsDirectives
+internal readonly struct ViewImportsDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives)
 {
-    public ViewImportsDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives)
-    {
-        InheritsDirective = inheritsDirective;
-        UsingDirectives = usingDirectives;
-    }
-
-    public string? InheritsDirective { get; }
-    public List<UsingDirective> UsingDirectives { get; }
+    public string? InheritsDirective { get; } = inheritsDirective;
+    public List<UsingDirective> UsingDirectives { get; } = usingDirectives;
 }
 
-internal readonly struct ResolvedDirectives
+internal readonly struct ResolvedDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives)
 {
-    public ResolvedDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives)
-    {
-        InheritsDirective = inheritsDirective;
-        UsingDirectives = usingDirectives;
-    }
 
     /// <summary>
     /// The effective @inherits directive value (from the slice or nearest _ViewImports).
     /// </summary>
-    public string? InheritsDirective { get; }
+    public string? InheritsDirective { get; } = inheritsDirective;
 
     /// <summary>
     /// All accumulated @using directives from the _ViewImports hierarchy and the slice itself.
     /// </summary>
-    public List<UsingDirective> UsingDirectives { get; }
+    public List<UsingDirective> UsingDirectives { get; } = usingDirectives;
 }

@@ -1,0 +1,84 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Benchmarks" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+  </Configurations>
+  <Folder Name="/samples/">
+    <Project Path="samples/RazorSlices.Samples.PagesAndSlices/RazorSlices.Samples.PagesAndSlices.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Debug" />
+    </Project>
+    <Project Path="samples/RazorSlices.Samples.RazorClassLibrary/RazorSlices.Samples.RazorClassLibrary.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+    <Project Path="samples/RazorSlices.Samples.WebApp/RazorSlices.Samples.WebApp.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="nuget.config" />
+  </Folder>
+  <Folder Name="/src/">
+    <File Path="src/Directory.Build.props" />
+    <Project Path="src/RazorSlices.SourceGenerator/RazorSlices.SourceGenerator.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+    </Project>
+    <Project Path="src/RazorSlices/RazorSlices.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RazorSlices.Benchmarks/RazorSlices.Benchmarks.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="tests/RazorSlices.ProfilingHarness/RazorSlices.ProfilingHarness.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/RazorSlices.Samples.WebApp.PublishTests/RazorSlices.Samples.WebApp.PublishTests.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+    <Project Path="tests/RazorSlices.Samples.WebApp.Tests/RazorSlices.Samples.WebApp.Tests.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Debug" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+    <Project Path="tests/RazorSlices.SourceGenerator.Tests/RazorSlices.SourceGenerator.Tests.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+    <Project Path="tests/RazorSlices.Tests/RazorSlices.Tests.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/BenchmarksWebApps/">
+    <File Path="tests/BenchmarksWebApps/Directory.Build.props" />
+    <Project Path="tests/BenchmarksWebApps/RazorSlices.Benchmarks.RazorClassLibrary.Local/RazorSlices.Benchmarks.RazorClassLibrary.Local.csproj" />
+    <Project Path="tests/BenchmarksWebApps/RazorSlices.Benchmarks.RazorClassLibrary.PreviousVersion/RazorSlices.Benchmarks.RazorClassLibrary.PreviousVersion.csproj" />
+    <Project Path="tests/BenchmarksWebApps/RazorSlices.Benchmarks.WebApp.Blazor/RazorSlices.Benchmarks.WebApp.Blazor.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="tests/BenchmarksWebApps/RazorSlices.Benchmarks.WebApp.RazorComponents/RazorSlices.Benchmarks.WebApp.RazorComponents.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="tests/BenchmarksWebApps/RazorSlices.Benchmarks.WebApp.RazorPages/RazorSlices.Benchmarks.WebApp.RazorPages.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="tests/BenchmarksWebApps/RazorSlices.Benchmarks.WebApp.RazorSlicesLocal/RazorSlices.Benchmarks.WebApp.RazorSlicesLocal.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="tests/BenchmarksWebApps/RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion/RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+</Solution>

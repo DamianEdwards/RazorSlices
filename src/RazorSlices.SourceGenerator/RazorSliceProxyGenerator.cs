@@ -143,7 +143,6 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 : $"{rootNamespace}.{subNamespace}";
 
             // Duplicate class name check
-
             if (generatedClasses.Contains($"{fullNamespace}.{className}"))
             {
                 // TODO: Add an integer suffix to the class name so it can be generated and then log a warning?
@@ -166,20 +165,19 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 string? resolvedModelType = null;
                 bool hasModel = false;
 
-                if (sourceText != null)
+                if (sourceText is not null)
                 {
-                    var directives = ViewImportsResolver.ResolveDirectives(
-                        file.Path, projectDirectory!, viewImportsMap, sourceText);
+                    var directives = ViewImportsResolver.ResolveDirectives(file.Path, projectDirectory!, viewImportsMap, sourceText);
 
-                    if (directives.InheritsDirective != null)
+                    if (directives.InheritsDirective is not null)
                     {
                         var modelTypeName = RazorDirectiveParser.ExtractModelType(directives.InheritsDirective);
-                        if (modelTypeName != null)
+                        if (modelTypeName is not null)
                         {
                             resolvedModelType = ModelTypeResolver.ResolveModelType(
                                 modelTypeName, directives.UsingDirectives, compilation, rootNamespace);
 
-                            if (resolvedModelType != null)
+                            if (resolvedModelType is not null)
                             {
                                 hasModel = true;
                             }
@@ -200,24 +198,22 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 }
 
                 codeBuilder.AppendLine($$"""
-                namespace {{fullNamespace}}
-                {
-                """);
+                    namespace {{fullNamespace}}
+                    {
+                    """);
 
                 var generatedTypeName = string.IsNullOrEmpty(subNamespaceAsClassName)
                     ? className
                     : $"{subNamespaceAsClassName}_{className}";
 
                 var sealedValue = sealSliceProxies ? "sealed " : "partial ";
+                var genericParameter = hasModel && resolvedModelType is not null ? $"<{resolvedModelType}>" : "";
 
-                if (hasModel && resolvedModelType != null)
-                {
-                    // Model slice: implement IRazorSliceProxy<TModel> with strongly-typed Create
-                    codeBuilder.AppendLine($$"""
+                codeBuilder.AppendLine($$"""
                         /// <summary>
                         /// Static proxy for the Razor Slice defined in <c>{{relativeFilePath}}</c>.
                         /// </summary>
-                        public {{ sealedValue }}class {{className}} : global::RazorSlices.IRazorSliceProxy<{{resolvedModelType}}>
+                        public {{ sealedValue }}class {{className}} : global::RazorSlices.IRazorSliceProxy{{genericParameter}}
                         {
                             [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, TypeName, "{{assemblyName}}")]
                             private const string TypeName = "AspNetCoreGeneratedDocument.{{generatedTypeName}}, {{assemblyName}}";
@@ -225,7 +221,11 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                             private static readonly global::System.Type _sliceType = global::System.Type.GetType(TypeName)
                                 ?? throw new global::System.InvalidOperationException($"Razor view type '{TypeName}' was not found. This is likely a bug in the RazorSlices source generator.");
                             private static readonly global::RazorSlices.SliceDefinition _sliceDefinition = new(_sliceType);
+                    """);
 
+                if (hasModel && resolvedModelType is not null)
+                {
+                    codeBuilder.AppendLine($$"""
                             /// <summary>
                             /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> with the given model.
                             /// </summary>
@@ -233,37 +233,26 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
 
                             // Explicit interface implementation, workaround for https://github.com/dotnet/runtime/issues/102796
                             static global::RazorSlices.RazorSlice<{{resolvedModelType}}> global::RazorSlices.IRazorSliceProxy<{{resolvedModelType}}>.CreateSlice({{resolvedModelType}} model) => Create(model);
-                        }
                     """);
                 }
                 else
                 {
-                    // No-model slice: implement IRazorSliceProxy with parameterless Create
                     codeBuilder.AppendLine($$"""
-                        /// <summary>
-                        /// Static proxy for the Razor Slice defined in <c>{{relativeFilePath}}</c>.
-                        /// </summary>
-                        public {{ sealedValue }}class {{className}} : global::RazorSlices.IRazorSliceProxy
-                        {
-                            [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, TypeName, "{{assemblyName}}")]
-                            private const string TypeName = "AspNetCoreGeneratedDocument.{{generatedTypeName}}, {{assemblyName}}";
-                            [global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All)]
-                            private static readonly global::System.Type _sliceType = global::System.Type.GetType(TypeName)
-                                ?? throw new global::System.InvalidOperationException($"Razor view type '{TypeName}' was not found. This is likely a bug in the RazorSlices source generator.");
-                            private static readonly global::RazorSlices.SliceDefinition _sliceDefinition = new(_sliceType);
-
                             /// <summary>
-                            /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> .
+                            /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c>.
                             /// </summary>
                             public static global::RazorSlices.RazorSlice Create() => _sliceDefinition.CreateSlice();
 
                             // Explicit interface implementation, workaround for https://github.com/dotnet/runtime/issues/102796
                             static global::RazorSlices.RazorSlice global::RazorSlices.IRazorSliceProxy.CreateSlice() => Create();
-                        }
                     """);
                 }
 
-                codeBuilder.AppendLine("}");
+                // Close class & namespace
+                codeBuilder.AppendLine("""
+                        }
+                    }
+                    """);
 
                 codeBuilder.AppendLine();
             }

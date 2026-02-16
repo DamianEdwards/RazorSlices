@@ -1,6 +1,8 @@
 ﻿using System.IO.Pipelines;
 using RazorSlices.Benchmarks.RazorClassLibrary.Local;
 
+#pragma warning disable CS8321 // Local function is declared but never used
+
 var iterations = 1000;
 //var memoryPool = MemoryPool<byte>.Shared;
 //var pipe = new Pipe(new(memoryPool, pauseWriterThreshold: 0) { });
@@ -26,6 +28,7 @@ static ValueTask<string> RenderSliceToString()
 {
     return LocalVersion.RenderHello();
 }
+
 
 static async ValueTask RenderSlice(Pipe pipe)
 {

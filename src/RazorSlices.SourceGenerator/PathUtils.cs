@@ -34,8 +34,16 @@ internal static class PathUtils
 
     private static string GetRelativePath(string relativeTo, string path, StringComparison comparisonType)
     {
-        if (string.IsNullOrEmpty(relativeTo)) throw new ArgumentNullException(nameof(relativeTo));
-        if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path));
+        if (string.IsNullOrEmpty(relativeTo))
+        {
+            throw new ArgumentNullException(nameof(relativeTo));
+        }
+
+        if (string.IsNullOrEmpty(path))
+        {
+            throw new ArgumentNullException(nameof(path));
+        }
+
         Debug.Assert(comparisonType == StringComparison.Ordinal ||
                      comparisonType == StringComparison.OrdinalIgnoreCase);
 
@@ -44,27 +52,38 @@ internal static class PathUtils
 
         // Need to check if the roots are different- if they are we need to return the "to" path.
         if (!PathInternalNetCore.AreRootsEqual(relativeTo, path, comparisonType))
+        {
             return path;
+        }
 
         int commonLength = PathInternalNetCore.GetCommonPathLength(relativeTo, path,
             ignoreCase: comparisonType == StringComparison.OrdinalIgnoreCase);
 
         // If there is nothing in common they can't share the same root, return the "to" path as is.
         if (commonLength == 0)
+        {
             return path;
+        }
 
         // Trailing separators aren't significant for comparison
         int relativeToLength = relativeTo.Length;
         if (PathInternalNetCore.EndsInDirectorySeparator(relativeTo))
+        {
             relativeToLength--;
+        }
 
         bool pathEndsInSeparator = PathInternalNetCore.EndsInDirectorySeparator(path);
         int pathLength = path.Length;
         if (pathEndsInSeparator)
+        {
             pathLength--;
+        }
 
         // If we have effectively the same path, return "."
-        if (relativeToLength == pathLength && commonLength >= relativeToLength) return ".";
+        if (relativeToLength == pathLength && commonLength >= relativeToLength)
+        {
+            return ".";
+        }
 
         // We have the same root, we need to calculate the difference now using the
         // common Length and Segment count past the length.
@@ -102,7 +121,9 @@ internal static class PathUtils
         // Now add the rest of the "to" path, adding back the trailing separator
         int differenceLength = pathLength - commonLength;
         if (pathEndsInSeparator)
+        {
             differenceLength++;
+        }
 
         if (differenceLength > 0)
         {
@@ -202,7 +223,10 @@ internal static class PathInternalNetCore
                 // (e.g. to \\?\UNC\Server\Share or \\Server\Share\)
                 i = uncRootLength;
                 int n = 2; // Maximum separators to skip
-                while (i < path.Length && (!IsDirectorySeparator(path[i]) || --n > 0)) i++;
+                while (i < path.Length && (!IsDirectorySeparator(path[i]) || --n > 0))
+                {
+                    i++;
+                }
             }
         }
         else if (path.Length >= volumeSeparatorLength &&
@@ -211,7 +235,10 @@ internal static class PathInternalNetCore
             // Path is at least longer than where we expect a colon, and has a colon (\\?\A:, A:)
             // If the colon is followed by a directory separator, move past it
             i = volumeSeparatorLength;
-            if (path.Length >= volumeSeparatorLength + 1 && IsDirectorySeparator(path[volumeSeparatorLength])) i++;
+            if (path.Length >= volumeSeparatorLength + 1 && IsDirectorySeparator(path[volumeSeparatorLength]))
+            {
+                i++;
+            }
         }
 
         return i;
@@ -235,19 +262,27 @@ internal static class PathInternalNetCore
 
         // If nothing matches
         if (commonChars == 0)
+        {
             return commonChars;
+        }
 
         // Or we're a full string and equal length or match to a separator
         if (commonChars == first.Length
             && (commonChars == second.Length || IsDirectorySeparator(second[commonChars])))
+        {
             return commonChars;
+        }
 
         if (commonChars == second.Length && IsDirectorySeparator(first[commonChars]))
+        {
             return commonChars;
+        }
 
         // It's possible we matched somewhere in the middle of a segment e.g. C:\Foodie and C:\Foobar.
         while (commonChars > 0 && !IsDirectorySeparator(first[commonChars - 1]))
+        {
             commonChars--;
+        }
 
         return commonChars;
     }
@@ -257,7 +292,10 @@ internal static class PathInternalNetCore
     /// </summary>
     internal static unsafe int EqualStartingCharacterCount(string first, string second, bool ignoreCase)
     {
-        if (string.IsNullOrEmpty(first) || string.IsNullOrEmpty(second)) return 0;
+        if (string.IsNullOrEmpty(first) || string.IsNullOrEmpty(second))
+        {
+            return 0;
+        }
 
         int commonChars = 0;
 

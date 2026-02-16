@@ -56,11 +56,11 @@
 
 1. Add a minimal API to return the slice in your *Program.cs*:
 
-    ``` c#
+    ``` csharp
     app.MapGet("/hello", () => Results.Extensions.RazorSlice<MyApp.Slices.Hello, DateTime>(DateTime.Now));
     ```
 
-1. **Optional:** By default, all *.cshtml* files in your project are treated as Razor Slices (excluding *_ViewImports.cshtml* and *_ViewStart.cshtml_*). You can change this by setting the `EnableDefaultRazorSlices` property to `false` and the `GenerateRazorSlice` metadata property of the desired `RazorGenerate` items to `true` in your project file, e.g.:
+1. **Optional:** By default, all *.cshtml* files in your project are treated as Razor Slices (excluding *_ViewImports.cshtml* and *_ViewStart.cshtml_*). You can change this by setting the `EnableDefaultRazorSlices` property to `false` and then including the desired `RazorSlice` items in your project file, e.g.:
 
     ``` xml
     <PropertyGroup>

@@ -48,7 +48,10 @@ internal static class RazorDirectiveParser
                 {
                     value = value.Substring(0, value.Length - 1).Trim();
                 }
-                if (value.Length == 0) continue;
+                if (value.Length == 0)
+                {
+                    continue;
+                }
 
                 // Check for alias: @using Alias = Namespace.Type
                 var equalsIndex = value.IndexOf('=');
@@ -79,10 +82,16 @@ internal static class RazorDirectiveParser
     {
         // Find the first '<' and last '>' for the generic type argument
         var openAngle = baseType.IndexOf('<');
-        if (openAngle < 0) return null;
+        if (openAngle < 0)
+        {
+            return null;
+        }
 
         var closeAngle = baseType.LastIndexOf('>');
-        if (closeAngle <= openAngle) return null;
+        if (closeAngle <= openAngle)
+        {
+            return null;
+        }
 
         var modelType = baseType.Substring(openAngle + 1, closeAngle - openAngle - 1).Trim();
         return modelType.Length > 0 ? modelType : null;
