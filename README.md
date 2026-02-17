@@ -20,7 +20,7 @@
 1. Create a directory in your project called *Slices* and add a *_ViewImports.cshtml* file to it with the following content:
 
     ``` cshtml
-    @inherits RazorSliceHttpResult
+    @inherits RazorSlice
 
     @using System.Globalization;
     @using Microsoft.AspNetCore.Razor;
@@ -33,7 +33,7 @@
 1. In the same directory, add a *Hello.cshtml* file with the following content:
 
     ``` cshtml
-    @inherits RazorSliceHttpResult<DateTime>
+    @inherits RazorSlice<DateTime>
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -111,7 +111,7 @@ The library is still new and features are being actively added.
 ### Currently supported
 
 - ASP.NET Core 8.0 and above
-- Strongly-typed models (via `@inherits RazorSlice<MyModel>` or `@inherits RazorSliceHttpResult<MyModel>`) with **compile-time model validation** — the source generator detects the model type from the `@inherits` directive (including `_ViewImports.cshtml` hierarchy) and generates strongly-typed `Create(MyModel model)` methods on the proxy class
+- Strongly-typed models (via `@inherits RazorSlice<MyModel>`) with **compile-time model validation** — the source generator detects the model type from the `@inherits` directive (including `_ViewImports.cshtml` hierarchy) and generates strongly-typed `Create(MyModel model)` methods on the proxy class
 - Razor constructs:
   - [Implicit expressions](https://learn.microsoft.com/aspnet/core/mvc/views/razor#implicit-razor-expressions), e.g. `@someVariable`
   - [Explicit expressions](https://learn.microsoft.com/aspnet/core/mvc/views/razor#implicit-razor-expressions), e.g. `@(someBool ? thisThing : thatThing)`
@@ -218,7 +218,7 @@ The library is still new and features are being actively added.
 - Asynchronous rendering, i.e. the template can contain `await` statements, e.g. `@await WriteTheThing()`
 - Writing UTF8 `byte[]` values directly to the output
 - Rendering directly to `PipeWriter`, `Stream`, `TextWriter`, `StringBuilder`, and `string` outputs, including optimizations for not boxing struct values, zero-allocation rendering of primitives like numbers, etc. (rather than just calling `ToString()` on everything)
-- Return a slice instance directly as an `IResult` in minimal APIs via `@inherits RazorSliceHttpResult` and `Results.Extensions.RazorSlice("/Slices/Hello.cshtml")`
+- `RazorSlice` implements `IResult` so you can return a slice instance from a minimal APIs route handler directly, or via `Results.Extensions.RazorSlice<Hello>()` and in .NET 10+ `Results.RazorSlice<Hello>()`. When using slices with models use `Results.Extensions.RazorSlice<Hello, MyModel>(model)` and in .NET 10+ `Results.RazorSlice<Hello, MyModel>(model)`.
 - Full support for trimming and native AOT when used in conjunction with ASP.NET Core Minimal APIs
 - Generated Razor Slice proxy types are `public sealed` by default. To unseal them and make them `public partial` for your own customization, set the `RazorSliceProxiesSealed` property to `false` in your project file, e.g.:
     ``` xml
