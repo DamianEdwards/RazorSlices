@@ -47,11 +47,11 @@
       <BuildType Solution="Benchmarks|*" Project="Debug" />
       <Build Solution="Benchmarks|*" Project="false" />
     </Project>
-    <Project Path="tests/SourceGenerator/SourceGenerator.Tests.csproj">
+    <Project Path="tests/SourceGenerator/SourceGenerator.csproj">
       <BuildType Solution="Benchmarks|*" Project="Release" />
       <Build Solution="Benchmarks|*" Project="false" />
     </Project>
-    <Project Path="tests/RazorSlices/RazorSlices.Tests.csproj">
+    <Project Path="tests/RazorSlices/RazorSlices.csproj">
       <BuildType Solution="Benchmarks|*" Project="Release" />
       <Build Solution="Benchmarks|*" Project="false" />
     </Project>
