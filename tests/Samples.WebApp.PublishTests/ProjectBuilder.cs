@@ -331,7 +331,8 @@ public class ProjectBuilder
 
         testOutput?.WriteLine(publishOutput);
 
-        var appFilePath = Path.Join(outputDir, projectName);
+        var assemblyName = GetAssemblyName(projectPath) ?? projectName;
+        var appFilePath = Path.Join(outputDir, assemblyName);
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             appFilePath += ".exe";
@@ -339,7 +340,7 @@ public class ProjectBuilder
 
         if (!File.Exists(appFilePath))
         {
-            appFilePath = Path.Join(outputDir, projectName + ".dll");
+            appFilePath = Path.Join(outputDir, assemblyName + ".dll");
             if (!File.Exists(appFilePath))
             {
                 throw new InvalidOperationException($"Could not find application exe or dll '{appFilePath}'");
@@ -354,6 +355,13 @@ public class ProjectBuilder
         }
 
         return new(appFilePath, publishOutput, GetUserSecretsId(projectPath));
+    }
+
+    private static string? GetAssemblyName(string projectFilePath)
+    {
+        var xml = XDocument.Load(projectFilePath);
+        var assemblyNameElement = xml.Descendants("AssemblyName").FirstOrDefault();
+        return assemblyNameElement?.Value;
     }
 
     private static string? GetUserSecretsId(string projectFilePath)

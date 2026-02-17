@@ -24,7 +24,7 @@ public class PathHelper
                 break;
             }
 
-            if (File.Exists(Path.Join(currentDir.FullName, "RazorSlices.sln")))
+            if (File.Exists(Path.Join(currentDir.FullName, "RazorSlices.slnx")))
             {
                 // We're in the repo root
                 repoDir = currentDir;
