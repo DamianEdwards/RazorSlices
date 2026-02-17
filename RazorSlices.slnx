@@ -1,0 +1,84 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Benchmarks" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+  </Configurations>
+  <Folder Name="/samples/">
+    <Project Path="samples/PagesAndSlices/PagesAndSlices.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Debug" />
+    </Project>
+    <Project Path="samples/RazorClassLibrary/RazorClassLibrary.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+    <Project Path="samples/WebApp/WebApp.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="nuget.config" />
+  </Folder>
+  <Folder Name="/src/">
+    <File Path="src/Directory.Build.props" />
+    <Project Path="src/SourceGenerator/SourceGenerator.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+    </Project>
+    <Project Path="src/RazorSlices/RazorSlices.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Benchmarks/Benchmarks.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="tests/ProfilingHarness/ProfilingHarness.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Samples.WebApp.PublishTests/Samples.WebApp.PublishTests.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+    <Project Path="tests/Samples.WebApp/Samples.WebApp.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Debug" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+    <Project Path="tests/SourceGenerator/SourceGenerator.Tests.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+    <Project Path="tests/RazorSlices/RazorSlices.Tests.csproj">
+      <BuildType Solution="Benchmarks|*" Project="Release" />
+      <Build Solution="Benchmarks|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/BenchmarksWebApps/">
+    <File Path="tests/BenchmarksWebApps/Directory.Build.props" />
+    <Project Path="tests/BenchmarksWebApps/Benchmarks.RazorClassLibrary.Local/Benchmarks.RazorClassLibrary.Local.csproj" />
+    <Project Path="tests/BenchmarksWebApps/Benchmarks.RazorClassLibrary.PreviousVersion/Benchmarks.RazorClassLibrary.PreviousVersion.csproj" />
+    <Project Path="tests/BenchmarksWebApps/Benchmarks.WebApp.Blazor/Benchmarks.WebApp.Blazor.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="tests/BenchmarksWebApps/Benchmarks.WebApp.RazorComponents/Benchmarks.WebApp.RazorComponents.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="tests/BenchmarksWebApps/Benchmarks.WebApp.RazorPages/Benchmarks.WebApp.RazorPages.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="tests/BenchmarksWebApps/Benchmarks.WebApp.RazorSlicesLocal/Benchmarks.WebApp.RazorSlicesLocal.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="tests/BenchmarksWebApps/Benchmarks.WebApp.RazorSlicesPreviousVersion/Benchmarks.WebApp.RazorSlicesPreviousVersion.csproj">
+      <Build Solution="Debug|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+</Solution>

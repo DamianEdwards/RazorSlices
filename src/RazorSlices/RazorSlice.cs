@@ -242,11 +242,11 @@ public abstract partial class RazorSlice : IDisposable
 
     private ValueTask RenderViaLayout<TWriter>(Func<RazorSlice, TWriter, HtmlEncoder?, CancellationToken, ValueTask> render, IUsesLayout usesLayout, TWriter writer, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
+        EnsureInitialized();
         var layoutSlice = usesLayout.CreateLayoutImpl();
 
         if (layoutSlice is IRazorLayoutSlice razorLayoutSlice and RazorSlice)
         {
-            EnsureInitialized();
             razorLayoutSlice.ContentSlice = this;
             CopySliceState(this, (RazorSlice)razorLayoutSlice);
 

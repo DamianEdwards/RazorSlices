@@ -1,13 +1,15 @@
 <Project>
 
+  <Import Project="..\Directory.Build.props" />
+
   <PropertyGroup>
-    <VersionPrefix>0.9.5</VersionPrefix>
+    <VersionPrefix>0.10.0</VersionPrefix>
     <!-- VersionSuffix used for local builds -->
     <VersionSuffix>dev</VersionSuffix>
     <!-- VersionSuffix to be used for CI builds -->
     <VersionSuffix Condition=" '$(ContinuousIntegrationBuild)' == 'true' And '$(BuildNumber)' != '' ">ci.$(BuildNumber)</VersionSuffix>
-    <VersionSuffix Condition=" '$(ContinuousIntegrationBuild)' == 'true' And '$(IsShipCandidate)' == 'true' "></VersionSuffix>
-    <!--<VersionSuffix Condition=" '$(ContinuousIntegrationBuild)' == 'true' And '$(IsShipCandidate)' == 'true' ">pre.$(BuildNumber)</VersionSuffix>-->
+    <!-- <VersionSuffix Condition=" '$(ContinuousIntegrationBuild)' == 'true' And '$(IsShipCandidate)' == 'true' "></VersionSuffix> -->
+    <VersionSuffix Condition=" '$(ContinuousIntegrationBuild)' == 'true' And '$(IsShipCandidate)' == 'true' ">pre.$(BuildNumber)</VersionSuffix>
     <Authors>Damian Edwards</Authors>
     <Copyright>Copyright © Damian Edwards</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion</AssemblyName>
+    <RootNamespace>RazorSlices.Benchmarks.WebApp.RazorSlicesPreviousVersion</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RazorSlices" />
+  </ItemGroup>
+
+</Project>

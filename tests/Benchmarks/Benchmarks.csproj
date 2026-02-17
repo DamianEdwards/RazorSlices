@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RazorSlices.Benchmarks</AssemblyName>
+    <RootNamespace>RazorSlices.Benchmarks</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Configurations>Debug;Release;Benchmarks</Configurations>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Benchmarks'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.RazorClassLibrary.Local\Benchmarks.RazorClassLibrary.Local.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.RazorClassLibrary.PreviousVersion\Benchmarks.RazorClassLibrary.PreviousVersion.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.WebApp.Blazor\Benchmarks.WebApp.Blazor.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.WebApp.RazorComponents\Benchmarks.WebApp.RazorComponents.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.WebApp.RazorPages\Benchmarks.WebApp.RazorPages.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.WebApp.RazorSlicesLocal\Benchmarks.WebApp.RazorSlicesLocal.csproj" />
+    <ProjectReference Include="..\BenchmarksWebApps\Benchmarks.WebApp.RazorSlicesPreviousVersion\Benchmarks.WebApp.RazorSlicesPreviousVersion.csproj" />
+  </ItemGroup>
+
+</Project>

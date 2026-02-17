@@ -104,7 +104,10 @@ public static class RazorSliceFactory
     [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for initializing slices")]
     private static Expression<Action<RazorSlice, IServiceProvider?, HttpContext?>> GetExpressionInitAction(SliceDefinition sliceDefinition)
     {
-        if (!sliceDefinition.InjectableProperties.Any) throw new InvalidOperationException("Shouldn't call GetExpressionInitAction if there's no injectable properties.");
+        if (!sliceDefinition.InjectableProperties.Any)
+        {
+            throw new InvalidOperationException("Shouldn't call GetExpressionInitAction if there's no injectable properties.");
+        }
 
         // Make a delegate like:
         //
@@ -210,7 +213,7 @@ public static class RazorSliceFactory
     {
         var sliceType = sliceDefinition.SliceType;
 
-        if (sliceType.GetConstructor(Type.EmptyTypes) == null)
+        if (sliceType.GetConstructor(Type.EmptyTypes) is null)
         {
             throw new ArgumentException($"Slice type {sliceType.Name} must have a parameterless constructor.", nameof(sliceDefinition));
         }

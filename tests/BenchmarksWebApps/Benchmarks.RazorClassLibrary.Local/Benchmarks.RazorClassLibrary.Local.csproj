@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!-- Reference the props that would be brought in when consuming the RazorSlices package -->
+  <Import Project="..\..\..\src\RazorSlices\build\RazorSlices.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RazorSlices.Benchmarks.RazorClassLibrary.Local</AssemblyName>
+    <RootNamespace>RazorSlices.Benchmarks.RazorClassLibrary.Local</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\RazorSlices\RazorSlices.csproj" />
+    <ProjectReference Include="..\..\..\src\SourceGenerator\SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- Reference the targets that would be brought in when consuming the RazorSlices package -->
+  <Import Project="..\..\..\src\RazorSlices\build\RazorSlices.targets" />
+
+</Project>

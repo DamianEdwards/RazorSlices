@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "RazorSlices.Samples.WebApp": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\samples\\WebApp\\WebApp.csproj"
+    },
+    "RazorSlices.Benchmarks.RazorClassLibrary.Local": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\tests\\BenchmarksWebApps\\Benchmarks.RazorClassLibrary.Local\\Benchmarks.RazorClassLibrary.Local.csproj"
+    },
+    "RazorSlices.Samples.PagesAndSlices": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\..\\samples\\PagesAndSlices\\PagesAndSlices.csproj"
+    }
+  }
+}
