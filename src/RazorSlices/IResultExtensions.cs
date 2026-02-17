@@ -9,7 +9,7 @@ namespace Microsoft.AspNetCore.Http;
 /// </summary>
 public static class ResultsExtensions
 {
-    extension (Results)
+    extension(Results)
     {
         /// <summary>
         /// Render a <see cref="RazorSlices.RazorSlice" /> template to the response.
@@ -40,20 +40,64 @@ public static class ResultsExtensions
 /// </summary>
 public static class TypedResultsExtensions
 {
-    extension (TypedResults)
+    extension(TypedResults)
     {
         /// <summary>
         /// Render a <see cref="RazorSlices.RazorSlice" /> template to the response.
         /// </summary>
-        /// <typeparam name="TSliceProxy"></typeparam>
+        /// <remarks>
+        /// <para>
+        /// Use this method to return a slice that you have already created using its generated proxy, e.g.:
+        /// <example>
+        /// <code language="csharp">
+        /// app.MapGet("/", () =&gt; Results.RazorSlice(Slices.HomePage.Create(new HomeModel { Message = "Hello from RazorSlices!" })));
+        /// </code>
+        /// </example>
+        /// </para>
+        /// <para>
+        /// This method sets the <see cref="RazorSlice.HtmlEncoder"/> property to <see cref="HtmlEncoder.Default"/>, if it's not already set, to avoid looking it
+        /// up from the DI container and paying the cost of the request services scope. If you need to use a custom <see cref="HtmlEncoder"/>,
+        /// set it on the slice before passing it to this method, or return the slice directly without using this method to have the <see cref="HtmlEncoder"/>
+        /// resolved from <see cref="HttpContext.RequestServices"/>, e.g.:
+        /// <example>
+        /// <code language="csharp">
+        /// app.MapGet("/", () =&gt; Slices.HomePage.Create(new HomeModel { Message = "Hello from RazorSlices!" }));
+        /// </code>
+        /// </example>
+        /// </para>
+        /// </remarks>
+        /// <param name="razorSlice">The Razor slice to render.</param>
         /// <param name="statusCode">The HTTP status code to set on the response.</param>
-        /// <returns>An <see cref="RazorSlices.RazorSlice"/> that can be rendered to the response.</returns>
+        /// <returns>The Razor slice with the specified status code.</returns>
+        public static RazorSlice RazorSlice(RazorSlice razorSlice, int statusCode = StatusCodes.Status200OK)
+        {
+            // Set the default HtmlEncoder if it's not set to avoid looking it up from the DI container and paying the cost of the request services scope.
+            razorSlice.HtmlEncoder ??= HtmlEncoder.Default;
+            razorSlice.StatusCode = statusCode;
+            return razorSlice;
+        }
+
+        /// <summary>
+        /// Render a <see cref="RazorSlices.RazorSlice" /> template to the response.
+        /// </summary>
+        /// <remarks>
+        /// This method sets the <see cref="RazorSlice.HtmlEncoder"/> property to <see cref="HtmlEncoder.Default"/>, if it's not already set, to avoid looking it
+        /// up from the DI container and paying the cost of the request services scope. If you need to use a custom <see cref="HtmlEncoder"/>,
+        /// use the <see cref="RazorSlice"/> overload and set <see cref="RazorSlice.HtmlEncoder"/> before passing it in. Alternatively, return the slice directly
+        /// without using these methods to have the <see cref="HtmlEncoder"/> resolved from <see cref="HttpContext.RequestServices"/>, e.g.:
+        /// <example>
+        /// <code language="csharp">
+        /// app.MapGet("/", () =&gt; Slices.HomePage.Create());
+        /// </code>
+        /// </example>
+        /// </remarks>
+        /// <typeparam name="TSliceProxy">The type of the Razor slice proxy.</typeparam>
+        /// <param name="statusCode">The HTTP status code to set on the response.</param>
+        /// <returns>A <see cref="RazorSlices.RazorSlice"/> that can be rendered to the response.</returns>
         public static RazorSlice RazorSlice<TSliceProxy>(int statusCode = StatusCodes.Status200OK)
             where TSliceProxy : IRazorSliceProxy
         {
-#pragma warning disable CA2000 // Dispose objects before losing scope: IResult will get disposed by ASP.NET Core
             var razorSlice = TSliceProxy.CreateSlice();
-#pragma warning restore CA2000 // Dispose objects before losing scope
 
             // Set the default HtmlEncoder if it's not set to avoid looking it up from the DI container and paying the cost of the request services scope.
             razorSlice.HtmlEncoder ??= HtmlEncoder.Default;
@@ -64,18 +108,27 @@ public static class TypedResultsExtensions
         /// <summary>
         /// Render a <see cref="RazorSlices.RazorSlice{TModel}" /> template to the response.
         /// </summary>
-        /// <typeparam name="TSliceProxy"></typeparam>
-        /// <typeparam name="TModel"></typeparam>
+        /// <remarks>
+        /// This method sets the <see cref="RazorSlice.HtmlEncoder"/> property to <see cref="HtmlEncoder.Default"/>, if it's not already set, to avoid looking it
+        /// up from the DI container and paying the cost of the request services scope. If you need to use a custom <see cref="HtmlEncoder"/>,
+        /// use the <see cref="RazorSlice"/> overload and set <see cref="RazorSlice.HtmlEncoder"/> before passing it in. Alternatively, return the slice directly
+        /// without using these methods to have the <see cref="HtmlEncoder"/> resolved from <see cref="HttpContext.RequestServices"/>, e.g.:
+        /// <example>
+        /// <code language="csharp">
+        /// app.MapGet("/", () =&gt; Slices.HomePage.Create(new HomeModel { Message = "Hello from RazorSlices!" }));
+        /// </code>
+        /// </example>
+        /// </remarks>
+        /// <typeparam name="TSliceProxy">The type of the Razor slice proxy.</typeparam>
+        /// <typeparam name="TModel">The type of the model.</typeparam>
         /// <param name="model">The model to pass to the Razor slice.</param>
         /// <param name="statusCode">The HTTP status code to set on the response.</param>
-        /// <returns>An <see cref="RazorSlices.RazorSlice{TModel}"/> that can be rendered to the response.</returns>
+        /// <returns>A <see cref="RazorSlices.RazorSlice{TModel}"/> that can be rendered to the response.</returns>
         public static RazorSlice<TModel> RazorSlice<TSliceProxy, TModel>(TModel model, int statusCode = StatusCodes.Status200OK)
             where TSliceProxy : IRazorSliceProxy<TModel>
         {
-    #pragma warning disable CA2000 // Dispose objects before losing scope: IResult will get disposed by ASP.NET Core
             var razorSlice = TSliceProxy.CreateSlice(model);
-    #pragma warning restore CA2000 // Dispose objects before losing scope
-            
+
             // Set the default HtmlEncoder if it's not set to avoid looking it up from the DI container and paying the cost of the request services scope.
             razorSlice.HtmlEncoder ??= HtmlEncoder.Default;
             razorSlice.StatusCode = statusCode;
@@ -103,9 +156,7 @@ public static class RazorSlicesExtensions
     public static RazorSlice RazorSlice<TSliceProxy>(this IResultExtensions _, int statusCode = StatusCodes.Status200OK)
         where TSliceProxy : IRazorSliceProxy
     {
-#pragma warning disable CA2000 // Dispose objects before losing scope: IResult will get disposed by ASP.NET Core
         var razorSlice = TSliceProxy.CreateSlice();
-#pragma warning restore CA2000 // Dispose objects before losing scope
 
         // Set the default HtmlEncoder if it's not set to avoid looking it up from the DI container and paying the cost of the request services scope.
         razorSlice.HtmlEncoder ??= HtmlEncoder.Default;
@@ -128,10 +179,8 @@ public static class RazorSlicesExtensions
     public static RazorSlice<TModel> RazorSlice<TSliceProxy, TModel>(this IResultExtensions _, TModel model, int statusCode = StatusCodes.Status200OK)
         where TSliceProxy : IRazorSliceProxy<TModel>
     {
-#pragma warning disable CA2000 // Dispose objects before losing scope: IResult will get disposed by ASP.NET Core
         var razorSlice = TSliceProxy.CreateSlice(model);
-#pragma warning restore CA2000 // Dispose objects before losing scope
-        
+
         // Set the default HtmlEncoder if it's not set to avoid looking it up from the DI container and paying the cost of the request services scope.
         razorSlice.HtmlEncoder ??= HtmlEncoder.Default;
         razorSlice.StatusCode = statusCode;
