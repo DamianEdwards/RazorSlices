@@ -17,7 +17,7 @@ public static class ResultsExtensions
         /// <typeparam name="TSliceProxy"></typeparam>
         /// <param name="statusCode">The HTTP status code to set on the response.</param>
         /// <returns>An <see cref="RazorSlices.RazorSlice"/> that can be rendered to the response.</returns>
-        public static RazorSlice RazorSlice<TSliceProxy>(int statusCode = StatusCodes.Status200OK)
+        public static IResult RazorSlice<TSliceProxy>(int statusCode = StatusCodes.Status200OK)
             where TSliceProxy : IRazorSliceProxy
             => TypedResultsExtensions.RazorSlice<TSliceProxy>(statusCode);
 
@@ -29,7 +29,7 @@ public static class ResultsExtensions
         /// <param name="model">The model to pass to the Razor slice.</param>
         /// <param name="statusCode">The HTTP status code to set on the response.</param>
         /// <returns>An <see cref="RazorSlices.RazorSlice{TModel}"/> that can be rendered to the response.</returns>
-        public static RazorSlice<TModel> RazorSlice<TSliceProxy, TModel>(TModel model, int statusCode = StatusCodes.Status200OK)
+        public static IResult RazorSlice<TSliceProxy, TModel>(TModel model, int statusCode = StatusCodes.Status200OK)
             where TSliceProxy : IRazorSliceProxy<TModel>
             => TypedResultsExtensions.RazorSlice<TSliceProxy, TModel>(model, statusCode);
     }

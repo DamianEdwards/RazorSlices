@@ -11,7 +11,8 @@ internal static class MapSlicesExtensions
         endpoints.MapGet("/lorem", () => Results.Redirect("/lorem-static"));
 
 #if NET10_0_OR_GREATER
-        endpoints.MapGet("/lorem-static", () => Results.RazorSlice<Slices.Lorem.LoremStatic>());
+        endpoints.MapGet("/lorem-static", () =>
+            Results.RazorSlice<Slices.Lorem.LoremStatic>());
         endpoints.MapGet("/lorem-dynamic", (int? paraCount, int? paraLength) =>
             Results.RazorSlice<Slices.Lorem.LoremDynamic, LoremParams>(new LoremParams(paraCount, paraLength)));
         endpoints.MapGet("/lorem-formattable", (int? paraCount, int? paraLength) =>
