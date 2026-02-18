@@ -15,6 +15,11 @@ jobs:
   push-package:
     name: Release
     runs-on: ubuntu-latest
+    environment: nuget.org
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
@@ -80,8 +85,11 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
 
-      - name: Add nuget.org source
-        run: dotnet nuget add source --name NUGET https://www.nuget.org
+      - name: NuGet login (OIDC)
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ github.repository_owner }}
 
       - name: Push to nuget.org
-        run: dotnet nuget push "$PACKAGE_FILEPATH" -s "NUGET" -k ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push "$PACKAGE_FILEPATH" --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
