@@ -19,6 +19,18 @@ public class DotNetCli
         return RunCommand("publish", args, testOutput);
     }
 
+    public static string Pack(string projectPath, string outputDir, ITestOutputHelper? testOutput = null)
+    {
+        var args = new List<string>
+        {
+            projectPath,
+            "--configuration", "Release",
+            "--output", outputDir,
+            "--no-restore"
+        };
+        return RunCommand("pack", args, testOutput);
+    }
+
     private static string RunCommand(string commandName, IEnumerable<string> args, ITestOutputHelper? testOutput = null)
     {
         var process = new Process
