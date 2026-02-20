@@ -53,11 +53,15 @@
     <ProjectReference Include="..\SourceGenerator\SourceGenerator.csproj" OutputItemType="SourceGeneratorAssemblyPath" ReferenceOutputAssembly="false" Private="true" />
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorInPackage</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
   <!-- Include source generator assembly in this project's package output -->
-  <Target Name="IncludeSourceGeneratorInPackage" AfterTargets="ResolveProjectReferences">
-      <ItemGroup>
-        <None Include="@(SourceGeneratorAssemblyPath -> '%(Identity)')" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-      </ItemGroup>
+  <Target Name="IncludeSourceGeneratorInPackage">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="@(SourceGeneratorAssemblyPath)" PackagePath="analyzers/dotnet/cs" />
+    </ItemGroup>
   </Target>
 
 </Project>
