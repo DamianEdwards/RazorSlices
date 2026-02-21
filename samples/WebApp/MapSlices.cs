@@ -48,6 +48,7 @@ internal static class MapSlicesExtensions
             return Results.Ok(new ResultDto(stringBuilder.ToString()));
         });
 
+        endpoints.MapGet("/nested", () => Results.RazorSlice<Slices.Nested, Models.Todo.Nested>(new Models.Todo.Nested { Extra = "Test" }));
         endpoints.MapGet("/", () => Results.RazorSlice<Slices.Todos, Models.Todo[]>(Models.Todos.AllTodos));
         endpoints.MapGet("/{id:int}", Results<RazorSlice, NotFound> (int id) =>
         {
@@ -57,7 +58,8 @@ internal static class MapSlicesExtensions
                 : TypedResults.NotFound();
         });
 #else
-        endpoints.MapGet("/lorem-static", () => Results.Extensions.RazorSlice<Slices.Lorem.LoremStatic>());
+        endpoints.MapGet("/nested", () => Results.Extensions.RazorSlice<Slices.Nested, Models.Todo.Nested>(new Models.Todo.Nested { Extra = "Test" }));
+        endpoints.MapGet("/lorem-static",() => Results.Extensions.RazorSlice<Slices.Lorem.LoremStatic>());
         endpoints.MapGet("/lorem-dynamic", (int? paraCount, int? paraLength) =>
             Results.Extensions.RazorSlice<Slices.Lorem.LoremDynamic, LoremParams>(new LoremParams(paraCount, paraLength)));
         endpoints.MapGet("/lorem-formattable", (int? paraCount, int? paraLength) =>

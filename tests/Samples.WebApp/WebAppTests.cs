@@ -25,6 +25,7 @@ public class WebAppTests
     public static object[][] EndpointDetails => [
         ["/", "Todos", MediaTypeNames.Text.Html],
         ["/1", "Wash the dishes", MediaTypeNames.Text.Html],
+        ["/nested", "Nested : Test", MediaTypeNames.Text.Html],
         ["/encoding", "{&#x27;antiForgery&#x27;", MediaTypeNames.Text.Html],
         ["/unicode", "🐻", MediaTypeNames.Text.Html],
         ["/templated", "This is from a partial with a templated model", MediaTypeNames.Text.Html],
