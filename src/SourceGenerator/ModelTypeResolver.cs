@@ -177,7 +177,49 @@ internal static class ModelTypeResolver
             }
         }
 
-        // 3. Try as fully-qualified name first
+        // 3-6. Try as fully-qualified, with @using prefixes, implicit namespaces, and root namespace
+        var result = TryResolveWithNamespaces(typeName, metadataNameOverride, usingDirectives, compilation, stripGenericParams, rootNamespace);
+        if (result != null)
+        {
+            return result;
+        }
+
+        // 7. Try nested classes: for types like "Outer.Inner", try treating dots as
+        //    nested type separators ('+' in metadata) with namespace resolution.
+        //    If there are no dots the loop naturally does nothing.
+        var parts = typeName.Split('.');
+        for (int j = parts.Length - 1; j > 0; j--)
+        {
+            var outerPart = string.Join(".", parts, 0, j);
+            var nestedPart = string.Join("+", parts, j, parts.Length - j);
+            var candidateName = outerPart + "+" + nestedPart;
+            string? candidateLookup = null;
+
+            if (metadataNameOverride != null)
+            {
+                var arityIndex = metadataNameOverride.IndexOf('`');
+                candidateLookup = arityIndex >= 0
+                    ? candidateName + metadataNameOverride.Substring(arityIndex)
+                    : candidateName;
+            }
+
+            result = TryResolveWithNamespaces(candidateName, candidateLookup, usingDirectives, compilation, stripGenericParams, rootNamespace);
+            if (result != null)
+            {
+                return result;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Tries to resolve a type name by attempting it as fully-qualified, then with each @using namespace prefix,
+    /// implicit namespaces (System, System.Collections.Generic, etc.), and the project's root namespace.
+    /// </summary>
+    private static string? TryResolveWithNamespaces(string typeName, string? metadataNameOverride, List<UsingDirective> usingDirectives, Compilation compilation, bool stripGenericParams, string? rootNamespace)
+    {
+        // Try as fully-qualified name
         var lookupName = metadataNameOverride ?? typeName;
         var result = TryResolveViaCompilation(typeName, lookupName, compilation, stripGenericParams);
         if (result != null)
@@ -185,12 +227,12 @@ internal static class ModelTypeResolver
             return result;
         }
 
-        // 4. Try with each @using namespace prefix
+        // Try with each @using namespace prefix
         foreach (var ud in usingDirectives)
         {
             if (ud.Alias != null)
             {
-                continue; // Skip aliases, handled above
+                continue;
             }
 
             var candidateName = ud.NamespaceOrType + "." + typeName;
@@ -205,7 +247,7 @@ internal static class ModelTypeResolver
             }
         }
 
-        // 5. Try with implicit namespaces (System, System.Collections.Generic, etc.)
+        // Try with implicit namespaces (System, System.Collections.Generic, etc.)
         foreach (var implicitNs in ImplicitNamespaces)
         {
             var candidateName = implicitNs + "." + typeName;
@@ -220,7 +262,7 @@ internal static class ModelTypeResolver
             }
         }
 
-        // 6. Try with the project's root namespace
+        // Try with the project's root namespace
         if (!string.IsNullOrEmpty(rootNamespace))
         {
             var candidateName = rootNamespace + "." + typeName;

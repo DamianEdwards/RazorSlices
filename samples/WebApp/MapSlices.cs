@@ -1,6 +1,7 @@
 using LibrarySlices = RazorSlices.Samples.RazorClassLibrary.Slices;
 using Microsoft.AspNetCore.Http.HttpResults;
 using System.Text;
+using RazorSlices.Samples.WebApp.Models;
 
 namespace RazorSlices.Samples.WebApp;
 
@@ -57,6 +58,7 @@ internal static class MapSlicesExtensions
                 : TypedResults.NotFound();
         });
 #else
+        endpoints.MapGet("/lorem-nested", () => Results.Extensions.RazorSlice<Slices.Nested, Todo.Nested>(new Todo.Nested() { Extra = "Test" }));
         endpoints.MapGet("/lorem-static", () => Results.Extensions.RazorSlice<Slices.Lorem.LoremStatic>());
         endpoints.MapGet("/lorem-dynamic", (int? paraCount, int? paraLength) =>
             Results.Extensions.RazorSlice<Slices.Lorem.LoremDynamic, LoremParams>(new LoremParams(paraCount, paraLength)));
