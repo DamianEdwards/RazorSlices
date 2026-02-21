@@ -4,6 +4,11 @@ namespace RazorSlices.Samples.WebApp.Models;
 
 public class Todo
 {
+    public class Nested
+    {
+        public string? Extra { get; set; }
+    }
+
     public int Id { get; set; }
 
     private byte[] _titleUtf8 = [];
