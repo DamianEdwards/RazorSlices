@@ -165,8 +165,12 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 string? resolvedModelType = null;
                 bool hasModel = false;
 
+                var templateNameSpace = "AspNetCoreGeneratedDocument";
+
                 if (sourceText is not null)
                 {
+                    templateNameSpace = RazorDirectiveParser.ParseNamespaceDirective(sourceText) ?? templateNameSpace;
+                    
                     var directives = ViewImportsResolver.ResolveDirectives(file.Path, projectDirectory!, viewImportsMap, sourceText);
 
                     if (directives.InheritsDirective is not null)
@@ -216,7 +220,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                         public {{ sealedValue }}class {{className}} : global::RazorSlices.IRazorSliceProxy{{genericParameter}}
                         {
                             [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, TypeName, "{{assemblyName}}")]
-                            private const string TypeName = "AspNetCoreGeneratedDocument.{{generatedTypeName}}, {{assemblyName}}";
+                            private const string TypeName = "{{templateNameSpace}}.{{generatedTypeName}}, {{assemblyName}}";
                             [global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All)]
                             private static readonly global::System.Type _sliceType = global::System.Type.GetType(TypeName)
                                 ?? throw new global::System.InvalidOperationException($"Razor view type '{TypeName}' was not found. This is likely a bug in the RazorSlices source generator.");

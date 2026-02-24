@@ -72,6 +72,27 @@ internal static class RazorDirectiveParser
         }
         return usings;
     }
+    
+    /// <summary>
+    /// Parses the @namespace directive value from the given source text.
+    /// Returns null if no @namespace directive is found.
+    /// </summary>
+    internal static string? ParseNamespaceDirective(SourceText sourceText)
+    {
+        foreach (var line in sourceText.Lines)
+        {
+            var lineText = line.ToString().TrimStart();
+            if (lineText.StartsWith("@namespace ", StringComparison.Ordinal))
+            {
+                var value = lineText.Substring("@namespace ".Length).Trim();
+                if (value.Length > 0)
+                {
+                    return value;
+                }
+            }
+        }
+        return null;
+    }
 
     /// <summary>
     /// Extracts the model type from a base type string.
