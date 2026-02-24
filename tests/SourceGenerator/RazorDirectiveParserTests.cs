@@ -56,6 +56,28 @@ public class RazorDirectiveParserTests
     {
         Assert.Null(RazorDirectiveParser.ExtractModelType(baseType));
     }
+    
+    [Theory]
+    [InlineData("@namespace MyApp", "MyApp")]
+    [InlineData("@namespace MyApp.Slices", "MyApp.Slices")]
+    [InlineData("@namespace  MyApp ", "MyApp")]
+    [InlineData("  @namespace MyApp", "MyApp")]
+    public void ParseNamespaceDirective_ReturnsBaseType(string line, string expected)
+    {
+        var sourceText = SourceText.From(line);
+        var result = RazorDirectiveParser.ParseNamespaceDirective(sourceText);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("@* comment *@")]
+    [InlineData("<p>Hello</p>")]
+    [InlineData("@using System")]
+    public void ParseNamespaceDirective_ReturnsNull_WhenNoNamespace(string line)
+    {
+        var sourceText = SourceText.From(line);
+        Assert.Null(RazorDirectiveParser.ParseNamespaceDirective(sourceText));
+    }
 
     [Fact]
     public void ParseUsingDirectives_ReturnsSimpleUsings()
