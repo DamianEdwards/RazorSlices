@@ -1,4 +1,5 @@
-﻿@using System.IO
+﻿@namespace RazorSlices.Samples.WebApp.Alternate.Lorem
+@using System.IO
 @using System.Text.Encodings.Web
 
 @inherits RazorSlice<HtmlContentParams>
@@ -32,10 +33,12 @@
             if (HtmlEncode)
             {
                 writer.Write(encoder.Encode(PageContent.Html));
+                writer.Write(encoder.Encode(LoremExtra.AdditionalContent));
             }
             else
             {
                 writer.Write(PageContent.Html);
+                writer.Write(LoremExtra.AdditionalContent);
             }
         }
     }

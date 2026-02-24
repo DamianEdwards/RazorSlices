@@ -44,8 +44,9 @@ internal static class ViewImportsResolver
 
             var inheritsDirective = RazorDirectiveParser.ParseInheritsDirective(sourceText);
             var usingDirectives = RazorDirectiveParser.ParseUsingDirectives(sourceText);
+            var namespaceDirective = RazorDirectiveParser.ParseNamespaceDirective(sourceText);
 
-            map[directory] = new ViewImportsDirectives(inheritsDirective, usingDirectives);
+            map[directory] = new ViewImportsDirectives(inheritsDirective, usingDirectives, namespaceDirective);
         }
 
         return map;
@@ -69,12 +70,13 @@ internal static class ViewImportsResolver
         // Parse the slice file's own directives
         var sliceInherits = RazorDirectiveParser.ParseInheritsDirective(sliceSourceText);
         var sliceUsings = RazorDirectiveParser.ParseUsingDirectives(sliceSourceText);
+        var sliceNamespace = RazorDirectiveParser.ParseNamespaceDirective(sliceSourceText);
 
         // Build the directory chain from project root down to the slice's directory
         var sliceDirectory = Path.GetDirectoryName(sliceFilePath);
         if (sliceDirectory is null)
         {
-            return new ResolvedDirectives(sliceInherits, sliceUsings);
+            return new ResolvedDirectives(sliceInherits, sliceUsings, sliceNamespace);
         }
 
         // Collect all _ViewImports directories from project root down to slice directory
@@ -83,6 +85,7 @@ internal static class ViewImportsResolver
         // Accumulate usings from outermost to innermost (parent first, child last)
         var accumulatedUsings = new List<UsingDirective>();
         string? effectiveInherits = null;
+        string? effectiveNamespace = null;
 
         foreach (var dir in directoryChain)
         {
@@ -94,6 +97,11 @@ internal static class ViewImportsResolver
                 if (directives.InheritsDirective is not null)
                 {
                     effectiveInherits = directives.InheritsDirective;
+                }
+
+                if (directives.NamespaceDirective is not null)
+                {
+                    effectiveNamespace = directives.NamespaceDirective;
                 }
             }
         }
@@ -107,7 +115,12 @@ internal static class ViewImportsResolver
             effectiveInherits = sliceInherits;
         }
 
-        return new ResolvedDirectives(effectiveInherits, accumulatedUsings);
+        if (sliceNamespace is not null)
+        {
+            effectiveNamespace = sliceNamespace;
+        }
+
+        return new ResolvedDirectives(effectiveInherits, accumulatedUsings, effectiveNamespace);
     }
 
     /// <summary>
@@ -149,13 +162,15 @@ internal static class ViewImportsResolver
     }
 }
 
-internal readonly struct ViewImportsDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives)
+internal readonly struct ViewImportsDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives, string? namespaceDirective)
 {
     public string? InheritsDirective { get; } = inheritsDirective;
     public List<UsingDirective> UsingDirectives { get; } = usingDirectives;
+
+    public string? NamespaceDirective { get; } = namespaceDirective;
 }
 
-internal readonly struct ResolvedDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives)
+internal readonly struct ResolvedDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives, string? namespaceDirective)
 {
 
     /// <summary>
@@ -167,4 +182,9 @@ internal readonly struct ResolvedDirectives(string? inheritsDirective, List<Usin
     /// All accumulated @using directives from the _ViewImports hierarchy and the slice itself.
     /// </summary>
     public List<UsingDirective> UsingDirectives { get; } = usingDirectives;
+
+    /// <summary>
+    /// The effective @namespace directive value (from the slice or nearest _ViewImports).
+    /// </summary>
+    public string? NamespaceDirective { get; } = namespaceDirective;
 }
