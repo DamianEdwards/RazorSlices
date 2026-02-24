@@ -115,6 +115,11 @@ internal static class ViewImportsResolver
             effectiveInherits = sliceInherits;
         }
 
+        if (sliceNamespace is not null)
+        {
+            effectiveNamespace = sliceNamespace;
+        }
+
         return new ResolvedDirectives(effectiveInherits, accumulatedUsings, effectiveNamespace);
     }
 
