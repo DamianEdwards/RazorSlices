@@ -169,8 +169,6 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
 
                 if (sourceText is not null)
                 {
-                    templateNameSpace = RazorDirectiveParser.ParseNamespaceDirective(sourceText) ?? templateNameSpace;
-                    
                     var directives = ViewImportsResolver.ResolveDirectives(file.Path, projectDirectory!, viewImportsMap, sourceText);
 
                     if (directives.InheritsDirective is not null)
@@ -198,6 +196,11 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                                 context.ReportDiagnostic(Diagnostic.Create(descriptor, Location.None));
                             }
                         }
+                    }
+
+                    if (directives.NamespaceDirective is not null)
+                    {
+                        templateNameSpace = directives.NamespaceDirective;
                     }
                 }
 
