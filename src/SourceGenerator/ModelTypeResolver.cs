@@ -67,13 +67,7 @@ internal static class ModelTypeResolver
             trimmedBaseTypeName = trimmedBaseTypeName.Substring("global::".Length);
         }
 
-        var resolvedBaseType = ResolveSimpleType(trimmedBaseTypeName, usingDirectives, compilation, rootNamespace: rootNamespace);
-        if (resolvedBaseType is null)
-        {
-            return null;
-        }
-
-        var baseTypeSymbol = ResolveNamedTypeSymbol(resolvedBaseType, compilation);
+        var baseTypeSymbol = ResolveTypeSymbolExpression(trimmedBaseTypeName, usingDirectives, compilation, rootNamespace) as INamedTypeSymbol;
         if (baseTypeSymbol is null)
         {
             return null;
@@ -132,6 +126,93 @@ internal static class ModelTypeResolver
 
         // Handle simple type names
         return ResolveSimpleType(typeName, usingDirectives, compilation, rootNamespace: rootNamespace);
+    }
+
+    private static ITypeSymbol? ResolveTypeSymbolExpression(string typeName, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace)
+    {
+        // Handle nullable value/reference types by resolving the underlying type symbol.
+        if (typeName.EndsWith("?", StringComparison.Ordinal))
+        {
+            var innerType = typeName.Substring(0, typeName.Length - 1).Trim();
+            return ResolveTypeSymbolExpression(innerType, usingDirectives, compilation, rootNamespace);
+        }
+
+        // Handle array types: T[], T[,], etc.
+        if (typeName.EndsWith("]", StringComparison.Ordinal))
+        {
+            var bracketStart = FindArrayBracketStart(typeName);
+            if (bracketStart >= 0)
+            {
+                var elementType = typeName.Substring(0, bracketStart).Trim();
+                var elementSymbol = ResolveTypeSymbolExpression(elementType, usingDirectives, compilation, rootNamespace);
+                if (elementSymbol is null)
+                {
+                    return null;
+                }
+
+                var arraySuffix = typeName.Substring(bracketStart);
+                int rank = 1;
+                for (int i = 0; i < arraySuffix.Length; i++)
+                {
+                    if (arraySuffix[i] == ',')
+                    {
+                        rank++;
+                    }
+                }
+
+                return compilation.CreateArrayTypeSymbol(elementSymbol, rank);
+            }
+        }
+
+        // Handle generic types: Type<T1, T2>
+        var genericOpen = FindTopLevelGenericOpen(typeName);
+        if (genericOpen >= 0)
+        {
+            var outerType = typeName.Substring(0, genericOpen).Trim();
+            var genericClose = typeName.LastIndexOf('>');
+            if (genericClose <= genericOpen)
+            {
+                return null;
+            }
+
+            var argsString = typeName.Substring(genericOpen + 1, genericClose - genericOpen - 1);
+            var args = SplitGenericArguments(argsString);
+
+            var metadataName = outerType + "`" + args.Count;
+            var resolvedOuter = ResolveSimpleType(outerType, usingDirectives, compilation, metadataName, stripGenericParams: true, rootNamespace: rootNamespace);
+            if (resolvedOuter is null)
+            {
+                return null;
+            }
+
+            var outerSymbol = ResolveNamedTypeSymbol(resolvedOuter + "`" + args.Count, compilation);
+            if (outerSymbol is null)
+            {
+                return null;
+            }
+
+            var resolvedArgs = new ITypeSymbol[args.Count];
+            for (int i = 0; i < args.Count; i++)
+            {
+                var resolvedArg = ResolveTypeSymbolExpression(args[i].Trim(), usingDirectives, compilation, rootNamespace);
+                if (resolvedArg is null)
+                {
+                    return null;
+                }
+
+                resolvedArgs[i] = resolvedArg;
+            }
+
+            return outerSymbol.Construct(resolvedArgs);
+        }
+
+        var resolvedSimple = ResolveSimpleType(typeName, usingDirectives, compilation, rootNamespace: rootNamespace);
+        if (resolvedSimple is null)
+        {
+            return null;
+        }
+
+        return ResolveNamedTypeSymbol(resolvedSimple, compilation);
     }
 
     private static string? ResolveGenericType(string typeName, int genericOpen, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace)
