@@ -54,6 +54,52 @@ internal static class ModelTypeResolver
         return ResolveTypeExpression(modelTypeName.Trim(), usingDirectives, compilation, rootNamespace);
     }
 
+    /// <summary>
+    /// Resolves the model type by resolving an inherited slice base type and walking its base type hierarchy
+    /// until a <c>RazorSlices.RazorSlice&lt;TModel&gt;</c> base type is found.
+    /// Returns null when the inherited type cannot be resolved or does not derive from a generic RazorSlice.
+    /// </summary>
+    internal static string? ResolveModelTypeFromSliceBaseType(string baseTypeName, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace = null)
+    {
+        var trimmedBaseTypeName = baseTypeName.Trim();
+        if (trimmedBaseTypeName.StartsWith("global::", StringComparison.Ordinal))
+        {
+            trimmedBaseTypeName = trimmedBaseTypeName.Substring("global::".Length);
+        }
+
+        var resolvedBaseType = ResolveSimpleType(trimmedBaseTypeName, usingDirectives, compilation, rootNamespace: rootNamespace);
+        if (resolvedBaseType is null)
+        {
+            return null;
+        }
+
+        var baseTypeSymbol = ResolveNamedTypeSymbol(resolvedBaseType, compilation);
+        if (baseTypeSymbol is null)
+        {
+            return null;
+        }
+
+        for (var currentType = baseTypeSymbol; currentType is not null; currentType = currentType.BaseType)
+        {
+            if (!string.Equals(currentType.Name, "RazorSlice", StringComparison.Ordinal) ||
+                !string.Equals(currentType.ContainingNamespace.ToDisplayString(), "RazorSlices", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (currentType.IsGenericType && currentType.TypeArguments.Length == 1)
+            {
+                return "global::" + currentType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat
+                    .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining));
+            }
+
+            // Reached non-generic RazorSlice, so there is no model.
+            return null;
+        }
+
+        return null;
+    }
+
     private static string? ResolveTypeExpression(string typeName, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace)
     {
         // Handle nullable value types: T?
@@ -343,6 +389,36 @@ internal static class ModelTypeResolver
 
             return result;
         }
+        return null;
+    }
+
+    private static INamedTypeSymbol? ResolveNamedTypeSymbol(string fullyQualifiedTypeName, Compilation compilation)
+    {
+        const string GlobalPrefix = "global::";
+
+        var metadataName = fullyQualifiedTypeName.StartsWith(GlobalPrefix, StringComparison.Ordinal)
+            ? fullyQualifiedTypeName.Substring(GlobalPrefix.Length)
+            : fullyQualifiedTypeName;
+
+        var symbol = compilation.GetTypeByMetadataName(metadataName);
+        if (symbol is not null)
+        {
+            return symbol;
+        }
+
+        var parts = metadataName.Split('.');
+        for (int j = parts.Length - 1; j > 0; j--)
+        {
+            var namespacePart = string.Join(".", parts, 0, j);
+            var nestedPart = string.Join("+", parts, j, parts.Length - j);
+            var candidateName = namespacePart + "+" + nestedPart;
+            symbol = compilation.GetTypeByMetadataName(candidateName);
+            if (symbol is not null)
+            {
+                return symbol;
+            }
+        }
+
         return null;
     }
 

@@ -196,6 +196,16 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                                 context.ReportDiagnostic(Diagnostic.Create(descriptor, Location.None));
                             }
                         }
+                        else
+                        {
+                            resolvedModelType = ModelTypeResolver.ResolveModelTypeFromSliceBaseType(
+                                directives.InheritsDirective, directives.UsingDirectives, compilation, rootNamespace);
+
+                            if (resolvedModelType is not null)
+                            {
+                                hasModel = true;
+                            }
+                        }
                     }
 
                     if (directives.NamespaceDirective is not null)

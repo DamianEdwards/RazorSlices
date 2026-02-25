@@ -12,6 +12,18 @@ public class ModelTypeResolverTests
         var source = @"
 namespace TestNs
 {
+    public class TodoModel { }
+
+    public abstract class DirectTodoSliceBase : RazorSlices.RazorSlice<TodoModel> { }
+
+    public abstract class GenericTodoSliceBase<TModel> : RazorSlices.RazorSlice<TModel> { }
+
+    public abstract class DeepGenericTodoSliceBase<TModel> : GenericTodoSliceBase<TModel> { }
+
+    public abstract class DeepConcreteTodoSliceBase : DeepGenericTodoSliceBase<TodoModel[]> { }
+
+    public abstract class NoModelSliceBase : RazorSlices.RazorSlice { }
+
     public class Outer
     {
         public class Inner { }
@@ -64,6 +76,13 @@ namespace RootNs
         public class Child { }
     }
 }
+
+namespace RazorSlices
+{
+    public abstract class RazorSlice { }
+
+    public abstract class RazorSlice<TModel> : RazorSlice { }
+}
 ";
         var syntaxTree = CSharpSyntaxTree.ParseText(source);
         var runtimeDir = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
@@ -98,6 +117,18 @@ namespace RootNs
     {
         return ModelTypeResolver.ResolveModelType(
             modelTypeName,
+            usings ?? [],
+            TestCompilation,
+            rootNamespace);
+    }
+
+    private static string? ResolveFromSliceBaseType(
+        string baseTypeName,
+        List<UsingDirective>? usings = null,
+        string? rootNamespace = null)
+    {
+        return ModelTypeResolver.ResolveModelTypeFromSliceBaseType(
+            baseTypeName,
             usings ?? [],
             TestCompilation,
             rootNamespace);
@@ -340,5 +371,37 @@ namespace RootNs
     {
         var result = Resolve("List<string>");
         Assert.Equal("global::System.Collections.Generic.List<global::System.String>", result);
+    }
+
+    [Fact]
+    public void SliceBaseType_DirectlyInheritsGenericRazorSlice_ResolvesModelType()
+    {
+        var usings = new List<UsingDirective> { new("TestNs", null) };
+        var result = ResolveFromSliceBaseType("DirectTodoSliceBase", usings);
+        Assert.Equal("global::TestNs.TodoModel", result);
+    }
+
+    [Fact]
+    public void SliceBaseType_DeepGenericHierarchy_ResolvesModelType()
+    {
+        var usings = new List<UsingDirective> { new("TestNs", null) };
+        var result = ResolveFromSliceBaseType("DeepConcreteTodoSliceBase", usings);
+        Assert.Equal("global::TestNs.TodoModel[]", result);
+    }
+
+    [Fact]
+    public void SliceBaseType_GlobalQualified_ResolvesModelType()
+    {
+        var usings = new List<UsingDirective> { new("TestNs", null) };
+        var result = ResolveFromSliceBaseType("global::TestNs.DirectTodoSliceBase", usings);
+        Assert.Equal("global::TestNs.TodoModel", result);
+    }
+
+    [Fact]
+    public void SliceBaseType_DerivesFromNonGenericRazorSlice_ReturnsNull()
+    {
+        var usings = new List<UsingDirective> { new("TestNs", null) };
+        var result = ResolveFromSliceBaseType("NoModelSliceBase", usings);
+        Assert.Null(result);
     }
 }
