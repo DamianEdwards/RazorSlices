@@ -26,6 +26,8 @@ namespace TestNs
 
     public abstract class MultiArgMappedSliceBase<TThing, TModel> : RazorSlices.RazorSlice<TModel> { }
 
+    public abstract class MultiArgMappedFirstSliceBase<TModel, TThing> : RazorSlices.RazorSlice<TModel> { }
+
     public abstract class NonModelMappedSliceBase<TThing> : RazorSlices.RazorSlice<TodoModel> { }
 
     public class Outer
@@ -422,6 +424,22 @@ namespace RazorSlices
     {
         var usings = new List<UsingDirective> { new("TestNs", null) };
         var result = ResolveFromSliceBaseType("NonModelMappedSliceBase<int>", usings);
+        Assert.Equal("global::TestNs.TodoModel", result);
+    }
+
+    [Fact]
+    public void SliceBaseType_MappedGenericArg_WithMultiDimensionalArray_ResolvesModelType()
+    {
+        var usings = new List<UsingDirective> { new("TestNs", null) };
+        var result = ResolveFromSliceBaseType("MultiArgMappedFirstSliceBase<TodoModel[,], int>", usings);
+        Assert.Equal("global::TestNs.TodoModel[,]", result);
+    }
+
+    [Fact]
+    public void SliceBaseType_NonMappedGenericArg_WithMultiDimensionalArray_ResolvesConcreteModelType()
+    {
+        var usings = new List<UsingDirective> { new("TestNs", null) };
+        var result = ResolveFromSliceBaseType("NonModelMappedSliceBase<int[,]>", usings);
         Assert.Equal("global::TestNs.TodoModel", result);
     }
 }

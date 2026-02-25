@@ -510,7 +510,9 @@ internal static class ModelTypeResolver
     private static List<string> SplitGenericArguments(string args)
     {
         var result = new List<string>();
-        int depth = 0;
+        int angleDepth = 0;
+        int squareDepth = 0;
+        int parenDepth = 0;
         int start = 0;
 
         for (int i = 0; i < args.Length; i++)
@@ -518,13 +520,29 @@ internal static class ModelTypeResolver
             var c = args[i];
             if (c == '<')
             {
-                depth++;
+                angleDepth++;
             }
             else if (c == '>')
             {
-                depth--;
+                angleDepth--;
             }
-            else if (c == ',' && depth == 0)
+            else if (c == '[')
+            {
+                squareDepth++;
+            }
+            else if (c == ']')
+            {
+                squareDepth--;
+            }
+            else if (c == '(')
+            {
+                parenDepth++;
+            }
+            else if (c == ')')
+            {
+                parenDepth--;
+            }
+            else if (c == ',' && angleDepth == 0 && squareDepth == 0 && parenDepth == 0)
             {
                 result.Add(args.Substring(start, i - start));
                 start = i + 1;
