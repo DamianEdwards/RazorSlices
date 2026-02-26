@@ -54,6 +54,46 @@ internal static class ModelTypeResolver
         return ResolveTypeExpression(modelTypeName.Trim(), usingDirectives, compilation, rootNamespace);
     }
 
+    /// <summary>
+    /// Resolves the model type by resolving an inherited slice base type and walking its base type hierarchy
+    /// until a <c>RazorSlices.RazorSlice&lt;TModel&gt;</c> base type is found.
+    /// Returns null when the inherited type cannot be resolved or does not derive from a generic RazorSlice.
+    /// </summary>
+    internal static string? ResolveModelTypeFromSliceBaseType(string baseTypeName, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace = null)
+    {
+        var trimmedBaseTypeName = baseTypeName.Trim();
+        if (trimmedBaseTypeName.StartsWith("global::", StringComparison.Ordinal))
+        {
+            trimmedBaseTypeName = trimmedBaseTypeName.Substring("global::".Length);
+        }
+
+        var baseTypeSymbol = ResolveTypeSymbolExpression(trimmedBaseTypeName, usingDirectives, compilation, rootNamespace) as INamedTypeSymbol;
+        if (baseTypeSymbol is null)
+        {
+            return null;
+        }
+
+        for (var currentType = baseTypeSymbol; currentType is not null; currentType = currentType.BaseType)
+        {
+            if (!string.Equals(currentType.Name, "RazorSlice", StringComparison.Ordinal) ||
+                !string.Equals(currentType.ContainingNamespace.ToDisplayString(), "RazorSlices", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (currentType.IsGenericType && currentType.TypeArguments.Length == 1)
+            {
+                return "global::" + currentType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat
+                    .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining));
+            }
+
+            // Reached non-generic RazorSlice, so there is no model.
+            return null;
+        }
+
+        return null;
+    }
+
     private static string? ResolveTypeExpression(string typeName, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace)
     {
         // Handle nullable value types: T?
@@ -86,6 +126,93 @@ internal static class ModelTypeResolver
 
         // Handle simple type names
         return ResolveSimpleType(typeName, usingDirectives, compilation, rootNamespace: rootNamespace);
+    }
+
+    private static ITypeSymbol? ResolveTypeSymbolExpression(string typeName, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace)
+    {
+        // Handle nullable value/reference types by resolving the underlying type symbol.
+        if (typeName.EndsWith("?", StringComparison.Ordinal))
+        {
+            var innerType = typeName.Substring(0, typeName.Length - 1).Trim();
+            return ResolveTypeSymbolExpression(innerType, usingDirectives, compilation, rootNamespace);
+        }
+
+        // Handle array types: T[], T[,], etc.
+        if (typeName.EndsWith("]", StringComparison.Ordinal))
+        {
+            var bracketStart = FindArrayBracketStart(typeName);
+            if (bracketStart >= 0)
+            {
+                var elementType = typeName.Substring(0, bracketStart).Trim();
+                var elementSymbol = ResolveTypeSymbolExpression(elementType, usingDirectives, compilation, rootNamespace);
+                if (elementSymbol is null)
+                {
+                    return null;
+                }
+
+                var arraySuffix = typeName.Substring(bracketStart);
+                int rank = 1;
+                for (int i = 0; i < arraySuffix.Length; i++)
+                {
+                    if (arraySuffix[i] == ',')
+                    {
+                        rank++;
+                    }
+                }
+
+                return compilation.CreateArrayTypeSymbol(elementSymbol, rank);
+            }
+        }
+
+        // Handle generic types: Type<T1, T2>
+        var genericOpen = FindTopLevelGenericOpen(typeName);
+        if (genericOpen >= 0)
+        {
+            var outerType = typeName.Substring(0, genericOpen).Trim();
+            var genericClose = typeName.LastIndexOf('>');
+            if (genericClose <= genericOpen)
+            {
+                return null;
+            }
+
+            var argsString = typeName.Substring(genericOpen + 1, genericClose - genericOpen - 1);
+            var args = SplitGenericArguments(argsString);
+
+            var metadataName = outerType + "`" + args.Count;
+            var resolvedOuter = ResolveSimpleType(outerType, usingDirectives, compilation, metadataName, stripGenericParams: true, rootNamespace: rootNamespace);
+            if (resolvedOuter is null)
+            {
+                return null;
+            }
+
+            var outerSymbol = ResolveNamedTypeSymbol(resolvedOuter + "`" + args.Count, compilation);
+            if (outerSymbol is null)
+            {
+                return null;
+            }
+
+            var resolvedArgs = new ITypeSymbol[args.Count];
+            for (int i = 0; i < args.Count; i++)
+            {
+                var resolvedArg = ResolveTypeSymbolExpression(args[i].Trim(), usingDirectives, compilation, rootNamespace);
+                if (resolvedArg is null)
+                {
+                    return null;
+                }
+
+                resolvedArgs[i] = resolvedArg;
+            }
+
+            return outerSymbol.Construct(resolvedArgs);
+        }
+
+        var resolvedSimple = ResolveSimpleType(typeName, usingDirectives, compilation, rootNamespace: rootNamespace);
+        if (resolvedSimple is null)
+        {
+            return null;
+        }
+
+        return ResolveNamedTypeSymbol(resolvedSimple, compilation);
     }
 
     private static string? ResolveGenericType(string typeName, int genericOpen, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace)
@@ -346,6 +473,36 @@ internal static class ModelTypeResolver
         return null;
     }
 
+    private static INamedTypeSymbol? ResolveNamedTypeSymbol(string fullyQualifiedTypeName, Compilation compilation)
+    {
+        const string GlobalPrefix = "global::";
+
+        var metadataName = fullyQualifiedTypeName.StartsWith(GlobalPrefix, StringComparison.Ordinal)
+            ? fullyQualifiedTypeName.Substring(GlobalPrefix.Length)
+            : fullyQualifiedTypeName;
+
+        var symbol = compilation.GetTypeByMetadataName(metadataName);
+        if (symbol is not null)
+        {
+            return symbol;
+        }
+
+        var parts = metadataName.Split('.');
+        for (int j = parts.Length - 1; j > 0; j--)
+        {
+            var namespacePart = string.Join(".", parts, 0, j);
+            var nestedPart = string.Join("+", parts, j, parts.Length - j);
+            var candidateName = namespacePart + "+" + nestedPart;
+            symbol = compilation.GetTypeByMetadataName(candidateName);
+            if (symbol is not null)
+            {
+                return symbol;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// Splits generic arguments at the top level, respecting nested angle brackets.
     /// "int, List&lt;string&gt;" → ["int", "List&lt;string&gt;"]
@@ -353,7 +510,9 @@ internal static class ModelTypeResolver
     private static List<string> SplitGenericArguments(string args)
     {
         var result = new List<string>();
-        int depth = 0;
+        int angleDepth = 0;
+        int squareDepth = 0;
+        int parenDepth = 0;
         int start = 0;
 
         for (int i = 0; i < args.Length; i++)
@@ -361,13 +520,29 @@ internal static class ModelTypeResolver
             var c = args[i];
             if (c == '<')
             {
-                depth++;
+                angleDepth++;
             }
             else if (c == '>')
             {
-                depth--;
+                angleDepth--;
             }
-            else if (c == ',' && depth == 0)
+            else if (c == '[')
+            {
+                squareDepth++;
+            }
+            else if (c == ']')
+            {
+                squareDepth--;
+            }
+            else if (c == '(')
+            {
+                parenDepth++;
+            }
+            else if (c == ')')
+            {
+                parenDepth--;
+            }
+            else if (c == ',' && angleDepth == 0 && squareDepth == 0 && parenDepth == 0)
             {
                 result.Add(args.Substring(start, i - start));
                 start = i + 1;

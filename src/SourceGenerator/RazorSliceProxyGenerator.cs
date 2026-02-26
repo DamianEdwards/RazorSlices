@@ -173,27 +173,41 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
 
                     if (directives.InheritsDirective is not null)
                     {
-                        var modelTypeName = RazorDirectiveParser.ExtractModelType(directives.InheritsDirective);
-                        if (modelTypeName is not null)
+                        var inheritsBaseTypeName = RazorDirectiveParser.ExtractBaseTypeName(directives.InheritsDirective);
+                        if (IsDirectRazorSliceBaseType(inheritsBaseTypeName))
                         {
-                            resolvedModelType = ModelTypeResolver.ResolveModelType(
-                                modelTypeName, directives.UsingDirectives, compilation, rootNamespace);
+                            var modelTypeName = RazorDirectiveParser.ExtractModelType(directives.InheritsDirective);
+                            if (modelTypeName is not null)
+                            {
+                                resolvedModelType = ModelTypeResolver.ResolveModelType(
+                                    modelTypeName, directives.UsingDirectives, compilation, rootNamespace);
+
+                                if (resolvedModelType is not null)
+                                {
+                                    hasModel = true;
+                                }
+                                else
+                                {
+                                    // Report diagnostic for unresolvable model type
+                                    var descriptor = new DiagnosticDescriptor(
+                                        "RSG0002",
+                                        "Unresolvable Model Type",
+                                        $"Could not resolve model type '{modelTypeName}' for slice '{relativeFilePath}'. The generated proxy will not have a strongly-typed Create method.",
+                                        "TypeResolution",
+                                        DiagnosticSeverity.Warning,
+                                        true);
+                                    context.ReportDiagnostic(Diagnostic.Create(descriptor, Location.None));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            resolvedModelType = ModelTypeResolver.ResolveModelTypeFromSliceBaseType(
+                                directives.InheritsDirective, directives.UsingDirectives, compilation, rootNamespace);
 
                             if (resolvedModelType is not null)
                             {
                                 hasModel = true;
-                            }
-                            else
-                            {
-                                // Report diagnostic for unresolvable model type
-                                var descriptor = new DiagnosticDescriptor(
-                                    "RSG0002",
-                                    "Unresolvable Model Type",
-                                    $"Could not resolve model type '{modelTypeName}' for slice '{relativeFilePath}'. The generated proxy will not have a strongly-typed Create method.",
-                                    "TypeResolution",
-                                    DiagnosticSeverity.Warning,
-                                    true);
-                                context.ReportDiagnostic(Diagnostic.Create(descriptor, Location.None));
                             }
                         }
                     }
@@ -267,4 +281,9 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
 
         context.AddSource($"{rootNamespace}.RazorSliceProxies.g.cs", SourceText.From(codeBuilder.ToString(), Encoding.UTF8));
     }
+
+    private static bool IsDirectRazorSliceBaseType(string baseTypeName) =>
+        string.Equals(baseTypeName, "RazorSlice", StringComparison.Ordinal) ||
+        string.Equals(baseTypeName, "RazorSlices.RazorSlice", StringComparison.Ordinal) ||
+        string.Equals(baseTypeName, "global::RazorSlices.RazorSlice", StringComparison.Ordinal);
 }
