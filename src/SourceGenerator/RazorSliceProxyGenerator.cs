@@ -22,13 +22,14 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         var projectDirectory = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
             options.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var projectDir) ? projectDir : null);
 
-        var sealSliceProxies = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
-            options.GlobalOptions.TryGetValue("build_property.RazorSliceProxiesSealed", out var sealSliceProxiesValue)
-                && bool.TryParse(sealSliceProxiesValue, out var result) && result);
+        var useRecords = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
+            options.GlobalOptions.TryGetValue("build_property.RazorSliceProxiesAsRecords",
+                out var recordSliceProxiesValue)
+            && bool.TryParse(recordSliceProxiesValue, out var result) && result);
 
-        // (Left.Left          , (Left.Right.Left.Left     , (Left.Right.Right.Left, Left.Right.Right.Right))
-        // (string assemblyName, (string rootNamespace     , (string projectDirectory, bool sealSliceProxies))
-        var projectInfo = assemblyName.Combine(rootNamespace.Combine(projectDirectory.Combine(sealSliceProxies)));
+        // (Left.Left          , (Left.Right.Left.Left     , (Left.Right.Right.Left, Left.Right.Right.Right)))
+        // (string assemblyName, (string rootNamespace     , (string projectDirectory, bool useRecords)))
+        var projectInfo = assemblyName.Combine(rootNamespace.Combine(projectDirectory.Combine(useRecords)));
 
         // Collect all .cshtml files (both slices and _ViewImports)
         var allCshtmlFiles = context.AdditionalTextsProvider
@@ -81,7 +82,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         string? assemblyName,
         string? rootNamespace,
         string? projectDirectory,
-        bool sealSliceProxies,
+        bool useRecords,
         ImmutableArray<AdditionalText> sliceTexts,
         ImmutableArray<AdditionalText> allCshtmlFiles,
         Compilation compilation)
@@ -227,14 +228,14 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                     ? className
                     : $"{subNamespaceAsClassName}_{className}";
 
-                var sealedValue = sealSliceProxies ? "sealed " : "partial ";
+                var sliceTypeDeclaration = useRecords ? "record " : "class ";
                 var genericParameter = hasModel && resolvedModelType is not null ? $"<{resolvedModelType}>" : "";
 
                 codeBuilder.AppendLine($$"""
                         /// <summary>
                         /// Static proxy for the Razor Slice defined in <c>{{relativeFilePath}}</c>.
                         /// </summary>
-                        public {{ sealedValue }}class {{className}} : global::RazorSlices.IRazorSliceProxy{{genericParameter}}
+                        public sealed partial {{sliceTypeDeclaration}}{{className}} : global::RazorSlices.IRazorSliceProxy{{genericParameter}}
                         {
                             [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, TypeName, "{{assemblyName}}")]
                             private const string TypeName = "{{templateNameSpace}}.{{generatedTypeName}}, {{assemblyName}}";

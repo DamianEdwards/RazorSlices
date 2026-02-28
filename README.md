@@ -221,13 +221,13 @@ The library is still new and features are being actively added.
 - Rendering directly to `PipeWriter`, `Stream`, `TextWriter`, `StringBuilder`, and `string` outputs, including optimizations for not boxing struct values, zero-allocation rendering of primitives like numbers, etc. (rather than just calling `ToString()` on everything)
 - `RazorSlice` implements `IResult` so you can return a slice instance from a minimal APIs route handler directly, or via `Results.Extensions.RazorSlice<Hello>()` and in .NET 10+ `Results.RazorSlice<Hello>()`. When using slices with models use `Results.Extensions.RazorSlice<Hello, MyModel>(model)` and in .NET 10+ `Results.RazorSlice<Hello, MyModel>(model)`.
 - Full support for trimming and native AOT when used in conjunction with ASP.NET Core Minimal APIs
-- Generated Razor Slice proxy types are `public sealed` by default. To unseal them and make them `public partial` for your own customization, set the `RazorSliceProxiesSealed` property to `false` in your project file, e.g.:
+- Generated Razor Slice proxy types are `public sealed partial class` by default. To use record classes instead, making them `public sealed partial record`, set the `RazorSliceProxiesAsRecords` property to `true` in your project file, e.g.:
     ``` xml
     <PropertyGroup>
-      <RazorSliceProxiesSealed>false</RazorSliceProxiesSealed>
+      <RazorSliceProxiesAsRecords>true</RazorSliceProxiesAsRecords>
     </PropertyGroup>
     ```
-
+  
 ### Interested in supporting but not sure yet
 
 - Extensions to help support using HTMX with Razor Slices 
