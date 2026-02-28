@@ -33,7 +33,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             && bool.TryParse(recordSliceProxiesValue, out var result) && result);
 
         // (Left.Left          , (Left.Right.Left.Left     , (Left.Right.Right.Left, (Left.Right.Right.Right.Left, Left.Right.Right.Right.Right)))
-        // (string assemblyName, (string rootNamespace     , (string projectDirectory, (bool sealSliceProxies, bool recordSliceProxies))
+        // (string assemblyName, (string rootNamespace     , (string projectDirectory, (bool sealSliceProxies, bool useRecords))
         var projectInfo = assemblyName.Combine(rootNamespace.Combine(projectDirectory.Combine(sealSliceProxies.Combine(recordSliceProxies))));
 
         // Collect all .cshtml files (both slices and _ViewImports)
