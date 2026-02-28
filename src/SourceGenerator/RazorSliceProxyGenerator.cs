@@ -236,7 +236,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                     : $"{subNamespaceAsClassName}_{className}";
 
                 var sealedValue = sealSliceProxies ? "sealed partial " : "partial ";
-                var recordValue = recordSliceProxies ? "record " : "class ";
+                var sliceTypeDeclaration = useRecords ? "record " : "class ";
                 var genericParameter = hasModel && resolvedModelType is not null ? $"<{resolvedModelType}>" : "";
 
                 codeBuilder.AppendLine($$"""
