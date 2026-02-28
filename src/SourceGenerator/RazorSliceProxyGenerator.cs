@@ -27,14 +27,14 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             options.GlobalOptions.TryGetValue("build_property.RazorSliceProxiesSealed", out var sealSliceProxiesValue)
                 && bool.TryParse(sealSliceProxiesValue, out var result) && result);
 
-        var recordSliceProxies = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
+        var useRecords = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
             options.GlobalOptions.TryGetValue("build_property.RazorSliceProxiesAsRecords",
                 out var recordSliceProxiesValue)
             && bool.TryParse(recordSliceProxiesValue, out var result) && result);
 
         // (Left.Left          , (Left.Right.Left.Left     , (Left.Right.Right.Left, (Left.Right.Right.Right.Left, Left.Right.Right.Right.Right)))
         // (string assemblyName, (string rootNamespace     , (string projectDirectory, (bool sealSliceProxies, bool useRecords))
-        var projectInfo = assemblyName.Combine(rootNamespace.Combine(projectDirectory.Combine(sealSliceProxies.Combine(recordSliceProxies))));
+        var projectInfo = assemblyName.Combine(rootNamespace.Combine(projectDirectory.Combine(sealSliceProxies.Combine(useRecords))));
 
         // Collect all .cshtml files (both slices and _ViewImports)
         var allCshtmlFiles = context.AdditionalTextsProvider
