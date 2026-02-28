@@ -11,12 +11,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
-    
-    <PropertyGroup>
-        <RazorSliceProxiesAsRecords>true</RazorSliceProxiesAsRecords>
-        <RazorSliceProxiesSealed>false</RazorSliceProxiesSealed>
-    </PropertyGroup>
-    
+
   <PropertyGroup>
     <PublishAot>true</PublishAot>
     <!-- Startup hooks are disabled when publishing aot/trimmed but are required for Hot Reload to work so enabling it here -->

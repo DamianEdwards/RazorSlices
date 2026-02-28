@@ -13,6 +13,10 @@
     <EnableDefaultRazorSlices>false</EnableDefaultRazorSlices>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <RazorSliceProxiesAsRecords>true</RazorSliceProxiesAsRecords>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\RazorSlices\RazorSlices.csproj" />
     <ProjectReference Include="..\..\src\SourceGenerator\SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
