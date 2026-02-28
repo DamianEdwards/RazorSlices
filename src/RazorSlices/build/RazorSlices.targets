@@ -31,7 +31,6 @@
 
       <!-- Make the RazorGenerate item type and GenerateRazorSlice item metadata visible to the source generator -->
       <CompilerVisibleItemMetadata Include="RazorGenerate" MetadataName="GenerateRazorSlice" />
-      <CompilerVisibleProperty Include="RazorSliceProxiesSealed" />
       <CompilerVisibleProperty Include="RazorSliceProxiesAsRecords" />
     </ItemGroup>
   </Target>
