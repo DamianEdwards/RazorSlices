@@ -89,7 +89,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         string? rootNamespace,
         string? projectDirectory,
         bool sealSliceProxies,
-        bool recordSliceProxies,
+        bool useRecords,
         ImmutableArray<AdditionalText> sliceTexts,
         ImmutableArray<AdditionalText> allCshtmlFiles,
         Compilation compilation)
