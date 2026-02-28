@@ -243,7 +243,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                         /// <summary>
                         /// Static proxy for the Razor Slice defined in <c>{{relativeFilePath}}</c>.
                         /// </summary>
-                        public {{ sealedValue }}{{ sliceTypeDeclaration }}{{generatedTypeName}} : global::RazorSlices.IRazorSliceProxy{{genericParameter}}
+                        public {{sealedValue}}{{sliceTypeDeclaration}}{{generatedTypeName}} : global::RazorSlices.IRazorSliceProxy{{genericParameter}}
                         {
                             [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, TypeName, "{{assemblyName}}")]
                             private const string TypeName = "{{templateNameSpace}}.{{generatedTypeName}}, {{assemblyName}}";
