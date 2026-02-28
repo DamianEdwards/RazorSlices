@@ -3,6 +3,7 @@
   <PropertyGroup>
     <EnableDefaultRazorSlices Condition=" '$(EnableDefaultRazorSlices)' == '' ">true</EnableDefaultRazorSlices>
     <RazorSliceProxiesSealed Condition=" '$(RazorSliceProxiesSealed)' == '' ">true</RazorSliceProxiesSealed>
+    <RazorSliceProxiesAsRecords Condition=" '$(RazorSliceProxiesAsRecords)' == '' ">false</RazorSliceProxiesAsRecords>  
   </PropertyGroup>
 
   <!-- Define a new item type for consumers to easily specify which files should generate slices -->
