@@ -15,9 +15,9 @@ public abstract partial class RazorSlice : IResult, IStatusCodeHttpResult, ICont
     int? IStatusCodeHttpResult.StatusCode { get => StatusCode; }
 
     /// <summary>
-    /// Gets the content type: <c>text/html; charset=utf-8</c>
+    /// Gets or sets the HTTP response content type. Defaults to <c>text/html; charset=utf-8</c>.
     /// </summary>
-    public string ContentType => "text/html; charset=utf-8";
+    public string ContentType { get; set; } = "text/html; charset=utf-8";
 
     /// <summary>
     /// Gets or sets the <see cref="System.Text.Encodings.Web.HtmlEncoder" /> instance to use when rendering the template. If
