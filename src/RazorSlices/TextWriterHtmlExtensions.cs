@@ -144,9 +144,9 @@ internal static class TextWriterHtmlExtensions
     {
         var charCount = Encoding.UTF8.GetCharCount(value);
         var buffer = ArrayPool<char>.Shared.Rent(charCount);
-        var bytesDecoded = Encoding.UTF8.GetChars(value, buffer);
+        var charsWritten = Encoding.UTF8.GetChars(value, buffer);
 
-        Debug.Assert(bytesDecoded == value.Length, "Bad decoding when writing to TextWriter in HtmlEncodeAndWriteUtf8(ReadOnlySpan<byte>)");
+        Debug.Assert(charsWritten == charCount, "Bad decoding when writing to TextWriter in HtmlEncodeAndWriteUtf8(ReadOnlySpan<byte>)");
 
         htmlEncoder.Encode(textWriter, buffer, 0, charCount);
         ArrayPool<char>.Shared.Return(buffer);
@@ -154,11 +154,11 @@ internal static class TextWriterHtmlExtensions
 
     public static void WriteUtf8(this TextWriter textWriter, ReadOnlySpan<byte> value)
     {
-        var charCount = Encoding.Unicode.GetCharCount(value);
+        var charCount = Encoding.UTF8.GetCharCount(value);
         var buffer = ArrayPool<char>.Shared.Rent(charCount);
-        var bytesDecoded = Encoding.Unicode.GetChars(value, buffer);
+        var charsWritten = Encoding.UTF8.GetChars(value, buffer);
 
-        Debug.Assert(bytesDecoded == value.Length, "Bad decoding when writing to TextWriter in WriteUtf8(ReadOnlySpan<byte>)");
+        Debug.Assert(charsWritten == charCount, "Bad decoding when writing to TextWriter in WriteUtf8(ReadOnlySpan<byte>)");
 
         textWriter.Write(buffer, 0, charCount);
         ArrayPool<char>.Shared.Return(buffer);
