@@ -66,7 +66,7 @@ static async Task RunCompilerLiteralTrace(string[] args)
 
     for (var i = 0; i < 1_000; i++)
     {
-        await RenderOnce(implementation, pipeWriter, paragraphGroups);
+        EnsureCompleted(RenderOnce(implementation, pipeWriter, paragraphGroups));
         pipeWriter.Reset();
     }
 
@@ -74,7 +74,7 @@ static async Task RunCompilerLiteralTrace(string[] args)
 
     for (var i = 0; i < renders; i++)
     {
-        await RenderOnce(implementation, pipeWriter, paragraphGroups);
+        EnsureCompleted(RenderOnce(implementation, pipeWriter, paragraphGroups));
         pipeWriter.Reset();
     }
 
@@ -87,6 +87,14 @@ static ValueTask RenderOnce(string implementation, NullPipeWriter pipeWriter, in
     return string.Equals(implementation, "string", StringComparison.OrdinalIgnoreCase)
         ? CompilerLiteralUtf16Version.RenderLorem(pipeWriter, paragraphGroups)
         : CompilerLiteralUtf8Version.RenderLorem(pipeWriter, paragraphGroups);
+}
+
+static void EnsureCompleted(ValueTask valueTask)
+{
+    if (!valueTask.IsCompletedSuccessfully)
+    {
+        valueTask.AsTask().GetAwaiter().GetResult();
+    }
 }
 
 [MemoryDiagnoser, Config(typeof(Config))]

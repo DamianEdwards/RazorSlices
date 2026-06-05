@@ -7,4 +7,8 @@
     <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Benchmarks'">
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
 </Project>
