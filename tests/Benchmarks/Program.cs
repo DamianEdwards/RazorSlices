@@ -8,7 +8,6 @@ using BenchmarkDotNet.Running;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Logging;
-using Perfolizer.Horology;
 using RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf16;
 using RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf8;
 using RazorSlices.Benchmarks.RazorClassLibrary.Local;
@@ -130,10 +129,7 @@ public class RazorSlicesCompilerLiteralRendering
     {
         public Config()
         {
-            AddJob(Job.ShortRun
-                .WithMinIterationTime(TimeInterval.FromMilliseconds(100))
-                .WithIterationCount(8)
-                .WithWarmupCount(3)
+            AddJob(Job.Default
                 .WithCustomBuildConfiguration("Benchmarks")
                 .WithId(".NET 11 Preview"));
         }
