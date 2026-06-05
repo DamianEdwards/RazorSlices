@@ -97,12 +97,6 @@ public class RazorSlicesCompilerLiteralRendering
     [Params(1, 5, 20, 100)]
     public int ParagraphGroups { get; set; }
 
-    [IterationSetup]
-    public void Setup()
-    {
-        _pipeWriter.Reset();
-    }
-
     [Benchmark(Baseline = true)]
     public void StringLiterals()
     {
