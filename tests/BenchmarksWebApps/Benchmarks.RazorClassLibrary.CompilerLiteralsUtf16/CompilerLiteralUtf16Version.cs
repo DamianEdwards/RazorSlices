@@ -12,7 +12,12 @@ public static class CompilerLiteralUtf16Version
 
     public static ValueTask RenderLorem(PipeWriter pipeWriter, int paragraphGroups)
     {
+        return Lorem.Create(paragraphGroups).RenderAsync(pipeWriter);
+    }
+
+    public static Func<PipeWriter, ValueTask> CreateLoremRenderer(int paragraphGroups)
+    {
         var slice = Lorem.Create(paragraphGroups);
-        return slice.RenderAsync(pipeWriter);
+        return pipeWriter => slice.RenderAsync(pipeWriter);
     }
 }

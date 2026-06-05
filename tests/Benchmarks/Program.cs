@@ -5,7 +5,6 @@ using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
 using BenchmarkDotNet.Running;
-using BenchmarkDotNet.Toolchains.InProcess.Emit;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Logging;
@@ -94,10 +93,22 @@ static ValueTask RenderOnce(string implementation, NullPipeWriter pipeWriter, in
 [MemoryDiagnoser, Config(typeof(Config))]
 public class RazorSlicesCompilerLiteralRendering
 {
+    private const int RendersPerInvocation = 16_384;
+
     private readonly NullPipeWriter _pipeWriter = new();
+    private Func<PipeWriter, ValueTask>[] _utf16Renderers = [];
+    private Func<PipeWriter, ValueTask>[] _utf8Renderers = [];
 
     [Params(1, 5, 20, 100)]
     public int ParagraphGroups { get; set; }
+
+    [GlobalSetup]
+    public void GlobalSetup()
+    {
+        // Keep slice creation/allocation out of the measured workload so this benchmark isolates literal rendering cost.
+        _utf16Renderers = CreateRenderers(CompilerLiteralUtf16Version.CreateLoremRenderer);
+        _utf8Renderers = CreateRenderers(CompilerLiteralUtf8Version.CreateLoremRenderer);
+    }
 
     [IterationSetup]
     public void Setup()
@@ -105,18 +116,37 @@ public class RazorSlicesCompilerLiteralRendering
         _pipeWriter.Reset();
     }
 
-    [Benchmark(Baseline = true)]
+    [Benchmark(Baseline = true, OperationsPerInvoke = RendersPerInvocation)]
     public void StringLiterals()
     {
-        EnsureCompleted(CompilerLiteralUtf16Version.RenderLorem(_pipeWriter, ParagraphGroups));
-        _pipeWriter.Reset();
+        RenderSlices(_utf16Renderers);
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = RendersPerInvocation)]
     public void Utf8Literals()
     {
-        EnsureCompleted(CompilerLiteralUtf8Version.RenderLorem(_pipeWriter, ParagraphGroups));
-        _pipeWriter.Reset();
+        RenderSlices(_utf8Renderers);
+    }
+
+    private Func<PipeWriter, ValueTask>[] CreateRenderers(Func<int, Func<PipeWriter, ValueTask>> createRenderer)
+    {
+        var renderers = new Func<PipeWriter, ValueTask>[RendersPerInvocation];
+
+        for (var i = 0; i < renderers.Length; i++)
+        {
+            renderers[i] = createRenderer(ParagraphGroups);
+        }
+
+        return renderers;
+    }
+
+    private void RenderSlices(Func<PipeWriter, ValueTask>[] renderers)
+    {
+        foreach (var render in renderers)
+        {
+            EnsureCompleted(render(_pipeWriter));
+            _pipeWriter.Reset();
+        }
     }
 
     private static void EnsureCompleted(ValueTask valueTask)
@@ -133,9 +163,10 @@ public class RazorSlicesCompilerLiteralRendering
         {
             AddJob(Job.ShortRun
                 .WithMinIterationTime(TimeInterval.FromMilliseconds(100))
+                .WithIterationCount(8)
+                .WithWarmupCount(3)
                 .WithCustomBuildConfiguration("Benchmarks")
-                .WithId(".NET 11 Preview")
-                .WithToolchain(InProcessEmitToolchain.Instance));
+                .WithId(".NET 11 Preview"));
         }
     }
 }
