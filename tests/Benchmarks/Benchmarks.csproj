@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <AssemblyName>Benchmarks</AssemblyName>
     <RootNamespace>RazorSlices.Benchmarks</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
