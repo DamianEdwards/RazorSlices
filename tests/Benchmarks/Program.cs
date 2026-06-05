@@ -9,6 +9,7 @@ using BenchmarkDotNet.Toolchains.InProcess.Emit;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Logging;
+using Perfolizer.Horology;
 using RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf16;
 using RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf8;
 using RazorSlices.Benchmarks.RazorClassLibrary.Local;
@@ -93,8 +94,6 @@ static ValueTask RenderOnce(string implementation, NullPipeWriter pipeWriter, in
 [MemoryDiagnoser, Config(typeof(Config))]
 public class RazorSlicesCompilerLiteralRendering
 {
-    private const int ParagraphGroupsPerInvocation = 10_000_000;
-
     private readonly NullPipeWriter _pipeWriter = new();
 
     [Params(1, 5, 20, 100)]
@@ -106,27 +105,25 @@ public class RazorSlicesCompilerLiteralRendering
         _pipeWriter.Reset();
     }
 
-    [Benchmark(Baseline = true, OperationsPerInvoke = ParagraphGroupsPerInvocation)]
-    public async ValueTask StringLiterals()
+    [Benchmark(Baseline = true)]
+    public void StringLiterals()
     {
-        var rendersPerInvocation = ParagraphGroupsPerInvocation / ParagraphGroups;
-
-        for (var i = 0; i < rendersPerInvocation; i++)
-        {
-            await CompilerLiteralUtf16Version.RenderLorem(_pipeWriter, ParagraphGroups);
-            _pipeWriter.Reset();
-        }
+        EnsureCompleted(CompilerLiteralUtf16Version.RenderLorem(_pipeWriter, ParagraphGroups));
+        _pipeWriter.Reset();
     }
 
-    [Benchmark(OperationsPerInvoke = ParagraphGroupsPerInvocation)]
-    public async ValueTask Utf8Literals()
+    [Benchmark]
+    public void Utf8Literals()
     {
-        var rendersPerInvocation = ParagraphGroupsPerInvocation / ParagraphGroups;
+        EnsureCompleted(CompilerLiteralUtf8Version.RenderLorem(_pipeWriter, ParagraphGroups));
+        _pipeWriter.Reset();
+    }
 
-        for (var i = 0; i < rendersPerInvocation; i++)
+    private static void EnsureCompleted(ValueTask valueTask)
+    {
+        if (!valueTask.IsCompletedSuccessfully)
         {
-            await CompilerLiteralUtf8Version.RenderLorem(_pipeWriter, ParagraphGroups);
-            _pipeWriter.Reset();
+            valueTask.AsTask().GetAwaiter().GetResult();
         }
     }
 
@@ -135,6 +132,7 @@ public class RazorSlicesCompilerLiteralRendering
         public Config()
         {
             AddJob(Job.ShortRun
+                .WithMinIterationTime(TimeInterval.FromMilliseconds(100))
                 .WithCustomBuildConfiguration("Benchmarks")
                 .WithId(".NET 11 Preview")
                 .WithToolchain(InProcessEmitToolchain.Instance));
