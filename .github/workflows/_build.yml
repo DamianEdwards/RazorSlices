@@ -23,12 +23,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Install .NET SDK
+
+    - name: Install .NET SDKs/runtimes
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
-        global-json-file: "./global.json"
+        dotnet-version: |
+          8.0.x
+          9.0.x
+          10.0.x
+          11.0.x
     
     - name: Restore dependencies
       run: dotnet restore
