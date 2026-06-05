@@ -15,8 +15,6 @@ using RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf8;
 using RazorSlices.Benchmarks.RazorClassLibrary.Local;
 using RazorSlices.Benchmarks.RazorClassLibrary.PreviousVersion;
 using RazorSlices.Benchmarks.WebApp;
-using Utf16LoremModel = RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf16.LoremModel;
-using Utf8LoremModel = RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf8.LoremModel;
 
 if (args.Contains("--compiler-literal-smoke", StringComparer.Ordinal))
 {
@@ -38,13 +36,10 @@ static async Task RunCompilerLiteralSmoke()
 
     foreach (var paragraphGroups in new[] { 1, 5, 20, 100 })
     {
-        var utf16Model = new Utf16LoremModel(paragraphGroups);
-        var utf8Model = new Utf8LoremModel(paragraphGroups);
-
-        await CompilerLiteralUtf16Version.RenderLorem(pipeWriter, utf16Model);
+        await CompilerLiteralUtf16Version.RenderLorem(pipeWriter, paragraphGroups);
         pipeWriter.Reset();
 
-        await CompilerLiteralUtf8Version.RenderLorem(pipeWriter, utf8Model);
+        await CompilerLiteralUtf8Version.RenderLorem(pipeWriter, paragraphGroups);
         pipeWriter.Reset();
     }
 
@@ -70,12 +65,10 @@ static async Task RunCompilerLiteralTrace(string[] args)
     }
 
     var pipeWriter = new NullPipeWriter();
-    var utf16Model = new Utf16LoremModel(paragraphGroups);
-    var utf8Model = new Utf8LoremModel(paragraphGroups);
 
     for (var i = 0; i < 1_000; i++)
     {
-        await RenderOnce(implementation, pipeWriter, utf16Model, utf8Model);
+        await RenderOnce(implementation, pipeWriter, paragraphGroups);
         pipeWriter.Reset();
     }
 
@@ -83,7 +76,7 @@ static async Task RunCompilerLiteralTrace(string[] args)
 
     for (var i = 0; i < renders; i++)
     {
-        await RenderOnce(implementation, pipeWriter, utf16Model, utf8Model);
+        await RenderOnce(implementation, pipeWriter, paragraphGroups);
         pipeWriter.Reset();
     }
 
@@ -91,29 +84,20 @@ static async Task RunCompilerLiteralTrace(string[] args)
     Console.WriteLine($"Rendered {renders:N0} {implementation} literal slices with {paragraphGroups} paragraph groups in {stopwatch.Elapsed.TotalSeconds:N3}s.");
 }
 
-static ValueTask RenderOnce(string implementation, NullPipeWriter pipeWriter, Utf16LoremModel utf16Model, Utf8LoremModel utf8Model)
+static ValueTask RenderOnce(string implementation, NullPipeWriter pipeWriter, int paragraphGroups)
 {
     return string.Equals(implementation, "string", StringComparison.OrdinalIgnoreCase)
-        ? CompilerLiteralUtf16Version.RenderLorem(pipeWriter, utf16Model)
-        : CompilerLiteralUtf8Version.RenderLorem(pipeWriter, utf8Model);
+        ? CompilerLiteralUtf16Version.RenderLorem(pipeWriter, paragraphGroups)
+        : CompilerLiteralUtf8Version.RenderLorem(pipeWriter, paragraphGroups);
 }
 
 [MemoryDiagnoser, Config(typeof(Config))]
 public class RazorSlicesCompilerLiteralRendering
 {
     private readonly NullPipeWriter _pipeWriter = new();
-    private Utf16LoremModel _utf16Model = new(1);
-    private Utf8LoremModel _utf8Model = new(1);
 
     [Params(1, 5, 20, 100)]
     public int ParagraphGroups { get; set; }
-
-    [GlobalSetup]
-    public void GlobalSetup()
-    {
-        _utf16Model = new Utf16LoremModel(ParagraphGroups);
-        _utf8Model = new Utf8LoremModel(ParagraphGroups);
-    }
 
     [IterationSetup]
     public void Setup()
@@ -124,14 +108,14 @@ public class RazorSlicesCompilerLiteralRendering
     [Benchmark(Baseline = true)]
     public void StringLiterals()
     {
-        EnsureCompleted(CompilerLiteralUtf16Version.RenderLorem(_pipeWriter, _utf16Model));
+        EnsureCompleted(CompilerLiteralUtf16Version.RenderLorem(_pipeWriter, ParagraphGroups));
         _pipeWriter.Reset();
     }
 
     [Benchmark]
     public void Utf8Literals()
     {
-        EnsureCompleted(CompilerLiteralUtf8Version.RenderLorem(_pipeWriter, _utf8Model));
+        EnsureCompleted(CompilerLiteralUtf8Version.RenderLorem(_pipeWriter, ParagraphGroups));
         _pipeWriter.Reset();
     }
 

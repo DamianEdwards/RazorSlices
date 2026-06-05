@@ -231,11 +231,11 @@ public static class RazorSliceFactory
         //
         // or
         //
-        // MySlice CreateSlice(object model)
+        // MySlice CreateSlice(MyModel model)
         // {
         //     var slice = new SliceType<MyModel>();
         //     slice.Init = ...;
-        //     slice.Model = (MyModel)model
+        //     slice.Model = model
         //     return slice;
         // }
 
@@ -253,14 +253,14 @@ public static class RazorSliceFactory
 
         if (sliceDefinition.ModelType is not null)
         {
-            // Func<object, RazorSlice<MyModel>>
+            // Func<MyModel, RazorSlice<MyModel>>
             var modelPropInfo = sliceType.GetProperty("Model")!;
-            factoryType = typeof(Func<,>).MakeGenericType(typeof(object), sliceType);
-            var modelParam = Expression.Parameter(typeof(object), "model");
+            factoryType = typeof(Func<,>).MakeGenericType(sliceDefinition.ModelType, sliceType);
+            var modelParam = Expression.Parameter(sliceDefinition.ModelType, "model");
             parameters = [modelParam];
             body.Add(Expression.Assign(
                 Expression.MakeMemberAccess(sliceVariable, modelPropInfo),
-                Expression.Convert(modelParam, sliceDefinition.ModelType)));
+                modelParam));
         }
 
         var returnTarget = Expression.Label(sliceType);
