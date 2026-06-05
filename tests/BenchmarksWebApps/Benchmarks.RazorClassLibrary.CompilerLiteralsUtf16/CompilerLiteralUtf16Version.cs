@@ -10,9 +10,11 @@ public static class CompilerLiteralUtf16Version
         return slice.RenderAsync(pipeWriter);
     }
 
-    public static ValueTask RenderLorem(PipeWriter pipeWriter, int paragraphGroups)
+    public static ValueTask RenderLorem(PipeWriter pipeWriter, LoremModel model)
     {
-        var slice = Lorem.Create(paragraphGroups);
+        var slice = Lorem.Create(model);
         return slice.RenderAsync(pipeWriter);
     }
 }
+
+public sealed record LoremModel(int ParagraphGroups);

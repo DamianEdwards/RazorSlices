@@ -1,6 +1,6 @@
-@inherits RazorSlice<int>
+@inherits RazorSlice<LoremModel>
 
-@for (var i = 0; i < Model; i++)
+@for (var i = 0; i < Model.ParagraphGroups; i++)
 {
     <section class="lorem-group">
         <h2>Razor compiler literal rendering benchmark</h2>
