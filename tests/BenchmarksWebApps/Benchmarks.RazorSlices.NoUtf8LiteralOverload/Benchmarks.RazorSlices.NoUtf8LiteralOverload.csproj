@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>RazorSlices.Benchmarks.NoUtf8LiteralOverload</AssemblyName>
+    <RootNamespace>RazorSlices</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <DefineConstants>$(DefineConstants);RAZOR_SLICES_DISABLE_UTF8_LITERAL_OVERLOAD</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\src\RazorSlices\*.cs" Link="%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

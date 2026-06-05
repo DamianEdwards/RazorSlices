@@ -1,19 +1,200 @@
-﻿using System.IO.Pipelines;
+using System.Diagnostics;
+using System.IO.Pipelines;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Order;
 using BenchmarkDotNet.Running;
+using BenchmarkDotNet.Toolchains.InProcess.Emit;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Logging;
+using RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf16;
+using RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf8;
 using RazorSlices.Benchmarks.RazorClassLibrary.Local;
 using RazorSlices.Benchmarks.RazorClassLibrary.PreviousVersion;
 using RazorSlices.Benchmarks.WebApp;
 
-//BenchmarkRunner.Run<RazorSlicesBenchmarks>();
-BenchmarkRunner.Run<RazorSlicesStringRendering>();
-//BenchmarkRunner.Run<RazorSlicesAppBenchmarks>();
+if (args.Contains("--compiler-literal-smoke", StringComparer.Ordinal))
+{
+    await RunCompilerLiteralSmoke();
+    return;
+}
+
+if (args.Length > 0 && string.Equals(args[0], "--compiler-literal-trace", StringComparison.Ordinal))
+{
+    await RunCompilerLiteralTrace(args);
+    return;
+}
+
+BenchmarkSwitcher.FromTypes([typeof(RazorSlicesCompilerLiteralRendering)]).Run(args);
+
+static async Task RunCompilerLiteralSmoke()
+{
+    var pipeWriter = new NullPipeWriter();
+
+    foreach (var paragraphGroups in new[] { 1, 5, 20, 100 })
+    {
+        await CompilerLiteralUtf16Version.RenderLorem(pipeWriter, paragraphGroups);
+        pipeWriter.Reset();
+
+        await CompilerLiteralUtf8Version.RenderLorem(pipeWriter, paragraphGroups);
+        pipeWriter.Reset();
+    }
+
+    Console.WriteLine("Compiler literal smoke test completed.");
+}
+
+static async Task RunCompilerLiteralTrace(string[] args)
+{
+    var implementation = args.Length > 1 ? args[1] : "";
+    var paragraphGroups = args.Length > 2 && int.TryParse(args[2], out var parsedParagraphGroups)
+        ? parsedParagraphGroups
+        : 100;
+    var renders = args.Length > 3 && int.TryParse(args[3], out var parsedRenders)
+        ? parsedRenders
+        : 1_000_000;
+
+    if (!string.Equals(implementation, "string", StringComparison.OrdinalIgnoreCase)
+        && !string.Equals(implementation, "utf8", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.Error.WriteLine("Usage: --compiler-literal-trace <string|utf8> [paragraphGroups] [renders]");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    var pipeWriter = new NullPipeWriter();
+
+    for (var i = 0; i < 1_000; i++)
+    {
+        await RenderOnce(implementation, pipeWriter, paragraphGroups);
+        pipeWriter.Reset();
+    }
+
+    var stopwatch = Stopwatch.StartNew();
+
+    for (var i = 0; i < renders; i++)
+    {
+        await RenderOnce(implementation, pipeWriter, paragraphGroups);
+        pipeWriter.Reset();
+    }
+
+    stopwatch.Stop();
+    Console.WriteLine($"Rendered {renders:N0} {implementation} literal slices with {paragraphGroups} paragraph groups in {stopwatch.Elapsed.TotalSeconds:N3}s.");
+}
+
+static ValueTask RenderOnce(string implementation, NullPipeWriter pipeWriter, int paragraphGroups)
+{
+    return string.Equals(implementation, "string", StringComparison.OrdinalIgnoreCase)
+        ? CompilerLiteralUtf16Version.RenderLorem(pipeWriter, paragraphGroups)
+        : CompilerLiteralUtf8Version.RenderLorem(pipeWriter, paragraphGroups);
+}
+
+[MemoryDiagnoser, Config(typeof(Config))]
+public class RazorSlicesCompilerLiteralRendering
+{
+    private const int ParagraphGroupsPerInvocation = 10_000_000;
+
+    private readonly NullPipeWriter _pipeWriter = new();
+
+    [Params(1, 5, 20, 100)]
+    public int ParagraphGroups { get; set; }
+
+    [IterationSetup]
+    public void Setup()
+    {
+        _pipeWriter.Reset();
+    }
+
+    [Benchmark(Baseline = true, OperationsPerInvoke = ParagraphGroupsPerInvocation)]
+    public async ValueTask StringLiterals()
+    {
+        var rendersPerInvocation = ParagraphGroupsPerInvocation / ParagraphGroups;
+
+        for (var i = 0; i < rendersPerInvocation; i++)
+        {
+            await CompilerLiteralUtf16Version.RenderLorem(_pipeWriter, ParagraphGroups);
+            _pipeWriter.Reset();
+        }
+    }
+
+    [Benchmark(OperationsPerInvoke = ParagraphGroupsPerInvocation)]
+    public async ValueTask Utf8Literals()
+    {
+        var rendersPerInvocation = ParagraphGroupsPerInvocation / ParagraphGroups;
+
+        for (var i = 0; i < rendersPerInvocation; i++)
+        {
+            await CompilerLiteralUtf8Version.RenderLorem(_pipeWriter, ParagraphGroups);
+            _pipeWriter.Reset();
+        }
+    }
+
+    private class Config : ManualConfig
+    {
+        public Config()
+        {
+            AddJob(Job.ShortRun
+                .WithCustomBuildConfiguration("Benchmarks")
+                .WithId(".NET 11 Preview")
+                .WithToolchain(InProcessEmitToolchain.Instance));
+        }
+    }
+}
+
+internal sealed class NullPipeWriter : PipeWriter
+{
+    private readonly byte[] _buffer = new byte[64 * 1024];
+    private long _unflushedBytes;
+
+    public override bool CanGetUnflushedBytes => true;
+
+    public override long UnflushedBytes => _unflushedBytes;
+
+    public override void Advance(int bytes)
+    {
+        _unflushedBytes += bytes;
+    }
+
+    public override void CancelPendingFlush()
+    {
+    }
+
+    public override void Complete(Exception? exception = null)
+    {
+    }
+
+    public override ValueTask<FlushResult> FlushAsync(CancellationToken cancellationToken = default)
+    {
+        _unflushedBytes = 0;
+        return ValueTask.FromResult(new FlushResult(isCanceled: false, isCompleted: false));
+    }
+
+    public override Memory<byte> GetMemory(int sizeHint = 0)
+    {
+        return GetMemoryOrThrow(sizeHint);
+    }
+
+    public override Span<byte> GetSpan(int sizeHint = 0)
+    {
+        return GetMemoryOrThrow(sizeHint).Span;
+    }
+
+    public void Reset()
+    {
+        _unflushedBytes = 0;
+    }
+
+    private Memory<byte> GetMemoryOrThrow(int sizeHint)
+    {
+        if (sizeHint > _buffer.Length)
+        {
+            throw new InvalidOperationException($"The requested buffer size ({sizeHint}) is larger than the {nameof(NullPipeWriter)} buffer ({_buffer.Length}).");
+        }
+
+        return _buffer;
+    }
+}
 
 [MemoryDiagnoser, Config(typeof(Config))]
 public class RazorSlicesStringRendering

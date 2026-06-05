@@ -59,6 +59,9 @@
   <Folder Name="/tests/BenchmarksWebApps/">
     <File Path="tests/BenchmarksWebApps/Directory.Build.props" />
     <Project Path="tests/BenchmarksWebApps/Benchmarks.RazorClassLibrary.Local/Benchmarks.RazorClassLibrary.Local.csproj" />
+    <Project Path="tests/BenchmarksWebApps/Benchmarks.RazorClassLibrary.CompilerLiteralsUtf16/Benchmarks.RazorClassLibrary.CompilerLiteralsUtf16.csproj" />
+    <Project Path="tests/BenchmarksWebApps/Benchmarks.RazorClassLibrary.CompilerLiteralsUtf8/Benchmarks.RazorClassLibrary.CompilerLiteralsUtf8.csproj" />
+    <Project Path="tests/BenchmarksWebApps/Benchmarks.RazorSlices.NoUtf8LiteralOverload/Benchmarks.RazorSlices.NoUtf8LiteralOverload.csproj" />
     <Project Path="tests/BenchmarksWebApps/Benchmarks.RazorClassLibrary.PreviousVersion/Benchmarks.RazorClassLibrary.PreviousVersion.csproj" />
     <Project Path="tests/BenchmarksWebApps/Benchmarks.WebApp.Blazor/Benchmarks.WebApp.Blazor.csproj">
       <Build Solution="Debug|*" Project="false" />
