@@ -184,6 +184,15 @@ public static class RazorSliceFactory
             : GetReflectionSliceFactory(sliceDefinition);
     }
 
+    [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "Guarded by check of RuntimeFeature.IsDynamicCodeCompiled")]
+    internal static Delegate GetSliceFactory<TModel>(SliceDefinition sliceDefinition)
+    {
+        return RuntimeFeature.IsDynamicCodeCompiled
+            ? GetExpressionsSliceFactory<TModel>(sliceDefinition)
+            : GetReflectionSliceFactory<TModel>(sliceDefinition);
+    }
+
     private static Delegate GetReflectionSliceFactory(SliceDefinition sliceDefinition)
     {
         var init = GetReflectionInitAction(sliceDefinition);
@@ -201,6 +210,18 @@ public static class RazorSliceFactory
                 slice.Initialize = init;
                 return slice;
             };
+    }
+
+    private static Func<TModel, RazorSlice<TModel>> GetReflectionSliceFactory<TModel>(SliceDefinition sliceDefinition)
+    {
+        var init = GetReflectionInitAction(sliceDefinition);
+        return model =>
+        {
+            var slice = (RazorSlice<TModel>)Activator.CreateInstance(sliceDefinition.SliceType)!;
+            slice.Model = model;
+            slice.Initialize = init;
+            return slice;
+        };
     }
 
     /// <summary>
@@ -274,6 +295,56 @@ public static class RazorSliceFactory
             ),
             name: "CreateSlice",
             parameters: parameters)
+        .Compile();
+    }
+
+    /// <summary>
+    /// Creates a <see cref="RazorSliceFactory"/> that can be used to create a <see cref="RazorSlice{TModel}"/> of the specified <see cref="Type"/>.
+    /// </summary>
+    /// <param name="sliceDefinition"></param>
+    /// <returns>A factory that can be used to create an instance of the slice.</returns>
+    [RequiresDynamicCode("Uses System.Linq.Expressions to dynamically generate delegates for creating slices")]
+    private static Func<TModel, RazorSlice<TModel>> GetExpressionsSliceFactory<TModel>(SliceDefinition sliceDefinition)
+    {
+        var sliceType = sliceDefinition.SliceType;
+
+        if (sliceType.GetConstructor(Type.EmptyTypes) is null)
+        {
+            throw new ArgumentException($"Slice type {sliceType.Name} must have a parameterless constructor.", nameof(sliceDefinition));
+        }
+
+        if (sliceDefinition.ModelProperty is null)
+        {
+            throw new ArgumentException($"Slice type {sliceType.Name} must have a model property.", nameof(sliceDefinition));
+        }
+
+        var sliceVariable = Expression.Variable(sliceType, "slice");
+        var modelParam = Expression.Parameter(typeof(TModel), "model");
+
+        var body = new List<Expression>
+        {
+            Expression.Assign(sliceVariable, Expression.New(sliceType))
+        };
+
+        if (sliceDefinition.InjectableProperties.Any)
+        {
+            body.Add(Expression.Assign(
+                Expression.MakeMemberAccess(sliceVariable, _razorSliceInitializeProperty),
+                GetExpressionInitAction(sliceDefinition)!));
+        }
+
+        body.Add(Expression.Assign(
+            Expression.MakeMemberAccess(sliceVariable, sliceDefinition.ModelProperty),
+            modelParam));
+
+        body.Add(Expression.Convert(sliceVariable, typeof(RazorSlice<TModel>)));
+
+        return Expression.Lambda<Func<TModel, RazorSlice<TModel>>>(
+            body: Expression.Block(
+                variables: [sliceVariable],
+                body),
+            name: "CreateSlice",
+            parameters: [modelParam])
         .Compile();
     }
 

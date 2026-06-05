@@ -93,22 +93,10 @@ static ValueTask RenderOnce(string implementation, NullPipeWriter pipeWriter, in
 [MemoryDiagnoser, Config(typeof(Config))]
 public class RazorSlicesCompilerLiteralRendering
 {
-    private const int RendersPerInvocation = 16_384;
-
     private readonly NullPipeWriter _pipeWriter = new();
-    private Func<PipeWriter, ValueTask>[] _utf16Renderers = [];
-    private Func<PipeWriter, ValueTask>[] _utf8Renderers = [];
 
     [Params(1, 5, 20, 100)]
     public int ParagraphGroups { get; set; }
-
-    [GlobalSetup]
-    public void GlobalSetup()
-    {
-        // Keep slice creation/allocation out of the measured workload so this benchmark isolates literal rendering cost.
-        _utf16Renderers = CreateRenderers(CompilerLiteralUtf16Version.CreateLoremRenderer);
-        _utf8Renderers = CreateRenderers(CompilerLiteralUtf8Version.CreateLoremRenderer);
-    }
 
     [IterationSetup]
     public void Setup()
@@ -116,37 +104,18 @@ public class RazorSlicesCompilerLiteralRendering
         _pipeWriter.Reset();
     }
 
-    [Benchmark(Baseline = true, OperationsPerInvoke = RendersPerInvocation)]
+    [Benchmark(Baseline = true)]
     public void StringLiterals()
     {
-        RenderSlices(_utf16Renderers);
+        EnsureCompleted(CompilerLiteralUtf16Version.RenderLorem(_pipeWriter, ParagraphGroups));
+        _pipeWriter.Reset();
     }
 
-    [Benchmark(OperationsPerInvoke = RendersPerInvocation)]
+    [Benchmark]
     public void Utf8Literals()
     {
-        RenderSlices(_utf8Renderers);
-    }
-
-    private Func<PipeWriter, ValueTask>[] CreateRenderers(Func<int, Func<PipeWriter, ValueTask>> createRenderer)
-    {
-        var renderers = new Func<PipeWriter, ValueTask>[RendersPerInvocation];
-
-        for (var i = 0; i < renderers.Length; i++)
-        {
-            renderers[i] = createRenderer(ParagraphGroups);
-        }
-
-        return renderers;
-    }
-
-    private void RenderSlices(Func<PipeWriter, ValueTask>[] renderers)
-    {
-        foreach (var render in renderers)
-        {
-            EnsureCompleted(render(_pipeWriter));
-            _pipeWriter.Reset();
-        }
+        EnsureCompleted(CompilerLiteralUtf8Version.RenderLorem(_pipeWriter, ParagraphGroups));
+        _pipeWriter.Reset();
     }
 
     private static void EnsureCompleted(ValueTask valueTask)
