@@ -11,6 +11,8 @@ namespace RazorSlices;
 /// </remarks>
 public sealed class SliceDefinition<TModel> : SliceDefinition
 {
+    private Func<TModel, RazorSlice<TModel>>? _createSlice;
+
     /// <summary>
     /// Creates a new instance of <see cref="SliceDefinition{TModel}"/>.
     /// </summary>
@@ -20,13 +22,12 @@ public sealed class SliceDefinition<TModel> : SliceDefinition
         Type sliceType)
         : base(sliceType, RazorSliceFactory.GetSliceFactory<TModel>)
     {
-        if (!HasModel || ModelType != typeof(TModel))
-        {
-            throw new InvalidOperationException($"""
-                Cannot create a strongly-typed slice definition for model type {typeof(TModel).Name} with slice {SliceType.Name}.
-                {(HasModel ? $"Ensure the model type is {ModelType!.Name}" : "It is not a strongly-typed slice.")}
-                """);
-        }
+    }
+
+    /// <inheritdoc />
+    private protected override void OnFactoryCreated(Delegate factory)
+    {
+        _createSlice = (Func<TModel, RazorSlice<TModel>>)factory;
     }
 
     /// <summary>
@@ -34,5 +35,5 @@ public sealed class SliceDefinition<TModel> : SliceDefinition
     /// </summary>
     /// <param name="model">The model for the slice.</param>
     /// <returns>The slice instance.</returns>
-    public RazorSlice<TModel> CreateSlice(TModel model) => ((Func<TModel, RazorSlice<TModel>>)Factory)(model);
+    public RazorSlice<TModel> CreateSlice(TModel model) => _createSlice!(model);
 }

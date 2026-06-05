@@ -179,6 +179,9 @@ public static class RazorSliceFactory
         Justification = "Guarded by check of RuntimeFeature.IsDynamicCodeCompiled")]
     internal static Delegate GetSliceFactory(SliceDefinition sliceDefinition)
     {
+        EnsureParameterlessConstructor(sliceDefinition);
+        EnsureNoModelSliceDefinition(sliceDefinition);
+
         return RuntimeFeature.IsDynamicCodeCompiled
             ? GetExpressionsSliceFactory(sliceDefinition)
             : GetReflectionSliceFactory(sliceDefinition);
@@ -188,6 +191,8 @@ public static class RazorSliceFactory
         Justification = "Guarded by check of RuntimeFeature.IsDynamicCodeCompiled")]
     internal static Delegate GetSliceFactory<TModel>(SliceDefinition sliceDefinition)
     {
+        EnsureParameterlessConstructor(sliceDefinition);
+
         return RuntimeFeature.IsDynamicCodeCompiled
             ? GetExpressionsSliceFactory<TModel>(sliceDefinition)
             : GetReflectionSliceFactory<TModel>(sliceDefinition);
@@ -196,24 +201,18 @@ public static class RazorSliceFactory
     private static Delegate GetReflectionSliceFactory(SliceDefinition sliceDefinition)
     {
         var init = GetReflectionInitAction(sliceDefinition);
-        return sliceDefinition.HasModel
-            ? (object model) =>
-            {
-                var slice = (RazorSlice)Activator.CreateInstance(sliceDefinition.SliceType)!;
-                sliceDefinition.ModelProperty!.SetValue(slice, model);
-                slice.Initialize = init;
-                return slice;
-            }
-            : () =>
-            {
-                var slice = (RazorSlice)Activator.CreateInstance(sliceDefinition.SliceType)!;
-                slice.Initialize = init;
-                return slice;
-            };
+        return () =>
+        {
+            var slice = (RazorSlice)Activator.CreateInstance(sliceDefinition.SliceType)!;
+            slice.Initialize = init;
+            return slice;
+        };
     }
 
     private static Func<TModel, RazorSlice<TModel>> GetReflectionSliceFactory<TModel>(SliceDefinition sliceDefinition)
     {
+        _ = GetModelProperty<TModel>(sliceDefinition);
+
         var init = GetReflectionInitAction(sliceDefinition);
         return model =>
         {
@@ -234,11 +233,6 @@ public static class RazorSliceFactory
     {
         var sliceType = sliceDefinition.SliceType;
 
-        if (sliceType.GetConstructor(Type.EmptyTypes) is null)
-        {
-            throw new ArgumentException($"Slice type {sliceType.Name} must have a parameterless constructor.", nameof(sliceDefinition));
-        }
-
         var body = new List<Expression>();
 
         // Make a delegate like:
@@ -249,21 +243,9 @@ public static class RazorSliceFactory
         //     slice.Init = ...;
         //     return slice;
         // }
-        //
-        // or
-        //
-        // MySlice CreateSlice(MyModel model)
-        // {
-        //     var slice = new SliceType<MyModel>();
-        //     slice.Init = ...;
-        //     slice.Model = model
-        //     return slice;
-        // }
 
         var sliceVariable = Expression.Variable(sliceType, "slice");
         body.Add(Expression.Assign(sliceVariable, Expression.New(sliceType)));
-        ParameterExpression[]? parameters = null;
-        var factoryType = typeof(Func<RazorSlice>);
 
         if (sliceDefinition.InjectableProperties.Any)
         {
@@ -272,29 +254,13 @@ public static class RazorSliceFactory
                 GetExpressionInitAction(sliceDefinition)!));
         }
 
-        if (sliceDefinition.ModelType is not null)
-        {
-            // Func<MyModel, RazorSlice<MyModel>>
-            var modelPropInfo = sliceType.GetProperty("Model")!;
-            factoryType = typeof(Func<,>).MakeGenericType(sliceDefinition.ModelType, sliceType);
-            var modelParam = Expression.Parameter(sliceDefinition.ModelType, "model");
-            parameters = [modelParam];
-            body.Add(Expression.Assign(
-                Expression.MakeMemberAccess(sliceVariable, modelPropInfo),
-                modelParam));
-        }
+        body.Add(Expression.Convert(sliceVariable, _razorSliceType));
 
-        var returnTarget = Expression.Label(sliceType);
-        body.Add(Expression.Label(returnTarget, sliceVariable));
-
-        return Expression.Lambda(
-            delegateType: factoryType,
+        return Expression.Lambda<Func<RazorSlice>>(
             body: Expression.Block(
                 variables: [sliceVariable],
                 body
-            ),
-            name: "CreateSlice",
-            parameters: parameters)
+            ))
         .Compile();
     }
 
@@ -307,16 +273,7 @@ public static class RazorSliceFactory
     private static Func<TModel, RazorSlice<TModel>> GetExpressionsSliceFactory<TModel>(SliceDefinition sliceDefinition)
     {
         var sliceType = sliceDefinition.SliceType;
-
-        if (sliceType.GetConstructor(Type.EmptyTypes) is null)
-        {
-            throw new ArgumentException($"Slice type {sliceType.Name} must have a parameterless constructor.", nameof(sliceDefinition));
-        }
-
-        if (sliceDefinition.ModelProperty is null)
-        {
-            throw new ArgumentException($"Slice type {sliceType.Name} must have a model property.", nameof(sliceDefinition));
-        }
+        var modelProperty = GetModelProperty<TModel>(sliceDefinition);
 
         var sliceVariable = Expression.Variable(sliceType, "slice");
         var modelParam = Expression.Parameter(typeof(TModel), "model");
@@ -334,7 +291,7 @@ public static class RazorSliceFactory
         }
 
         body.Add(Expression.Assign(
-            Expression.MakeMemberAccess(sliceVariable, sliceDefinition.ModelProperty),
+            Expression.MakeMemberAccess(sliceVariable, modelProperty),
             modelParam));
 
         body.Add(Expression.Convert(sliceVariable, typeof(RazorSlice<TModel>)));
@@ -346,6 +303,35 @@ public static class RazorSliceFactory
             name: "CreateSlice",
             parameters: [modelParam])
         .Compile();
+    }
+
+    private static void EnsureParameterlessConstructor(SliceDefinition sliceDefinition)
+    {
+        if (sliceDefinition.SliceType.GetConstructor(Type.EmptyTypes) is null)
+        {
+            throw new ArgumentException($"Slice type {sliceDefinition.SliceType.Name} must have a parameterless constructor.", nameof(sliceDefinition));
+        }
+    }
+
+    private static void EnsureNoModelSliceDefinition(SliceDefinition sliceDefinition)
+    {
+        if (sliceDefinition.HasModel)
+        {
+            throw new InvalidOperationException($"Slice {sliceDefinition.SliceType.Name} requires a model of type {sliceDefinition.ModelType?.Name}. Use SliceDefinition<TModel> instead.");
+        }
+    }
+
+    private static PropertyInfo GetModelProperty<TModel>(SliceDefinition sliceDefinition)
+    {
+        if (!sliceDefinition.HasModel || sliceDefinition.ModelProperty is null || sliceDefinition.ModelType != typeof(TModel))
+        {
+            throw new InvalidOperationException($"""
+                Cannot create a strongly-typed slice definition for model type {typeof(TModel).Name} with slice {sliceDefinition.SliceType.Name}.
+                {(sliceDefinition.HasModel ? $"Ensure the model type is {sliceDefinition.ModelType!.Name}" : "It is not a strongly-typed slice.")}
+                """);
+        }
+
+        return sliceDefinition.ModelProperty;
     }
 
     private static bool IsNullable(PropertyInfo info) =>
