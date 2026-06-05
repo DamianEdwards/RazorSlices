@@ -14,6 +14,8 @@ public class SliceDefinition
 {
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
     private readonly Type _originalSliceType;
+    private readonly Func<SliceDefinition, Delegate> _createFactory;
+    private Func<RazorSlice> _createSlice = null!;
 
     /// <summary>
     /// Creates a new instance of <see cref="SliceDefinition"/>.
@@ -23,20 +25,36 @@ public class SliceDefinition
     public SliceDefinition(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
         Type sliceType)
+        : this(sliceType, RazorSliceFactory.GetSliceFactory)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="SliceDefinition"/> with a custom factory provider.
+    /// </summary>
+    /// <param name="sliceType">The type of the slice.</param>
+    /// <param name="createFactory">A callback that creates the slice factory delegate for this definition.</param>
+    protected SliceDefinition(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
+        Type sliceType,
+        Func<SliceDefinition, Delegate> createFactory)
     {
         ArgumentNullException.ThrowIfNull(sliceType);
+        ArgumentNullException.ThrowIfNull(createFactory);
 
         if (HotReloadService.IsSupported)
         {
             HotReloadService.ClearCacheEvent += ReplaceSliceType;
         }
 
+        _createFactory = createFactory;
         _originalSliceType = sliceType;
         Initialize(sliceType);
-        Factory = RazorSliceFactory.GetSliceFactory(this);
     }
 
     [MemberNotNull(nameof(SliceType))]
+    [MemberNotNull(nameof(Factory))]
+    [MemberNotNull(nameof(_createSlice))]
     private void Initialize(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
         Type sliceType)
@@ -46,7 +64,24 @@ public class SliceDefinition
         ModelProperty = SliceType.GetProperty("Model");
         ModelType = ModelProperty?.PropertyType;
         InjectableProperties = RazorSliceFactory.GetInjectableProperties(SliceType);
-        Factory = RazorSliceFactory.GetSliceFactory(this);
+        Factory = _createFactory(this);
+        _createSlice = HasModel
+            ? CreateModelRequiredThrower(SliceType.Name, ModelType?.Name)
+            : (Func<RazorSlice>)Factory;
+        OnFactoryCreated(Factory);
+    }
+
+    private static Func<RazorSlice> CreateModelRequiredThrower(string sliceName, string? modelTypeName)
+    {
+        return () => throw new InvalidOperationException($"Slice {sliceName} requires a model of type {modelTypeName}. Call Create<TModel>(TModel model) instead.");
+    }
+
+    /// <summary>
+    /// Called after the slice factory delegate is created.
+    /// </summary>
+    /// <param name="factory">The factory delegate for this slice definition.</param>
+    private protected virtual void OnFactoryCreated(Delegate factory)
+    {
     }
 
     [UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2067",
@@ -102,21 +137,6 @@ public class SliceDefinition
     /// </summary>
     /// <returns>The slice instance.</returns>
     /// <exception cref="InvalidOperationException">Thrown if the slice requires a model.</exception>
-    public RazorSlice CreateSlice() => HasModel
-        ? throw new InvalidOperationException($"Slice {SliceType.Name} requires a model of type {ModelType?.Name}. Call Create<TModel>(TModel model) instead.")
-        : ((Func<RazorSlice>)Factory)();
+    public RazorSlice CreateSlice() => _createSlice();
 
-    /// <summary>
-    /// Creates a new instance of the slice this definition represents with the specified model.
-    /// </summary>
-    /// <typeparam name="TModel">The type of the slice model.</typeparam>
-    /// <param name="model">The model for the slice.</param>
-    /// <returns>The slice instance.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the slice does not require a model or the model instance passed is not assignable to the model type the slice requires.</exception>
-    public RazorSlice<TModel> CreateSlice<TModel>(TModel model) => !HasModel || !typeof(TModel).IsAssignableTo(ModelType)
-        ? throw new InvalidOperationException($"""
-            Cannot use model of type {typeof(TModel).Name} with slice {SliceType.Name}.
-            {(HasModel ? $"Ensure the model is assignable to {ModelType!.Name}" : "It is not a strongly-typed slice.")}
-            """)
-        : (RazorSlice<TModel>)((Func<object, RazorSlice>)Factory)(model!);
 }

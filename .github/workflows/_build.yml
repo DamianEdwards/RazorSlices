@@ -22,13 +22,16 @@ jobs:
       DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install .NET SDK
-      uses: actions/setup-dotnet@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+    - name: Install .NET SDKs/runtimes
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
       with:
-        dotnet-version: 8.0.x
-        global-json-file: "./global.json"
+        dotnet-version: |
+          8.0.x
+          9.0.x
+          10.0.x
+          11.0.x
     
     - name: Restore dependencies
       run: dotnet restore
@@ -67,7 +70,7 @@ jobs:
       run: dotnet pack --configuration Release --output ./artifacts/ship --verbosity normal -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true -p:IsShipCandidate=true
 
     - name: Upload artifacts (packages)
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: nupkg
         path: ./artifacts/**/*.nupkg

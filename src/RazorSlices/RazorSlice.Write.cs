@@ -53,6 +53,7 @@ public partial class RazorSlice
         WriteLiteral(value?.ToString());
     }
 
+#if !RAZOR_SLICES_DISABLE_UTF8_LITERAL_OVERLOAD
     /// <summary>
     /// Writes a buffer of UTF8 bytes to the output without HTML encoding it.
     /// </summary>
@@ -77,6 +78,7 @@ public partial class RazorSlice
         _pipeWriter?.Write(value);
         _textWriter?.WriteUtf8(value);
     }
+#endif
 
     /// <summary>
     /// Writes a <see cref="bool"/> value to the output.

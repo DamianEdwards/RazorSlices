@@ -231,6 +231,10 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 var sliceTypeDeclaration = useRecords ? "record " : "class ";
                 var genericParameter = hasModel && resolvedModelType is not null ? $"<{resolvedModelType}>" : "";
 
+                var sliceDefinitionType = hasModel && resolvedModelType is not null
+                    ? $"global::RazorSlices.SliceDefinition<{resolvedModelType}>"
+                    : "global::RazorSlices.SliceDefinition";
+
                 codeBuilder.AppendLine($$"""
                         /// <summary>
                         /// Static proxy for the Razor Slice defined in <c>{{relativeFilePath}}</c>.
@@ -242,7 +246,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                             [global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All)]
                             private static readonly global::System.Type _sliceType = global::System.Type.GetType(TypeName)
                                 ?? throw new global::System.InvalidOperationException($"Razor view type '{TypeName}' was not found. This is likely a bug in the RazorSlices source generator.");
-                            private static readonly global::RazorSlices.SliceDefinition _sliceDefinition = new(_sliceType);
+                            private static readonly {{sliceDefinitionType}} _sliceDefinition = new(_sliceType);
                     """);
 
                 if (hasModel && resolvedModelType is not null)
@@ -251,7 +255,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                             /// <summary>
                             /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> with the given model.
                             /// </summary>
-                            public static global::RazorSlices.RazorSlice<{{resolvedModelType}}> Create({{resolvedModelType}} model) => _sliceDefinition.CreateSlice<{{resolvedModelType}}>(model);
+                            public static global::RazorSlices.RazorSlice<{{resolvedModelType}}> Create({{resolvedModelType}} model) => _sliceDefinition.CreateSlice(model);
 
                             // Explicit interface implementation, workaround for https://github.com/dotnet/runtime/issues/102796
                             static global::RazorSlices.RazorSlice<{{resolvedModelType}}> global::RazorSlices.IRazorSliceProxy<{{resolvedModelType}}>.CreateSlice({{resolvedModelType}} model) => Create(model);
