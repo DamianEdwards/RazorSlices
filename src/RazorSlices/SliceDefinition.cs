@@ -139,23 +139,4 @@ public class SliceDefinition
     /// <exception cref="InvalidOperationException">Thrown if the slice requires a model.</exception>
     public RazorSlice CreateSlice() => _createSlice();
 
-    /// <summary>
-    /// Creates a new instance of the slice this definition represents with the specified model.
-    /// </summary>
-    /// <typeparam name="TModel">The type of the slice model.</typeparam>
-    /// <param name="model">The model for the slice.</param>
-    /// <returns>The slice instance.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the slice does not require a model or the model instance passed is not assignable to the model type the slice requires.</exception>
-    public RazorSlice<TModel> CreateSlice<TModel>(TModel model)
-    {
-        if (Factory is Func<TModel, RazorSlice<TModel>> typedFactory)
-        {
-            return typedFactory(model);
-        }
-
-        throw new InvalidOperationException($"""
-            Cannot use model of type {typeof(TModel).Name} with slice {SliceType.Name}.
-            {(HasModel ? $"Ensure the model type is {ModelType!.Name}" : "It is not a strongly-typed slice.")}
-            """);
-    }
 }
