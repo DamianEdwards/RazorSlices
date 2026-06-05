@@ -15,10 +15,11 @@ samples/
   PagesAndSlices/                 # Sample showing Razor Pages + Slices coexistence
   RazorClassLibrary/              # Sample Razor Class Library
 tests/
-  Tests/                          # Unit tests for library
+  RazorSlices/                    # Unit tests for library
   SourceGenerator/                # Unit tests for source generator
   Samples.WebApp/                 # Integration tests (WebApplicationFactory)
   Samples.WebApp.PublishTests/    # Publish/AOT tests
+  Benchmarks/                     # Benchmarks (BenchmarkDotNet)
   BenchmarksWebApps/              # Benchmark projects
 ```
 
@@ -27,7 +28,10 @@ tests/
 - `src/RazorSlices/IRazorSliceProxy.cs` — Interfaces for generated proxy types (`IRazorSliceProxy` for no-model, `IRazorSliceProxy<TModel>` for model slices)
 - `src/RazorSlices/IResultExtensions.cs` — `Results.Extensions.RazorSlice<T>()` extension methods
 - `src/RazorSlices/IUsesLayout.cs` — Layout support interfaces
-- `src/RazorSlices/SliceDefinition.cs` — Runtime slice factory (reflection + expression trees)
+- `src/RazorSlices/SliceDefinition.cs` — Defines a slice, instances emitted at compile time by the source generator
+- `src/RazorSlices/SliceDefinitionOfTModel.cs` — Slice definition for slices with strongly-typed models
+- `src/RazorSlices/RazorSliceProxy.cs` — Base class for generated proxy types, implements `IRazorSliceProxy` or `IRazorSliceProxy<TModel>`
+- `src/RazorSlices/RazorSliceFactory.cs` — Methods for creating factory methods that create `RazorSlice` instances from `SliceDefinition`
 - `src/RazorSlices/RazorSlice.cs` — Base class for all slices
 - `src/RazorSlices/RazorSlice.Partials.cs` — Partial rendering support
 - `src/SourceGenerator/RazorSliceProxyGenerator.cs` — The incremental source generator
