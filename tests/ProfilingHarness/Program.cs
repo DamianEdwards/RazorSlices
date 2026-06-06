@@ -1,38 +1,259 @@
-﻿using System.IO.Pipelines;
+using System.Diagnostics;
+using System.IO.Pipelines;
+using RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf16;
+using RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf8;
 using RazorSlices.Benchmarks.RazorClassLibrary.Local;
 
-#pragma warning disable CS8321 // Local function is declared but never used
+var scenario = args.Length > 0 ? args[0] : "utf16-lorem-pipe";
+var paragraphGroups = args.Length > 1 && int.TryParse(args[1], out var parsedParagraphGroups)
+    ? parsedParagraphGroups
+    : 100;
+var iterations = args.Length > 2 && int.TryParse(args[2], out var parsedIterations)
+    ? parsedIterations
+    : 1_000_000;
+var warmupIterations = args.Length > 3 && int.TryParse(args[3], out var parsedWarmupIterations)
+    ? parsedWarmupIterations
+    : 10_000;
 
-var iterations = 1000;
-//var memoryPool = MemoryPool<byte>.Shared;
-//var pipe = new Pipe(new(memoryPool, pauseWriterThreshold: 0) { });
-
-Console.WriteLine("Warming up");
-
-for (int i = 0; i < iterations; i++)
+if (string.Equals(scenario, "--help", StringComparison.OrdinalIgnoreCase)
+    || string.Equals(scenario, "-h", StringComparison.OrdinalIgnoreCase)
+    || string.Equals(scenario, "/?", StringComparison.OrdinalIgnoreCase))
 {
-    //await RenderSlice(pipe);
-    await RenderSliceToString();
+    PrintUsage();
+    return;
 }
 
-Console.WriteLine("Press ENTER to run test");
-Console.ReadLine();
-
-for (int i = 0; i < iterations; i++)
+if (!TryGetScenario(scenario, paragraphGroups, out var render))
 {
-    //await RenderSlice(pipe);
-    await RenderSliceToString();
+    Console.Error.WriteLine($"Unknown scenario '{scenario}'.");
+    PrintUsage();
+    Environment.ExitCode = 1;
+    return;
 }
 
-static ValueTask<string> RenderSliceToString()
+Console.WriteLine($"Scenario: {scenario}");
+Console.WriteLine($"Paragraph groups: {paragraphGroups:N0}");
+Console.WriteLine($"Warmup iterations: {warmupIterations:N0}");
+Console.WriteLine($"Measured iterations: {iterations:N0}");
+
+for (var i = 0; i < warmupIterations; i++)
 {
-    return LocalVersion.RenderHello();
+    await render();
 }
 
-static async ValueTask RenderSlice(Pipe pipe)
+GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+GC.WaitForPendingFinalizers();
+GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+
+var allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
+var stopwatch = Stopwatch.StartNew();
+
+for (var i = 0; i < iterations; i++)
 {
-    await LocalVersion.RenderHello(pipe.Writer);
-    await pipe.Writer.CompleteAsync();
-    await pipe.Reader.CompleteAsync();
-    pipe.Reset();
+    await render();
+}
+
+stopwatch.Stop();
+var allocatedBytes = GC.GetTotalAllocatedBytes(precise: true) - allocatedBefore;
+
+Console.WriteLine($"Elapsed: {stopwatch.Elapsed.TotalSeconds:N3}s");
+Console.WriteLine($"Renders/second: {iterations / stopwatch.Elapsed.TotalSeconds:N0}");
+Console.WriteLine($"Allocated bytes/render: {allocatedBytes / (double)iterations:N2}");
+
+static bool TryGetScenario(string scenario, int paragraphGroups, out Func<ValueTask> render)
+{
+    var pipeWriter = new NullPipeWriter();
+    var wrappedPipeWriter = new NonTrackingPipeWriter(pipeWriter);
+    var textWriter = TextWriter.Null;
+
+    Func<ValueTask>? selectedRender = scenario.ToLowerInvariant() switch
+    {
+        "render-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderEmpty(pipeWriter), pipeWriter),
+        "render-empty-text" => () => RenderLifecycleScenarios.RenderEmpty(textWriter),
+        "render-empty-init-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderEmptyWithInitialize(pipeWriter), pipeWriter),
+        "render-empty-wrapper-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderEmpty(wrappedPipeWriter), pipeWriter),
+        "render-generated-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderGeneratedStyleEmpty(pipeWriter), pipeWriter),
+        "render-generated-empty-text" => () => RenderLifecycleScenarios.RenderGeneratedStyleEmpty(textWriter),
+        "render-small-literal-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderSmallLiteral(pipeWriter), pipeWriter),
+        "render-small-literal-text" => () => RenderLifecycleScenarios.RenderSmallLiteral(textWriter),
+        "render-encoded-string-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderEncodedString(pipeWriter), pipeWriter),
+        "render-encoded-string-text" => () => RenderLifecycleScenarios.RenderEncodedString(textWriter),
+        "render-autoflush-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderAutoFlush(pipeWriter), pipeWriter),
+        "render-async-yield-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderAsyncYield(pipeWriter), pipeWriter),
+        "render-partial-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderPartialEmpty(pipeWriter), pipeWriter),
+        "render-partial-loop-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderPartialLoop(pipeWriter, paragraphGroups), pipeWriter),
+        "render-layout-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderLayoutEmpty(pipeWriter), pipeWriter),
+        "render-layout-body-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderLayoutBody(pipeWriter), pipeWriter),
+        "utf16-lorem-pipe" => () => RenderPipe(() => CompilerLiteralUtf16Version.RenderLorem(pipeWriter, paragraphGroups), pipeWriter),
+        "utf16-lorem-text" => () => CompilerLiteralUtf16Version.RenderLorem(textWriter, paragraphGroups),
+        "utf16-lorem-string" => async () =>
+        {
+            _ = await CompilerLiteralUtf16Version.RenderLorem(paragraphGroups);
+        },
+        "utf8-lorem-pipe" => () => RenderPipe(() => CompilerLiteralUtf8Version.RenderLorem(pipeWriter, paragraphGroups), pipeWriter),
+        "utf8-lorem-text" => () => CompilerLiteralUtf8Version.RenderLorem(textWriter, paragraphGroups),
+        "utf8-lorem-string" => async () =>
+        {
+            _ = await CompilerLiteralUtf8Version.RenderLorem(paragraphGroups);
+        },
+        "utf16-lorem-lifetime" => () =>
+        {
+            var slice = RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf16.Lorem.Create(paragraphGroups);
+            slice.Dispose();
+            return ValueTask.CompletedTask;
+        },
+        "utf8-lorem-lifetime" => () =>
+        {
+            var slice = RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf8.Lorem.Create(paragraphGroups);
+            slice.Dispose();
+            return ValueTask.CompletedTask;
+        },
+        "local-hello-pipe" => () => RenderPipe(() => LocalVersion.RenderHello(pipeWriter), pipeWriter),
+        "local-hello-lifetime" => () =>
+        {
+            var slice = RazorSlices.Benchmarks.RazorClassLibrary.Local.Hello.Create();
+            slice.Dispose();
+            return ValueTask.CompletedTask;
+        },
+        "local-hello-string" => async () =>
+        {
+            _ = await LocalVersion.RenderHello();
+        },
+        _ => null
+    };
+
+    render = selectedRender!;
+    return selectedRender is not null;
+}
+
+static async ValueTask RenderPipe(Func<ValueTask> render, NullPipeWriter pipeWriter)
+{
+    await render();
+    pipeWriter.Reset();
+}
+
+static void PrintUsage()
+{
+    Console.WriteLine("""
+        Usage:
+          dotnet run --project tests\ProfilingHarness -c Release -- <scenario> [paragraphGroups] [iterations] [warmupIterations]
+
+        Scenarios:
+          render-empty-pipe      Empty hand-written slice rendered to PipeWriter
+          render-empty-text      Empty hand-written slice rendered to TextWriter.Null
+          render-empty-init-pipe Empty hand-written slice with an Initialize delegate
+          render-empty-wrapper-pipe Empty slice rendered through FlushTrackingPipeWriter
+          render-generated-empty-pipe Empty async-method-style slice rendered to PipeWriter
+          render-generated-empty-text Empty async-method-style slice rendered to TextWriter.Null
+          render-small-literal-pipe Small literal hand-written slice rendered to PipeWriter
+          render-small-literal-text Small literal hand-written slice rendered to TextWriter.Null
+          render-encoded-string-pipe HTML-encoded string expression rendered to PipeWriter
+          render-encoded-string-text HTML-encoded string expression rendered to TextWriter.Null
+          render-autoflush-pipe Large literal hand-written slice that trips auto-flush
+          render-async-yield-pipe Slice whose ExecuteAsync yields asynchronously
+          render-partial-empty-pipe Parent slice rendering one empty partial
+          render-partial-loop-pipe Parent slice rendering [paragraphGroups] empty partials
+          render-layout-empty-pipe Empty slice rendered through an empty layout
+          render-layout-body-pipe Small literal slice rendered through a layout body
+          utf16-lorem-pipe    Razor compiler string literals rendered to PipeWriter
+          utf16-lorem-text    Razor compiler string literals rendered to TextWriter.Null
+          utf16-lorem-string  Razor compiler string literals rendered to a string
+          utf8-lorem-pipe     Razor compiler UTF-8 literals rendered to PipeWriter
+          utf8-lorem-text     Razor compiler UTF-8 literals rendered to TextWriter.Null
+          utf8-lorem-string   Razor compiler UTF-8 literals rendered to a string
+          utf16-lorem-lifetime  Razor compiler string literal slice creation and disposal only
+          utf8-lorem-lifetime   Razor compiler UTF-8 literal slice creation and disposal only
+          local-hello-pipe    Local Hello slice rendered to PipeWriter
+          local-hello-lifetime  Local Hello slice creation and disposal only
+          local-hello-string  Local Hello slice rendered to string/TextWriter
+        """);
+}
+
+internal sealed class NonTrackingPipeWriter(PipeWriter innerPipeWriter) : PipeWriter
+{
+    public override bool CanGetUnflushedBytes => false;
+
+    public override void Advance(int bytes)
+    {
+        innerPipeWriter.Advance(bytes);
+    }
+
+    public override void CancelPendingFlush()
+    {
+        innerPipeWriter.CancelPendingFlush();
+    }
+
+    public override void Complete(Exception? exception = null)
+    {
+        innerPipeWriter.Complete(exception);
+    }
+
+    public override ValueTask<FlushResult> FlushAsync(CancellationToken cancellationToken = default)
+    {
+        return innerPipeWriter.FlushAsync(cancellationToken);
+    }
+
+    public override Memory<byte> GetMemory(int sizeHint = 0)
+    {
+        return innerPipeWriter.GetMemory(sizeHint);
+    }
+
+    public override Span<byte> GetSpan(int sizeHint = 0)
+    {
+        return innerPipeWriter.GetSpan(sizeHint);
+    }
+}
+
+internal sealed class NullPipeWriter : PipeWriter
+{
+    private readonly byte[] _buffer = new byte[64 * 1024];
+    private long _unflushedBytes;
+
+    public override bool CanGetUnflushedBytes => true;
+
+    public override long UnflushedBytes => _unflushedBytes;
+
+    public override void Advance(int bytes)
+    {
+        _unflushedBytes += bytes;
+    }
+
+    public override void CancelPendingFlush()
+    {
+    }
+
+    public override void Complete(Exception? exception = null)
+    {
+    }
+
+    public override ValueTask<FlushResult> FlushAsync(CancellationToken cancellationToken = default)
+    {
+        _unflushedBytes = 0;
+        return ValueTask.FromResult(new FlushResult(isCanceled: false, isCompleted: false));
+    }
+
+    public override Memory<byte> GetMemory(int sizeHint = 0)
+    {
+        return GetMemoryOrThrow(sizeHint);
+    }
+
+    public override Span<byte> GetSpan(int sizeHint = 0)
+    {
+        return GetMemoryOrThrow(sizeHint).Span;
+    }
+
+    public void Reset()
+    {
+        _unflushedBytes = 0;
+    }
+
+    private Memory<byte> GetMemoryOrThrow(int sizeHint)
+    {
+        if (sizeHint > _buffer.Length)
+        {
+            throw new InvalidOperationException($"The requested buffer size ({sizeHint}) is larger than the {nameof(NullPipeWriter)} buffer ({_buffer.Length}).");
+        }
+
+        return _buffer;
+    }
 }

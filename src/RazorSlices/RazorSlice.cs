@@ -17,8 +17,6 @@ public abstract partial class RazorSlice : IDisposable
 {
     private const int _autoFlushThreshold = 1_024 * 16; // Auto-flush after each slice rendering if unflushed bytes is over 16 KB
 
-    private static readonly FlushResult _noFlushResult = new(false, false);
-
     // Used to support nested writers emitted by the Razor compiler when using templated razor delegates
     private Stack<(PipeWriter?, TextWriter?)>? _writerStack;
 
@@ -127,6 +125,19 @@ public abstract partial class RazorSlice : IDisposable
 
         var pipe = FlushTrackingPipeWriter.Create(pipeWriter);
 
+        if (ReferenceEquals(pipe, pipeWriter))
+        {
+            var unwrappedRenderTask = RenderToPipeWriterAsync(pipe, htmlEncoder, cancellationToken);
+
+            if (!unwrappedRenderTask.IsCompletedSuccessfully)
+            {
+                // Go async
+                return unwrappedRenderTask;
+            }
+
+            return ValueTask.CompletedTask;
+        }
+
         ValueTask renderTask;
         try
         {
@@ -201,7 +212,7 @@ public abstract partial class RazorSlice : IDisposable
 
         Dispose();
 
-        return AutoFlush().GetAsValueTask();
+        return AutoFlush();
     }
 
     [MemberNotNull(nameof(_textWriter))]
@@ -280,17 +291,17 @@ public abstract partial class RazorSlice : IDisposable
         }
     }
 
-    private ValueTask<FlushResult> AutoFlush()
+    private ValueTask AutoFlush()
     {
         Debug.Assert(_pipeWriter is null || _pipeWriter.CanGetUnflushedBytes, "PipeWriter must support unflushed bytes to auto-flush.");
 
         if (_pipeWriter is not null && _pipeWriter.UnflushedBytes >= _autoFlushThreshold)
         {
             Debug.WriteLine($"Auto-flushing slice of type '{GetType().Name}' to a PipeWriter");
-            return _pipeWriter.FlushAsync(CancellationToken);
+            return _pipeWriter.FlushAsync(CancellationToken).GetAsValueTask();
         }
 
-        return ValueTask.FromResult(_noFlushResult);
+        return ValueTask.CompletedTask;
     }
 
     private static async ValueTask AwaitOutputFlushTask(Task flushTask)
@@ -384,13 +395,5 @@ public abstract partial class RazorSlice : IDisposable
         _disposed = true;
 
         Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
-    }
-
-    /// <summary>
-    /// Finalizer.
-    /// </summary>
-    ~RazorSlice()
-    {
-        DisposeInternal();
     }
 }

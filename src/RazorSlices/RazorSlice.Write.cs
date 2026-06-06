@@ -166,7 +166,11 @@ public partial class RazorSlice
     {
         if (!string.IsNullOrEmpty(value))
         {
-            Write(value.AsSpan());
+            _pipeWriter?.HtmlEncodeAndWrite(value.AsSpan(), _htmlEncoder);
+            if (_textWriter is not null)
+            {
+                _htmlEncoder.Encode(_textWriter, value);
+            }
         }
     }
 

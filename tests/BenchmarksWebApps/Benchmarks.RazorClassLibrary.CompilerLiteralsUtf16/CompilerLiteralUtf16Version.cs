@@ -14,4 +14,14 @@ public static class CompilerLiteralUtf16Version
     {
         return Lorem.Create(paragraphGroups).RenderAsync(pipeWriter);
     }
+
+    public static ValueTask RenderLorem(TextWriter textWriter, int paragraphGroups)
+    {
+        return Lorem.Create(paragraphGroups).RenderAsync(textWriter);
+    }
+
+    public static ValueTask<string> RenderLorem(int paragraphGroups)
+    {
+        return Lorem.Create(paragraphGroups).RenderAsync();
+    }
 }
