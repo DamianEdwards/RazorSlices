@@ -402,7 +402,7 @@ public partial class RazorSlice
     /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtml(Model.SomeHtml)</c></returns>
     protected HtmlString WriteHtml(string? htmlString)
     {
-        if (string.IsNullOrEmpty(htmlString))
+        if (!string.IsNullOrEmpty(htmlString))
         {
             _pipeWriter?.WriteHtml(htmlString.AsSpan());
             _textWriter?.Write(htmlString);
