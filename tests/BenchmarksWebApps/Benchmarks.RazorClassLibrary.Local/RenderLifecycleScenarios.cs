@@ -10,6 +10,12 @@ public static class RenderLifecycleScenarios
         return slice.RenderAsync(pipeWriter);
     }
 
+    public static ValueTask RenderEmpty(TextWriter textWriter)
+    {
+        var slice = new EmptySlice();
+        return slice.RenderAsync(textWriter);
+    }
+
     public static ValueTask RenderEmptyWithInitialize(PipeWriter pipeWriter)
     {
         var slice = new EmptySlice { Initialize = static (_, _, _) => { } };
@@ -22,10 +28,34 @@ public static class RenderLifecycleScenarios
         return slice.RenderAsync(pipeWriter);
     }
 
+    public static ValueTask RenderGeneratedStyleEmpty(TextWriter textWriter)
+    {
+        var slice = new GeneratedStyleEmptySlice();
+        return slice.RenderAsync(textWriter);
+    }
+
     public static ValueTask RenderSmallLiteral(PipeWriter pipeWriter)
     {
         var slice = new SmallLiteralSlice();
         return slice.RenderAsync(pipeWriter);
+    }
+
+    public static ValueTask RenderSmallLiteral(TextWriter textWriter)
+    {
+        var slice = new SmallLiteralSlice();
+        return slice.RenderAsync(textWriter);
+    }
+
+    public static ValueTask RenderEncodedString(PipeWriter pipeWriter)
+    {
+        var slice = new EncodedStringSlice();
+        return slice.RenderAsync(pipeWriter);
+    }
+
+    public static ValueTask RenderEncodedString(TextWriter textWriter)
+    {
+        var slice = new EncodedStringSlice();
+        return slice.RenderAsync(textWriter);
     }
 
     public static ValueTask RenderAutoFlush(PipeWriter pipeWriter)
@@ -98,6 +128,17 @@ public static class RenderLifecycleScenarios
         public override Task ExecuteAsync()
         {
             WriteLiteral(_html);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class EncodedStringSlice : RazorSlice
+    {
+        private const string Html = "<hello>&\"world\"</hello>";
+
+        public override Task ExecuteAsync()
+        {
+            Write(Html);
             return Task.CompletedTask;
         }
     }

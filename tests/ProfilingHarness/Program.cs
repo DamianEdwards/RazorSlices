@@ -64,14 +64,20 @@ static bool TryGetScenario(string scenario, int paragraphGroups, out Func<ValueT
 {
     var pipeWriter = new NullPipeWriter();
     var wrappedPipeWriter = new NonTrackingPipeWriter(pipeWriter);
+    var textWriter = TextWriter.Null;
 
     Func<ValueTask>? selectedRender = scenario.ToLowerInvariant() switch
     {
         "render-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderEmpty(pipeWriter), pipeWriter),
+        "render-empty-text" => () => RenderLifecycleScenarios.RenderEmpty(textWriter),
         "render-empty-init-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderEmptyWithInitialize(pipeWriter), pipeWriter),
         "render-empty-wrapper-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderEmpty(wrappedPipeWriter), pipeWriter),
         "render-generated-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderGeneratedStyleEmpty(pipeWriter), pipeWriter),
+        "render-generated-empty-text" => () => RenderLifecycleScenarios.RenderGeneratedStyleEmpty(textWriter),
         "render-small-literal-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderSmallLiteral(pipeWriter), pipeWriter),
+        "render-small-literal-text" => () => RenderLifecycleScenarios.RenderSmallLiteral(textWriter),
+        "render-encoded-string-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderEncodedString(pipeWriter), pipeWriter),
+        "render-encoded-string-text" => () => RenderLifecycleScenarios.RenderEncodedString(textWriter),
         "render-autoflush-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderAutoFlush(pipeWriter), pipeWriter),
         "render-async-yield-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderAsyncYield(pipeWriter), pipeWriter),
         "render-partial-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderPartialEmpty(pipeWriter), pipeWriter),
@@ -79,7 +85,17 @@ static bool TryGetScenario(string scenario, int paragraphGroups, out Func<ValueT
         "render-layout-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderLayoutEmpty(pipeWriter), pipeWriter),
         "render-layout-body-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderLayoutBody(pipeWriter), pipeWriter),
         "utf16-lorem-pipe" => () => RenderPipe(() => CompilerLiteralUtf16Version.RenderLorem(pipeWriter, paragraphGroups), pipeWriter),
+        "utf16-lorem-text" => () => CompilerLiteralUtf16Version.RenderLorem(textWriter, paragraphGroups),
+        "utf16-lorem-string" => async () =>
+        {
+            _ = await CompilerLiteralUtf16Version.RenderLorem(paragraphGroups);
+        },
         "utf8-lorem-pipe" => () => RenderPipe(() => CompilerLiteralUtf8Version.RenderLorem(pipeWriter, paragraphGroups), pipeWriter),
+        "utf8-lorem-text" => () => CompilerLiteralUtf8Version.RenderLorem(textWriter, paragraphGroups),
+        "utf8-lorem-string" => async () =>
+        {
+            _ = await CompilerLiteralUtf8Version.RenderLorem(paragraphGroups);
+        },
         "utf16-lorem-lifetime" => () =>
         {
             var slice = RazorSlices.Benchmarks.RazorClassLibrary.CompilerLiteralsUtf16.Lorem.Create(paragraphGroups);
@@ -124,18 +140,27 @@ static void PrintUsage()
 
         Scenarios:
           render-empty-pipe      Empty hand-written slice rendered to PipeWriter
+          render-empty-text      Empty hand-written slice rendered to TextWriter.Null
           render-empty-init-pipe Empty hand-written slice with an Initialize delegate
           render-empty-wrapper-pipe Empty slice rendered through FlushTrackingPipeWriter
           render-generated-empty-pipe Empty async-method-style slice rendered to PipeWriter
+          render-generated-empty-text Empty async-method-style slice rendered to TextWriter.Null
           render-small-literal-pipe Small literal hand-written slice rendered to PipeWriter
+          render-small-literal-text Small literal hand-written slice rendered to TextWriter.Null
+          render-encoded-string-pipe HTML-encoded string expression rendered to PipeWriter
+          render-encoded-string-text HTML-encoded string expression rendered to TextWriter.Null
           render-autoflush-pipe Large literal hand-written slice that trips auto-flush
           render-async-yield-pipe Slice whose ExecuteAsync yields asynchronously
           render-partial-empty-pipe Parent slice rendering one empty partial
           render-partial-loop-pipe Parent slice rendering [paragraphGroups] empty partials
-           render-layout-empty-pipe Empty slice rendered through an empty layout
+          render-layout-empty-pipe Empty slice rendered through an empty layout
           render-layout-body-pipe Small literal slice rendered through a layout body
           utf16-lorem-pipe    Razor compiler string literals rendered to PipeWriter
+          utf16-lorem-text    Razor compiler string literals rendered to TextWriter.Null
+          utf16-lorem-string  Razor compiler string literals rendered to a string
           utf8-lorem-pipe     Razor compiler UTF-8 literals rendered to PipeWriter
+          utf8-lorem-text     Razor compiler UTF-8 literals rendered to TextWriter.Null
+          utf8-lorem-string   Razor compiler UTF-8 literals rendered to a string
           utf16-lorem-lifetime  Razor compiler string literal slice creation and disposal only
           utf8-lorem-lifetime   Razor compiler UTF-8 literal slice creation and disposal only
           local-hello-pipe    Local Hello slice rendered to PipeWriter
