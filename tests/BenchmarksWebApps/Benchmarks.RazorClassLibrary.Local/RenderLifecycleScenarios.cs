@@ -40,6 +40,30 @@ public static class RenderLifecycleScenarios
         return slice.RenderAsync(pipeWriter);
     }
 
+    public static ValueTask RenderPartialEmpty(PipeWriter pipeWriter)
+    {
+        var slice = new PartialParentSlice();
+        return slice.RenderAsync(pipeWriter);
+    }
+
+    public static ValueTask RenderPartialLoop(PipeWriter pipeWriter, int count)
+    {
+        var slice = new PartialLoopParentSlice { Count = count };
+        return slice.RenderAsync(pipeWriter);
+    }
+
+    public static ValueTask RenderLayoutEmpty(PipeWriter pipeWriter)
+    {
+        var slice = new EmptyContentWithEmptyLayoutSlice();
+        return slice.RenderAsync(pipeWriter);
+    }
+
+    public static ValueTask RenderLayoutBody(PipeWriter pipeWriter)
+    {
+        var slice = new BodyContentWithLayoutSlice();
+        return slice.RenderAsync(pipeWriter);
+    }
+
     private sealed class EmptySlice : RazorSlice
     {
         public override Task ExecuteAsync()
@@ -83,6 +107,75 @@ public static class RenderLifecycleScenarios
         public override async Task ExecuteAsync()
         {
             await Task.Yield();
+        }
+    }
+
+    private sealed class EmptySliceProxy : IRazorSliceProxy
+    {
+        public static RazorSlice CreateSlice() => new EmptySlice();
+    }
+
+    private sealed class PartialParentSlice : RazorSlice
+    {
+        public override async Task ExecuteAsync()
+        {
+            await RenderPartialAsync<EmptySliceProxy>();
+        }
+    }
+
+    private sealed class PartialLoopParentSlice : RazorSlice
+    {
+        public int Count { get; set; }
+
+        public override async Task ExecuteAsync()
+        {
+            for (var i = 0; i < Count; i++)
+            {
+                await RenderPartialAsync<EmptySliceProxy>();
+            }
+        }
+    }
+
+    private sealed class EmptyLayoutProxy : IRazorSliceProxy
+    {
+        public static RazorSlice CreateSlice() => new EmptyLayoutSlice();
+    }
+
+    private sealed class BodyLayoutProxy : IRazorSliceProxy
+    {
+        public static RazorSlice CreateSlice() => new BodyLayoutSlice();
+    }
+
+    private sealed class EmptyContentWithEmptyLayoutSlice : RazorSlice, IUsesLayout<EmptyLayoutProxy>
+    {
+        public override Task ExecuteAsync()
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class BodyContentWithLayoutSlice : RazorSlice, IUsesLayout<BodyLayoutProxy>
+    {
+        public override Task ExecuteAsync()
+        {
+            WriteLiteral("Hello, layout!");
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class EmptyLayoutSlice : RazorLayoutSlice
+    {
+        public override Task ExecuteAsync()
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class BodyLayoutSlice : RazorLayoutSlice
+    {
+        public override async Task ExecuteAsync()
+        {
+            await RenderBodyAsync();
         }
     }
 }

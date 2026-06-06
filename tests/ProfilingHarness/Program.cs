@@ -74,6 +74,10 @@ static bool TryGetScenario(string scenario, int paragraphGroups, out Func<ValueT
         "render-small-literal-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderSmallLiteral(pipeWriter), pipeWriter),
         "render-autoflush-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderAutoFlush(pipeWriter), pipeWriter),
         "render-async-yield-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderAsyncYield(pipeWriter), pipeWriter),
+        "render-partial-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderPartialEmpty(pipeWriter), pipeWriter),
+        "render-partial-loop-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderPartialLoop(pipeWriter, paragraphGroups), pipeWriter),
+        "render-layout-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderLayoutEmpty(pipeWriter), pipeWriter),
+        "render-layout-body-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderLayoutBody(pipeWriter), pipeWriter),
         "utf16-lorem-pipe" => () => RenderPipe(() => CompilerLiteralUtf16Version.RenderLorem(pipeWriter, paragraphGroups), pipeWriter),
         "utf8-lorem-pipe" => () => RenderPipe(() => CompilerLiteralUtf8Version.RenderLorem(pipeWriter, paragraphGroups), pipeWriter),
         "utf16-lorem-lifetime" => () =>
@@ -126,6 +130,10 @@ static void PrintUsage()
           render-small-literal-pipe Small literal hand-written slice rendered to PipeWriter
           render-autoflush-pipe Large literal hand-written slice that trips auto-flush
           render-async-yield-pipe Slice whose ExecuteAsync yields asynchronously
+          render-partial-empty-pipe Parent slice rendering one empty partial
+          render-partial-loop-pipe Parent slice rendering [paragraphGroups] empty partials
+           render-layout-empty-pipe Empty slice rendered through an empty layout
+          render-layout-body-pipe Small literal slice rendered through a layout body
           utf16-lorem-pipe    Razor compiler string literals rendered to PipeWriter
           utf8-lorem-pipe     Razor compiler UTF-8 literals rendered to PipeWriter
           utf16-lorem-lifetime  Razor compiler string literal slice creation and disposal only
