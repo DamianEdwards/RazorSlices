@@ -63,9 +63,17 @@ Console.WriteLine($"Allocated bytes/render: {allocatedBytes / (double)iterations
 static bool TryGetScenario(string scenario, int paragraphGroups, out Func<ValueTask> render)
 {
     var pipeWriter = new NullPipeWriter();
+    var wrappedPipeWriter = new NonTrackingPipeWriter(pipeWriter);
 
     Func<ValueTask>? selectedRender = scenario.ToLowerInvariant() switch
     {
+        "render-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderEmpty(pipeWriter), pipeWriter),
+        "render-empty-init-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderEmptyWithInitialize(pipeWriter), pipeWriter),
+        "render-empty-wrapper-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderEmpty(wrappedPipeWriter), pipeWriter),
+        "render-generated-empty-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderGeneratedStyleEmpty(pipeWriter), pipeWriter),
+        "render-small-literal-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderSmallLiteral(pipeWriter), pipeWriter),
+        "render-autoflush-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderAutoFlush(pipeWriter), pipeWriter),
+        "render-async-yield-pipe" => () => RenderPipe(() => RenderLifecycleScenarios.RenderAsyncYield(pipeWriter), pipeWriter),
         "utf16-lorem-pipe" => () => RenderPipe(() => CompilerLiteralUtf16Version.RenderLorem(pipeWriter, paragraphGroups), pipeWriter),
         "utf8-lorem-pipe" => () => RenderPipe(() => CompilerLiteralUtf8Version.RenderLorem(pipeWriter, paragraphGroups), pipeWriter),
         "utf16-lorem-lifetime" => () =>
@@ -111,6 +119,13 @@ static void PrintUsage()
           dotnet run --project tests\ProfilingHarness -c Release -- <scenario> [paragraphGroups] [iterations] [warmupIterations]
 
         Scenarios:
+          render-empty-pipe      Empty hand-written slice rendered to PipeWriter
+          render-empty-init-pipe Empty hand-written slice with an Initialize delegate
+          render-empty-wrapper-pipe Empty slice rendered through FlushTrackingPipeWriter
+          render-generated-empty-pipe Empty async-method-style slice rendered to PipeWriter
+          render-small-literal-pipe Small literal hand-written slice rendered to PipeWriter
+          render-autoflush-pipe Large literal hand-written slice that trips auto-flush
+          render-async-yield-pipe Slice whose ExecuteAsync yields asynchronously
           utf16-lorem-pipe    Razor compiler string literals rendered to PipeWriter
           utf8-lorem-pipe     Razor compiler UTF-8 literals rendered to PipeWriter
           utf16-lorem-lifetime  Razor compiler string literal slice creation and disposal only
@@ -119,6 +134,41 @@ static void PrintUsage()
           local-hello-lifetime  Local Hello slice creation and disposal only
           local-hello-string  Local Hello slice rendered to string/TextWriter
         """);
+}
+
+internal sealed class NonTrackingPipeWriter(PipeWriter innerPipeWriter) : PipeWriter
+{
+    public override bool CanGetUnflushedBytes => false;
+
+    public override void Advance(int bytes)
+    {
+        innerPipeWriter.Advance(bytes);
+    }
+
+    public override void CancelPendingFlush()
+    {
+        innerPipeWriter.CancelPendingFlush();
+    }
+
+    public override void Complete(Exception? exception = null)
+    {
+        innerPipeWriter.Complete(exception);
+    }
+
+    public override ValueTask<FlushResult> FlushAsync(CancellationToken cancellationToken = default)
+    {
+        return innerPipeWriter.FlushAsync(cancellationToken);
+    }
+
+    public override Memory<byte> GetMemory(int sizeHint = 0)
+    {
+        return innerPipeWriter.GetMemory(sizeHint);
+    }
+
+    public override Span<byte> GetSpan(int sizeHint = 0)
+    {
+        return innerPipeWriter.GetSpan(sizeHint);
+    }
 }
 
 internal sealed class NullPipeWriter : PipeWriter
