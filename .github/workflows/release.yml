@@ -30,23 +30,28 @@ jobs:
       DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
 
     steps:
-      - name: Download workflow run details
-        run: |
-          workflowUrl="https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ inputs.runId }}"
-          curl -s -H "Accept: application/json" "${workflowUrl}" > workflow_details.json
-
-      - name: Extract workflow run commit SHA
-        uses: sergeysova/jq-action@a3f0d4ff59cc1dddf023fc0b325dd75b10deec58 # v2
+      - name: Get workflow run commit SHA
         id: workflowsha
-        with:
-          cmd: 'jq .head_sha workflow_details.json -r'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          runDetails=$(gh api "repos/${{ github.repository }}/actions/runs/${{ inputs.runId }}")
+          conclusion=$(echo "$runDetails" | jq -r '.conclusion')
+          if [ "$conclusion" != "success" ]; then
+            echo "Workflow run ${{ inputs.runId }} concluded with '$conclusion', expected 'success'."
+            exit 1
+          fi
+
+          sha=$(echo "$runDetails" | jq -r '.head_sha')
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Download workflow run artifacts
-        uses: dawidd6/action-download-artifact@09f2f74827fd3a8607589e5ad7f9398816f540fe # v3
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          run_id: ${{ inputs.runId }}
-          workflow_conclusion: success
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.runId }}
           name: nupkg
+          path: .
       
       - name: Get package version into an environment variable
         run: |
@@ -74,20 +79,22 @@ jobs:
           fi
 
       - name: Create release
-        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1
-        with:
-          tag: v${{ env.PACKAGE_VERSION }}
-          commit: ${{ steps.workflowsha.outputs.value }}
-          generateReleaseNotes: true
-          draft: true
-          prerelease: ${{ contains(env.PACKAGE_VERSION, '-') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          args=(--target "${{ steps.workflowsha.outputs.sha }}" --generate-notes --draft)
+          if [[ "$PACKAGE_VERSION" == *-* ]]; then
+            args+=(--prerelease)
+          fi
+
+          gh release create "v$PACKAGE_VERSION" "${args[@]}"
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
 
       - name: NuGet login (OIDC)
         id: nuget-login
-        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         with:
           user: ${{ github.repository_owner }}
 
