@@ -24,6 +24,10 @@ jobs:
     name: Deploy
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      packages: write
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
@@ -35,10 +39,10 @@ jobs:
 
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
 
       - name: Add GitHub Package Repository source
         run: dotnet nuget add source --username DamianEdwards --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name GPR "https://nuget.pkg.github.com/DamianEdwards/index.json"
@@ -47,8 +51,25 @@ jobs:
         run: dotnet nuget push **/ci/*.nupkg --source "GPR" --skip-duplicate
 
       - name: Delete old packages
-        uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5
-        with:
-          min-versions-to-keep: 5
-          package-type: 'nuget'
-          package-name: '${{ env.PACKAGE_ID }}'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          owner="${{ github.repository_owner }}"
+          packageName="${{ env.PACKAGE_ID }}"
+          keep=5
+
+          versionIds=$(
+            gh api --paginate "/users/$owner/packages/nuget/$packageName/versions?per_page=100" \
+              --jq '.[] | { id, created_at }' |
+              jq -rs --argjson keep "$keep" 'sort_by(.created_at) | reverse | .[$keep:][]?.id'
+          )
+
+          if [ -z "$versionIds" ]; then
+            echo "No old package versions to delete."
+            exit 0
+          fi
+
+          for versionId in $versionIds; do
+            echo "Deleting package version $versionId"
+            gh api --method DELETE "/users/$owner/packages/nuget/$packageName/versions/$versionId"
+          done
