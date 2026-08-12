@@ -63,6 +63,30 @@ public abstract partial class RazorSlice
     protected void WriteAttributeValue(
         string prefix,
         int prefixOffset,
+        bool value,
+        int valueOffset,
+        int valueLength,
+        bool isLiteral)
+    {
+        WriteAttributeValue(prefix, prefixOffset, (bool?)value, valueOffset, valueLength, isLiteral);
+    }
+
+    /// <summary>
+    /// Writes out a <see cref="bool"/> attribute value.
+    /// </summary>
+    /// <remarks>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all HTML attributes containing Razor expressions in your .cshtml file.
+    /// </remarks>
+    /// <param name="prefix">The prefix.</param>
+    /// <param name="prefixOffset">The prefix offset.</param>
+    /// <param name="value">The value.</param>
+    /// <param name="valueOffset">The value offset.</param>
+    /// <param name="valueLength">The value length.</param>
+    /// <param name="isLiteral">Whether the attribute is a literal.</param>
+    protected void WriteAttributeValue(
+        string prefix,
+        int prefixOffset,
         bool? value,
 #pragma warning disable IDE0060 // Remove unused parameter
         int valueOffset,
@@ -154,12 +178,14 @@ public abstract partial class RazorSlice
 #pragma warning restore IDE0060 // Remove unused parameter
         bool isLiteral)
     {
+        if (value is bool boolValue)
+        {
+            WriteAttributeValue(prefix, prefixOffset, boolValue, valueOffset, valueLength, isLiteral);
+            return;
+        }
+
         if (_attributeInfo.AttributeValuesCount == 1)
         {
-            // NOTE: In some edge cases, 'value' could render an empty string, e.g. custom ISpanFormattable/IHtmlContent, and thus
-            //       this IsNullValue() check will fail, but we want to avoid any allocation here so we only check if the value is
-            //       null or is actually a string and is empty. In the edge case, the attribute will still be rendered with an
-            //       empty value.
             if (IsNullValue(prefix, value))
             {
                 // Value is null with no prefix; don't render the attribute.
@@ -193,9 +219,7 @@ public abstract partial class RazorSlice
 
         static bool IsNullValue(string? prefix, TValue? value)
         {
-            return string.IsNullOrEmpty(prefix)
-                && (value is null
-                    || (value is string && string.IsNullOrEmpty((string)(object)value)));
+            return string.IsNullOrEmpty(prefix) && value is null;
         }
     }
 
