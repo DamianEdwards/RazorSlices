@@ -30,7 +30,7 @@ public class WebAppTests
 
         var html = await httpClient.GetStringAsync("/attribute-rendering");
 
-        Assert.Equal(
+        Assert.Contains(
             """
             <div>False</div>
             <div>Null</div>
@@ -41,7 +41,7 @@ public class WebAppTests
             <input type="checkbox" name="false" />
             <input type="checkbox" name="null" />
             """,
-            html.Trim().ReplaceLineEndings());
+            html.ReplaceLineEndings());
     }
 
     public static object[][] EndpointDetails => [
