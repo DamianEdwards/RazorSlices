@@ -22,6 +22,28 @@ public class WebAppTests
         Assert.Contains(shouldContain, await response.Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task AttributeRendering_RendersConditionalAttributes()
+    {
+        var waf = new WebApplicationFactory<Program>();
+        using var httpClient = waf.CreateClient();
+
+        var html = await httpClient.GetStringAsync("/attribute-rendering");
+
+        Assert.Contains(
+            """
+            <div>False</div>
+            <div>Null</div>
+            <div class="">Empty</div>
+            <div class="false">False String</div>
+            <div class="active">String</div>
+            <input type="checkbox" checked="checked" name="true" />
+            <input type="checkbox" name="false" />
+            <input type="checkbox" name="null" />
+            """,
+            html.ReplaceLineEndings());
+    }
+
     public static object[][] EndpointDetails => [
         ["/", "Todos", MediaTypeNames.Text.Html],
         ["/1", "Wash the dishes", MediaTypeNames.Text.Html],
