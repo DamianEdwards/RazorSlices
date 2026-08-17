@@ -64,7 +64,7 @@ internal static class TextWriterHtmlExtensions
 
         if (waitingToWrite > 0)
         {
-            textWriter.Write(encodeBufferSpan);
+            textWriter.Write(encodeBuffer.AsSpan()[..waitingToWrite]);
         }
 
         ArrayPool<char>.Shared.Return(encodeBuffer);
@@ -82,8 +82,9 @@ internal static class TextWriterHtmlExtensions
             if ((charsWritten * BufferSizes.HtmlEncodeAllowanceRatio) < BufferSizes.SmallFormattableWriteCharSize)
             {
                 Span<char> encodedBuffer = stackalloc char[BufferSizes.SmallFormattableWriteCharSize];
-                if (htmlEncoder.Encode(formatBuffer, encodedBuffer, out var charsConsumed, out var charsEncoded) == OperationStatus.Done)
+                if (htmlEncoder.Encode(formatBuffer[..charsWritten], encodedBuffer, out var charsConsumed, out var charsEncoded) == OperationStatus.Done)
                 {
+                    textWriter.Write(encodedBuffer[..charsEncoded]);
                     return true;
                 }
             }

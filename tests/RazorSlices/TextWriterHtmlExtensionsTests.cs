@@ -125,4 +125,86 @@ public class TextWriterHtmlExtensionsTests
         var expected = string.Concat(Enumerable.Repeat("&lt;", 1_000));
         Assert.Equal(expected, writer.ToString());
     }
+
+    private enum SampleStatus
+    {
+        Open = 0,
+        Posted = 1
+    }
+
+    [Fact]
+    public void HtmlEncodeAndWriteSpanFormattable_WritesOnlyTheFormattedChars_Enum()
+    {
+        var writer = new StringWriter();
+
+        writer.HtmlEncodeAndWriteSpanFormattable(SampleStatus.Open, HtmlEncoder.Default);
+
+        Assert.Equal("Open", writer.ToString());
+    }
+
+    [Fact]
+    public void HtmlEncodeAndWriteSpanFormattable_WritesOnlyTheFormattedChars_Int()
+    {
+        var writer = new StringWriter();
+
+        writer.HtmlEncodeAndWriteSpanFormattable(42, HtmlEncoder.Default);
+
+        Assert.Equal("42", writer.ToString());
+    }
+
+    [Fact]
+    public void HtmlEncodeAndWriteSpanFormattable_DoesNotWriteBufferPadding()
+    {
+        // The rented encode buffer comes from ArrayPool<char>.Shared, whose smallest bucket is 16.
+        // Writing the whole buffer instead of the encoded length appended 12 chars of whatever the
+        // previous renter left behind.
+        var writer = new StringWriter();
+
+        writer.HtmlEncodeAndWriteSpanFormattable(SampleStatus.Open, HtmlEncoder.Default);
+
+        Assert.Equal(4, writer.ToString().Length);
+        Assert.DoesNotContain('\0', writer.ToString());
+    }
+
+    [Fact]
+    public void HtmlEncodeAndWriteSpanFormattable_DoesNotLeakPreviousRenterContent()
+    {
+        // Dirty the shared pool with a long value first, then write a short one. Without the fix
+        // the short write carried the tail of the long one into the output.
+        var warmup = new StringWriter();
+        warmup.HtmlEncodeAndWriteSpanFormattable(1234567890123456789L, HtmlEncoder.Default);
+
+        var writer = new StringWriter();
+        writer.HtmlEncodeAndWriteSpanFormattable(SampleStatus.Posted, HtmlEncoder.Default);
+
+        Assert.Equal("Posted", writer.ToString());
+    }
+
+    [Fact]
+    public void HtmlEncodeAndWriteSpanFormattable_StillEncodesHtml()
+    {
+        var writer = new StringWriter();
+
+        writer.HtmlEncodeAndWriteSpanFormattable(new HtmlishFormattable(), HtmlEncoder.Default);
+
+        Assert.Equal("a&lt;b&gt;c", writer.ToString());
+    }
+
+    private readonly struct HtmlishFormattable : ISpanFormattable
+    {
+        public string ToString(string? format, IFormatProvider? formatProvider) => "a<b>c";
+
+        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+        {
+            const string value = "a<b>c";
+            if (destination.Length < value.Length)
+            {
+                charsWritten = 0;
+                return false;
+            }
+            value.AsSpan().CopyTo(destination);
+            charsWritten = value.Length;
+            return true;
+        }
+    }
 }
