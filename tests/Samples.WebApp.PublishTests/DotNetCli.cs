@@ -7,7 +7,7 @@ namespace RazorSlices.Samples.WebApp.PublishTests;
 public class DotNetCli
 {
     private static readonly string _fileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "dotnet.exe" : "dotnet";
-    private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan _timeout = TimeSpan.FromMinutes(5);
 
     public static string Clean(IEnumerable<string> args)
     {
@@ -26,7 +26,8 @@ public class DotNetCli
             projectPath,
             "--configuration", "Release",
             "--output", outputDir,
-            "--no-restore"
+            "--no-restore",
+            "--disable-build-servers"
         };
         return RunCommand("pack", args, testOutput);
     }
@@ -60,21 +61,22 @@ public class DotNetCli
             throw new InvalidOperationException($"dotnet {commandName} failed");
         }
 
-        process.WaitForExit();
+        var stdOutTask = process.StandardOutput.ReadToEndAsync();
+        var stdErrTask = process.StandardError.ReadToEndAsync();
 
         if (!process.WaitForExit(_timeout))
         {
-            process.Kill();
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit();
 
             throw new InvalidOperationException($"dotnet {commandName} took longer than the allowed time of {_timeout}");
         }
 
-        var stdOut = process.StandardOutput.ReadToEnd();
+        var stdOut = stdOutTask.GetAwaiter().GetResult();
+        var stdErr = stdErrTask.GetAwaiter().GetResult();
 
         if (process.ExitCode != 0)
         {
-            var stdErr = process.StandardError.ReadToEnd();
-
             throw new InvalidOperationException($"""
                 dotnet {commandName} failed on exit ({process.ExitCode})
                 Error:  {stdErr}
