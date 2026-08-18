@@ -113,6 +113,16 @@ public partial class RazorSlice
     /// all matching Razor expressions in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
+    protected void Write(ReadOnlyMemory<byte> value) => Write(value.Span);
+
+    /// <summary>
+    /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.
+    /// </summary>
+    /// <remarks>
+    /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
+    /// all matching Razor expressions in your .cshtml file.
+    /// </remarks>
+    /// <param name="value">The value to write to the output.</param>
     protected void Write(ReadOnlySpan<byte> value)
     {
         if (value.Length == 0)
