@@ -26,7 +26,8 @@ public class DotNetCli
             projectPath,
             "--configuration", "Release",
             "--output", outputDir,
-            "--no-restore"
+            "--no-restore",
+            "--disable-build-servers"
         };
         return RunCommand("pack", args, testOutput);
     }
