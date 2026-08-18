@@ -8,18 +8,19 @@ on:
         type: boolean
         default: false
 
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+  DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+  DOTNET_ADD_GLOBAL_TOOLS_TO_PATH: false
+  DOTNET_MULTILEVEL_LOOKUP: 0
+  DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     name: Build & Test
-    env:
-      DOTNET_CLI_TELEMETRY_OPTOUT: 1
-      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
-      DOTNET_NOLOGO: true
-      DOTNET_GENERATE_ASPNET_CERTIFICATE: false
-      DOTNET_ADD_GLOBAL_TOOLS_TO_PATH: false
-      DOTNET_MULTILEVEL_LOOKUP: 0
-      DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
 
     steps:
     - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
@@ -46,19 +47,10 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
 
+    # PublishSample scenarios run in the parallel matrix below.
     - name: Test
-      run: dotnet test --configuration Release --no-restore --no-build
+      run: dotnet test --configuration Release --no-restore --no-build --filter "FullyQualifiedName!~RazorSlices.Samples.WebApp.PublishTests.PublishSample"
 
-    - name: Publish samples
-      run: |
-        for projectPath in ./samples/**/*.csproj ; do
-          for tfm in "net8.0"; do
-            projectFileName=${projectPath##*/}
-            projectName=${projectFileName%.*}
-            dotnet publish "$projectPath" --output "./artifacts/$projectName" --framework $tfm --configuration Release --verbosity normal
-          done;
-        done;
-    
     - name: Build benchmarks
       run: dotnet build --configuration Benchmarks
 
@@ -75,3 +67,37 @@ jobs:
         name: nupkg
         path: ./artifacts/**/*.nupkg
         retention-days: 5
+
+  publish-tests:
+    runs-on: ubuntu-latest
+    name: Publish ${{ matrix.project }} (${{ matrix.framework }})
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+        - WebApp
+        - PagesAndSlices
+        framework:
+        - net8.0
+        - net9.0
+        - net10.0
+
+    steps:
+    - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+
+    - name: Install .NET SDKs/runtimes
+      uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+      with:
+        dotnet-version: |
+          8.0.x
+          9.0.x
+          10.0.x
+          11.0.x
+
+    - name: Publish and verify
+      # %22 encodes the quotes around xUnit theory argument values for VSTest.
+      run: >-
+        dotnet test tests/Samples.WebApp.PublishTests/Samples.WebApp.PublishTests.csproj
+        --configuration Release
+        --filter "FullyQualifiedName~RazorSlices.Samples.WebApp.PublishTests.PublishSample&DisplayName~projectName: %22${{ matrix.project }}%22&DisplayName~${{ matrix.framework }}"
