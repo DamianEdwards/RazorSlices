@@ -28,10 +28,7 @@ tests/
 - `src/RazorSlices/IRazorSliceProxy.cs` — Interfaces for generated proxy types (`IRazorSliceProxy` for no-model, `IRazorSliceProxy<TModel>` for model slices)
 - `src/RazorSlices/IResultExtensions.cs` — `Results.Extensions.RazorSlice<T>()` extension methods
 - `src/RazorSlices/IUsesLayout.cs` — Layout support interfaces
-- `src/RazorSlices/SliceDefinition.cs` — Defines a slice, instances emitted at compile time by the source generator
-- `src/RazorSlices/SliceDefinitionOfTModel.cs` — Slice definition for slices with strongly-typed models
-- `src/RazorSlices/RazorSliceProxy.cs` — Base class for generated proxy types, implements `IRazorSliceProxy` or `IRazorSliceProxy<TModel>`
-- `src/RazorSlices/RazorSliceFactory.cs` — Methods for creating factory methods that create `RazorSlice` instances from `SliceDefinition`
+- `src/RazorSlices/RazorSliceFactory.cs` — Invokes generated constructor callbacks, caches property injection, and handles Hot Reload replacement types
 - `src/RazorSlices/RazorSlice.cs` — Base class for all slices
 - `src/RazorSlices/RazorSlice.Partials.cs` — Partial rendering support
 - `src/SourceGenerator/RazorSliceProxyGenerator.cs` — The incremental source generator
@@ -78,6 +75,10 @@ The `RazorSliceProxyGenerator` is an `IIncrementalGenerator` that:
 3. Parses `@inherits` and `@using` directives from each file and its `_ViewImports.cshtml` hierarchy
 4. Resolves model types to fully-qualified names using the `Compilation`
 5. Generates proxy classes implementing `IRazorSliceProxy` (no model) or `IRazorSliceProxy<TModel>` (with model)
+6. Emits static callbacks that directly construct the compiled Razor types and initialize their models; the Razor compiler must expose these types to application code
+
+### Slice Activation
+Generated proxies use `RazorSliceFactory.Create` with a static constructor callback. There is no runtime constructor or model-property discovery on this path. Injectable properties are discovered once per template type and initialized before rendering (compiled assignments on JIT, reflection on AOT). Only Hot Reload replacement types use reflective construction, with construction and injection cached together.
 
 ### Model Type Resolution
 The generator resolves type names from Razor directives against the compilation:

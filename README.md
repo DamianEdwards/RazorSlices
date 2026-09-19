@@ -55,6 +55,10 @@
 
     This provides compile-time validation that you're passing the correct model type.
 
+    Proxies construct the compiled Razor template directly with `new`, including setting its model in an object initializer. This requires a Razor compiler that emits template types accessible to application code. Property injection is initialized lazily before rendering; reflective construction is only used for replacement types supplied by Hot Reload.
+
+    The generator-facing `SliceDefinition` and `SliceDefinition<TModel>` APIs have been removed. Rebuild applications and Razor Class Libraries with the matching source generator and runtime when upgrading. The generated proxy `Create` methods and `IRazorSliceProxy` interfaces are unchanged.
+
 1. Add a minimal API to return the slice in your *Program.cs*:
 
     ``` csharp
