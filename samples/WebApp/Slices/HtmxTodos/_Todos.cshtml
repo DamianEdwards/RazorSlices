@@ -1,0 +1,18 @@
+@inherits RazorSlice<IReadOnlyList<Models.HtmxTodo>>
+
+<table class="table">
+    <caption>Todos shared by visitors to this sample</caption>
+    <thead>
+        <tr>
+            <th scope="col">Title</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+        </tr>
+    </thead>
+    <tbody id="todo-table">
+        @foreach (var todo in Model)
+        {
+            @await RenderPartialAsync(_Todo.Create(todo))
+        }
+    </tbody>
+</table>

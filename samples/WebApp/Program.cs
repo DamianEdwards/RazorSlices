@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Microsoft.AspNetCore.Antiforgery;
 using RazorSlices.Samples.WebApp;
 using RazorSlices.Samples.WebApp.Services;
 
@@ -13,6 +14,8 @@ builder.WebHost.UseKestrelHttpsConfiguration();
 
 builder.Services.AddWebEncoders();
 builder.Services.AddSingleton<LoremService>();
+builder.Services.AddSingleton<HtmxTodoStore>();
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default);
@@ -22,6 +25,19 @@ var app = builder.Build();
 
 app.UseStatusCodePages();
 app.UseStaticFiles();
+app.UseAntiforgery();
+app.Use(async (context, next) =>
+{
+    // Reject invalid tokens before form binding, including in AOT-generated handlers.
+    if (context.Features.Get<IAntiforgeryValidationFeature>() is { IsValid: false })
+    {
+        await Results.Text("Invalid antiforgery token. Reload the page and try again.",
+            statusCode: StatusCodes.Status400BadRequest).ExecuteAsync(context);
+        return;
+    }
+
+    await next(context);
+});
 
 if (app.Environment.IsDevelopment())
 {
@@ -34,6 +50,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapSlices();
+app.MapHtmxTodoRoutes();
 
 Console.WriteLine($"RuntimeFeature.IsDynamicCodeSupported = {RuntimeFeature.IsDynamicCodeSupported}");
 Console.WriteLine($"RuntimeFeature.IsDynamicCodeCompiled = {RuntimeFeature.IsDynamicCodeCompiled}");

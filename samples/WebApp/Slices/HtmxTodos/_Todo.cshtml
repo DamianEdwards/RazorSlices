@@ -1,0 +1,18 @@
+@inherits RazorSlice<Models.HtmxTodo>
+
+<tr id="todo-@Model.Id" hx-target="this" hx-swap="outerHTML" hx-sync="this:drop">
+    <td class="@(Model.IsComplete ? "text-decoration-line-through" : null)">@Model.Title</td>
+    <td>@(Model.IsComplete ? "Complete" : "Incomplete")</td>
+    <td>
+        <button type="button" class="btn btn-sm btn-outline-primary"
+                hx-put="/htmx-todo/@Model.Id"
+                hx-vals='{"isComplete": "@(Model.IsComplete ? "false" : "true")"}'
+                hx-disabled-elt="this"
+                aria-label="@(Model.IsComplete ? "Mark incomplete: " : "Mark complete: ")@Model.Title">
+            @(Model.IsComplete ? "Mark incomplete" : "Mark complete")
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger"
+                hx-delete="/htmx-todo/@Model.Id" hx-disabled-elt="this"
+                aria-label="Delete: @Model.Title">Delete</button>
+    </td>
+</tr>

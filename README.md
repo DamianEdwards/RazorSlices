@@ -6,6 +6,7 @@
 *Lightweight* Razor-based templates for ASP.NET Core without MVC, Razor Pages, or Blazor, optimized for high-performance, unbuffered rendering with low allocations. Compatible with trimming and native AOT. Great for returning dynamically rendered HTML from Minimal APIs, middleware, etc. Supports .NET 8+
 
 - [Getting Started](#getting-started)
+- [Samples](#samples)
 - [Installation](#installation)
 - [Features](#features)
 
@@ -78,6 +79,27 @@
     ```
 
     This will configure the Razor Slices source generator to only generate proxy types for *.cshtml* files in the *Slices* directory in your project.
+
+## Samples
+
+### HTMX sample
+
+Run `dotnet run --project samples/WebApp --framework net10.0` and open `/htmx-todo` on
+the app's listening URL. The sample uses [HTMX](https://htmx.org/) to add, complete,
+and delete todos without navigating away from the page:
+
+- The initial GET renders a full page using the shared layout and nested Razor Slice partials.
+- POST returns one new row; PUT sets the completion state and returns its replacement.
+- DELETE returns an empty `200 OK` so HTMX removes the targeted row.
+- An antiforgery cookie is issued before rendering begins. HTMX sends the request token in a
+  header for every mutation, including DELETE. Failed requests preserve the form and show an error.
+
+The endpoints are in `samples/WebApp/HtmxTodoRoutes.cs` and the slices are in
+`samples/WebApp/Slices/HtmxTodos`. A singleton in-memory store uses a lock and immutable
+records so concurrent requests are safe. Its data is shared by visitors, resets on restart,
+and is separate from the other samples. This is not a per-user or persistent todo service.
+HTMX is loaded from a pinned CDN URL with subresource integrity; the other sample pages do
+not load it.
 
 ## Installation
 

@@ -1,0 +1,29 @@
+@inherits RazorSlice<Models.HtmxTodoPage>
+@implements IUsesLayout<_Layout, LayoutModel>
+
+<h1 class="mt-5">Todos using HTMX</h1>
+<p>Each change returns a Razor Slice, updating just one row without reloading the page.</p>
+<p class="text-muted">This demo's in-memory todos are shared by all visitors and reset when the app restarts.</p>
+<noscript><p class="alert alert-warning">Enable JavaScript to use this HTMX sample.</p></noscript>
+
+<section hx-headers='{"X-CSRF-TOKEN": "@Model.Antiforgery.RequestToken"}'
+         hx-on::after-request="document.getElementById('todo-error').textContent = event.detail.successful ? '' : 'The change could not be saved. Check the title or reload the page and try again.'">
+    @(await RenderPartialAsync<_TodoCreateForm>())
+    <p id="todo-error" class="text-danger" role="alert"></p>
+    @await RenderPartialAsync(_Todos.Create(Model.Todos))
+</section>
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = "Todos using HTMX" };
+
+    protected override Task ExecuteSectionAsync(string sectionName)
+    {
+        if (sectionName == "scripts")
+        {
+            <script src="https://unpkg.com/htmx.org@2.0.10/dist/htmx.min.js"
+                    integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V"
+                    crossorigin="anonymous"></script>
+        }
+        return Task.CompletedTask;
+    }
+}

@@ -1,0 +1,14 @@
+@inherits RazorSlice
+
+<form hx-post="/htmx-todo"
+      hx-target="#todo-table"
+      hx-swap="beforeend"
+      hx-disabled-elt="find button"
+      hx-on::after-request="if (event.detail.successful) this.reset()">
+    <label for="todo-title" class="form-label">New todo</label>
+    <div class="input-group">
+        <input id="todo-title" class="form-control" type="text" name="title"
+               required maxlength="@Models.HtmxTodo.MaxTitleLength" autocomplete="off" />
+        <button class="btn btn-primary" type="submit">Add</button>
+    </div>
+</form>
