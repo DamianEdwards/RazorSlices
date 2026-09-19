@@ -79,6 +79,23 @@
 
     This will configure the Razor Slices source generator to only generate proxy types for *.cshtml* files in the *Slices* directory in your project.
 
+### Streaming sample
+
+Run `dotnet run --project samples/WebApp --framework net10.0` and open `/streaming`
+(also linked as **Streaming** in the sample's footer). The page immediately flushes
+"Counting down... 10", then flushes a plain JavaScript `<script>` block every second
+to update the number through zero. After showing zero for one second, it replaces
+the message with "Countdown complete!".
+
+The sample uses `FlushAsync()` in the Razor slice and cancellation-aware server-side
+delays, with no JavaScript libraries or additional requests. The endpoint opts out
+of the sample's development response buffering with `.DisableResponseBuffering()`,
+so updates also stream when using the default launch profiles. This helper works
+on individual endpoints and route groups. It adds `DisableResponseBufferingAttribute`
+metadata implementing `IDisableResponseBufferingMetadata`; the attribute can also
+be applied directly to a handler method. The buffering middleware runs after routing
+and checks the selected endpoint's metadata, leaving all other endpoints buffered.
+
 ## Installation
 
 ### NuGet Releases

@@ -31,6 +31,8 @@ internal static class MapSlicesExtensions
         });
         endpoints.MapGet("/encoding", () => Results.RazorSlice<Slices.Encoding>());
         endpoints.MapGet("/attribute-rendering", () => Results.RazorSlice<Slices.AttributeRendering>());
+        endpoints.MapGet("/streaming", () => Results.RazorSlice<Slices.Streaming>())
+            .DisableResponseBuffering();
         endpoints.MapGet("/unicode", () => Results.RazorSlice<Slices.Unicode>());
         endpoints.MapGet("/templated", (bool async = false) => Results.RazorSlice<Slices.Templated, bool>(async));
         endpoints.MapGet("/library", () => Results.RazorSlice<LibrarySlices.FromLibrary>());
@@ -79,6 +81,8 @@ internal static class MapSlicesExtensions
         });
         endpoints.MapGet("/encoding", () => Results.Extensions.RazorSlice<Slices.Encoding>());
         endpoints.MapGet("/attribute-rendering", () => Results.Extensions.RazorSlice<Slices.AttributeRendering>());
+        endpoints.MapGet("/streaming", () => Results.Extensions.RazorSlice<Slices.Streaming>())
+            .DisableResponseBuffering();
         endpoints.MapGet("/unicode", () => Results.Extensions.RazorSlice<Slices.Unicode>());
         endpoints.MapGet("/templated", (bool async = false) => Results.Extensions.RazorSlice<Slices.Templated, bool>(async));
         endpoints.MapGet("/library", () => Results.Extensions.RazorSlice<LibrarySlices.FromLibrary>());

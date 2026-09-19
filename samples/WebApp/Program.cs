@@ -22,11 +22,12 @@ var app = builder.Build();
 
 app.UseStatusCodePages();
 app.UseStaticFiles();
+app.UseRouting();
 
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    if (Environment.GetEnvironmentVariable("ENABLE_RESPONSE_BUFFERING") == "true")
+    if (builder.Configuration["ENABLE_RESPONSE_BUFFERING"] == "true")
     {
         // Enable response buffering middleware to allow for response interception during local development
         app.UseResponseBuffering();
