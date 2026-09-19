@@ -1,5 +1,8 @@
 ﻿using System.Net;
 using System.Net.Mime;
+using System.Diagnostics;
+using System.Text;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace RazorSlices.Samples.WebApp.Tests;
@@ -44,12 +47,69 @@ public class WebAppTests
             html.ReplaceLineEndings());
     }
 
+    [Fact]
+    public async Task Streaming_FlushesInitialMessageAndCountdownUpdates()
+    {
+        using var waf = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder => builder
+                .UseEnvironment("Development")
+                .UseSetting("ENABLE_RESPONSE_BUFFERING", "true"));
+        using var httpClient = waf.CreateClient();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var stopwatch = Stopwatch.StartNew();
+
+        using var response = await httpClient.GetAsync("/streaming", HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(MediaTypeNames.Text.Html, response.Content.Headers.ContentType?.MediaType);
+
+        using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
+        using var reader = new StreamReader(stream);
+
+        var initialHtml = await ReadUntilAsync("</noscript>");
+        Assert.Contains("""<p id="countdown" role="status">Counting down... <span id="countdown-value">10</span></p>""", initialHtml);
+        Assert.DoesNotContain("<script>", initialHtml);
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5), "The initial message should arrive before the countdown finishes.");
+
+        for (var count = 9; count >= 0; count--)
+        {
+            var script = await ReadUntilAsync("</script>");
+            Assert.Contains($"document.getElementById('countdown-value').textContent = '{count}';", script);
+            Assert.DoesNotContain("Countdown complete!", script);
+            Assert.True(stopwatch.Elapsed >= TimeSpan.FromSeconds(10 - count) - TimeSpan.FromMilliseconds(250),
+                "Countdown updates should be delayed by one second each.");
+        }
+
+        var completionScript = await ReadUntilAsync("</script>");
+        Assert.Contains("document.getElementById('countdown').textContent = 'Countdown complete!';", completionScript);
+        Assert.True(stopwatch.Elapsed >= TimeSpan.FromSeconds(10.75), "Zero should be visible before completion.");
+        Assert.Contains("</html>", await reader.ReadToEndAsync(timeout.Token));
+
+        async Task<string> ReadUntilAsync(string marker)
+        {
+            using var chunkTimeout = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token);
+            chunkTimeout.CancelAfter(TimeSpan.FromSeconds(5));
+            var html = new StringBuilder();
+            while (true)
+            {
+                var line = await reader.ReadLineAsync(chunkTimeout.Token);
+                Assert.NotNull(line);
+                html.AppendLine(line);
+                if (line.Contains(marker, StringComparison.Ordinal))
+                {
+                    return html.ToString();
+                }
+            }
+        }
+    }
+
     public static object[][] EndpointDetails => [
         ["/", "Todos", MediaTypeNames.Text.Html],
         ["/1", "Wash the dishes", MediaTypeNames.Text.Html],
         ["/nested", "Nested : Test", MediaTypeNames.Text.Html],
         ["/encoding", "{&#x27;antiForgery&#x27;", MediaTypeNames.Text.Html],
         ["/unicode", "🐻", MediaTypeNames.Text.Html],
+        ["/streaming", "Countdown complete!", MediaTypeNames.Text.Html],
         ["/templated", "This is from a partial with a templated model", MediaTypeNames.Text.Html],
         ["/library", "This slice was loaded from a referenced Razor Class Library!", MediaTypeNames.Text.Html],
         ["/render-to-string", "htmlString", MediaTypeNames.Application.Json],
