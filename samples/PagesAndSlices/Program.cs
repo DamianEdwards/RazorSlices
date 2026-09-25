@@ -6,6 +6,8 @@ builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
+app.UseStaticFiles();
+
 // Return a Razor slice instance directly from the endpoint handler
 app.MapGet("/", () => Hello.Create());
 

@@ -10,6 +10,20 @@ namespace RazorSlices.Samples.WebApp.Tests;
 public class WebAppTests
 {
     [Theory]
+    [InlineData("/favicon.svg")]
+    [InlineData("/favicon.ico")]
+    public async Task Favicon_IsServed(string path)
+    {
+        using var waf = new WebApplicationFactory<Program>();
+        using var httpClient = waf.CreateClient();
+
+        using var response = await httpClient.GetAsync(path);
+
+        response.EnsureSuccessStatusCode();
+        Assert.NotEmpty(await response.Content.ReadAsByteArrayAsync());
+    }
+
+    [Theory]
     [MemberData(nameof(EndpointDetails))]
     public async Task WafHosted_EndpointsRenderOK(string path, string shouldContain, string expectedMediaType)
     {

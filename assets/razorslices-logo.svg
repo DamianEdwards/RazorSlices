@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="549" height="160" viewBox="0 0 549 160" role="img" aria-labelledby="title">
+  <title id="title">Razor Slices</title>
+  <rect width="549" height="160" rx="28" fill="#172333"/>
+  <rect x="16" y="16" width="128" height="128" rx="26" fill="#243548"/>
+  <g transform="translate(16 16)">
+    <path d="M33 41 16 64l17 23m62-46 17 23-17 23" fill="none" stroke="#F6F2E9" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M47 37h43L80 47H37zm0 44h43L80 91H37z" fill="#F6F2E9"/>
+    <path d="M47 59h43L80 69H37z" fill="#FF835C"/>
+  </g>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="66" font-weight="700" letter-spacing="-2">
+    <text x="166" y="88" fill="#F6F2E9">R@zor</text>
+    <text x="365" y="88" fill="#FF835C">Slices</text>
+  </g>
+  <text x="169" y="119" fill="#B9C8D4" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" letter-spacing="2">LIGHTWEIGHT RAZOR TEMPLATES</text>
+</svg>

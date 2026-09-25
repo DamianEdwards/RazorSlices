@@ -1,4 +1,4 @@
-# Razor Slices
+# ![Razor Slices](assets/razorslices-logo.svg)
 
 [![CI (main)](https://github.com/DamianEdwards/RazorSlices/actions/workflows/ci.yml/badge.svg)](https://github.com/DamianEdwards/RazorSlices/actions/workflows/ci.yml)
 [![Nuget](https://img.shields.io/nuget/v/RazorSlices)](https://www.nuget.org/packages/RazorSlices/)
