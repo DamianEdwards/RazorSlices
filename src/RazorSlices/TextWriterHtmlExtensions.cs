@@ -51,6 +51,12 @@ internal static class TextWriterHtmlExtensions
             }
 
             encodeStatus = htmlEncoder.Encode(textToEncode, encodeBufferSpan, out var charsConsumed, out var charsEncoded);
+            if (charsConsumed == 0 && encodeStatus == OperationStatus.DestinationTooSmall)
+            {
+                // Flush the encoded prefix before retrying an escape that cannot fit in the remaining space.
+                encodeBufferSpan = default;
+                continue;
+            }
             waitingToWrite += charsEncoded;
 
             if (textToEncode.Length - charsConsumed == 0)

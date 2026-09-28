@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Razor.TagHelpers;
@@ -206,5 +207,60 @@ public class TextWriterHtmlExtensionsTests
             charsWritten = value.Length;
             return true;
         }
+    }
+
+    [Theory]
+    [InlineData('&', 7)]
+    [InlineData('\'', 6)]
+    [InlineData('&', 300)]
+    [InlineData('\'', 300)]
+    [InlineData('\u2013', 300)]
+    [InlineData('<', 1025)]
+    public void HtmlEncodeAndWriteSpanFormattable_ContinuesWhenAnEscapeDoesNotFit(char character, int count)
+    {
+        var text = new string(character, count);
+        using var writer = new StringWriter();
+
+        writer.HtmlEncodeAndWriteSpanFormattable(new TextFormattable(text), new ProgressGuardHtmlEncoder());
+
+        Assert.Equal(HtmlEncoder.Default.Encode(text), writer.ToString());
+    }
+
+    private readonly struct TextFormattable(string text) : ISpanFormattable
+    {
+        public string ToString(string? format, IFormatProvider? formatProvider) => text;
+
+        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+        {
+            var copied = text.AsSpan().TryCopyTo(destination);
+            charsWritten = copied ? text.Length : 0;
+            return copied;
+        }
+    }
+
+    // Bound retries without changing the default encoder's output or buffer requirements.
+    private sealed class ProgressGuardHtmlEncoder : HtmlEncoder
+    {
+        private int _callsWithoutProgress;
+
+        public override OperationStatus Encode(ReadOnlySpan<char> source, Span<char> destination, out int charsConsumed, out int charsWritten, bool isFinalBlock = true)
+        {
+            var status = Default.Encode(source, destination, out charsConsumed, out charsWritten, isFinalBlock);
+            if (charsConsumed > 0)
+            {
+                _callsWithoutProgress = 0;
+            }
+            else if (++_callsWithoutProgress > 8)
+            {
+                throw new InvalidOperationException("HTML encoding repeatedly retried without consuming input.");
+            }
+            return status;
+        }
+
+        public override int MaxOutputCharactersPerInputCharacter => Default.MaxOutputCharactersPerInputCharacter;
+        public override bool WillEncode(int unicodeScalar) => Default.WillEncode(unicodeScalar);
+        public override unsafe int FindFirstCharacterToEncode(char* text, int textLength) => Default.FindFirstCharacterToEncode(text, textLength);
+        public override unsafe bool TryEncodeUnicodeScalar(int unicodeScalar, char* buffer, int bufferLength, out int numberOfCharactersWritten)
+            => Default.TryEncodeUnicodeScalar(unicodeScalar, buffer, bufferLength, out numberOfCharactersWritten);
     }
 }
