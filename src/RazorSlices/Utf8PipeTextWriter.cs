@@ -4,6 +4,7 @@ using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Unicode;
+using RazorSlices;
 
 namespace Microsoft.AspNetCore.Internal;
 
@@ -11,7 +12,6 @@ namespace Microsoft.AspNetCore.Internal;
 internal sealed class Utf8PipeTextWriter : TextWriter
 {
     private static readonly UTF8Encoding _utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
-    private const int MaximumBytesPerUtf8Char = 4;
 
     [ThreadStatic]
     private static Utf8PipeTextWriter? _cachedInstance;
@@ -125,12 +125,9 @@ internal sealed class Utf8PipeTextWriter : TextWriter
 
     private void EnsureBuffer()
     {
-        // We need at least enough bytes to encode a single UTF-8 character, or Encoder.Convert will throw.
-        // Normally, if there isn't enough space to write every character of a char buffer, Encoder.Convert just
-        // writes what it can. However, if it can't even write a single character, it throws. So if the buffer has only
-        // 2 bytes left and the next character to write is 3 bytes in UTF-8, an exception is thrown.
+        // Reserve enough space for one scalar so UTF-8 conversion always makes progress.
         var remaining = _memory.Length - _memoryUsed;
-        if (remaining < MaximumBytesPerUtf8Char)
+        if (remaining < BufferSizes.MaxUtf8BytesPerScalar)
         {
             // Used up the memory from the buffer writer so advance and get more
             if (_memoryUsed > 0)
@@ -138,7 +135,7 @@ internal sealed class Utf8PipeTextWriter : TextWriter
                 _pipeWriter!.Advance(_memoryUsed);
             }
 
-            _memory = _pipeWriter!.GetMemory(MaximumBytesPerUtf8Char);
+            _memory = _pipeWriter!.GetMemory(BufferSizes.MaxUtf8BytesPerScalar);
             _memoryUsed = 0;
         }
     }
