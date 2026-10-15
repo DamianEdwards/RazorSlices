@@ -84,7 +84,8 @@ internal static class ModelTypeResolver
             if (currentType.IsGenericType && currentType.TypeArguments.Length == 1)
             {
                 return "global::" + currentType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat
-                    .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining));
+                    .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining)
+                    .WithMiscellaneousOptions(SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions & ~SymbolDisplayMiscellaneousOptions.UseSpecialTypes));
             }
 
             // Reached non-generic RazorSlice, so there is no model.
@@ -455,7 +456,8 @@ internal static class ModelTypeResolver
         if (symbol != null)
         {
             var result = "global::" + symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat
-                .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining));
+                .WithGlobalNamespaceStyle(SymbolDisplayGlobalNamespaceStyle.OmittedAsContaining)
+                .WithMiscellaneousOptions(SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions & ~SymbolDisplayMiscellaneousOptions.UseSpecialTypes));
 
             // For generic types being resolved as outer types, strip the generic type parameters
             // e.g. "global::System.Func<T, TResult>" → "global::System.Func"
