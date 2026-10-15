@@ -379,6 +379,23 @@ namespace RazorSlices
         Assert.Equal("global::System.Collections.Generic.List<global::System.String>", result);
     }
 
+    [Theory]
+    [InlineData("System.String", "global::System.String")]
+    [InlineData("System.Int32", "global::System.Int32")]
+    public void NonNestedType_FullyQualifiedPrimitive(string typeName, string expected)
+    {
+        Assert.Equal(expected, Resolve(typeName));
+    }
+
+    [Theory]
+    [InlineData("string", "global::System.String")]
+    [InlineData("int", "global::System.Int32")]
+    public void SliceBaseType_PrimitiveModel_UsesQualifiedTypeName(string modelType, string expected)
+    {
+        var usings = new List<UsingDirective> { new("TestNs", null) };
+        Assert.Equal(expected, ResolveFromSliceBaseType($"GenericTodoSliceBase<{modelType}>", usings));
+    }
+
     [Fact]
     public void SliceBaseType_DirectlyInheritsGenericRazorSlice_ResolvesModelType()
     {
