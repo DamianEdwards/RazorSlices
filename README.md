@@ -172,7 +172,7 @@ The library is still new and features are being actively added.
     @inherits RazorSlice<Todo>
 
     @{
-        var tmpl = @<div>
+        Func<object?, Microsoft.AspNetCore.Mvc.Razor.HelperResult> tmpl = @<div>
             This is a templated Razor delegate. The following value was passed in: @item
         </div>;
     }
