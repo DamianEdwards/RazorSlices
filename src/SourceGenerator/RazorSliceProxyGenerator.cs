@@ -311,8 +311,10 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         }
     }
 
-    private static bool IsDirectRazorSliceBaseType(string baseTypeName) =>
-        string.Equals(baseTypeName, "RazorSlice", StringComparison.Ordinal) ||
+    private static bool IsDirectRazorSliceBaseType(string baseTypeName)
+    {
+        return string.Equals(baseTypeName, "RazorSlice", StringComparison.Ordinal) ||
         string.Equals(baseTypeName, "RazorSlices.RazorSlice", StringComparison.Ordinal) ||
         string.Equals(baseTypeName, "global::RazorSlices.RazorSlice", StringComparison.Ordinal);
+    }
 }

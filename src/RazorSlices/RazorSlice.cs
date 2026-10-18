@@ -43,14 +43,12 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
     {
         ((IHelperContext)this).EnsureActive();
         ArgumentNullException.ThrowIfNull(create);
-        _helpers ??= new();
+        _helpers ??= [];
         if (_helpers.TryGetValue(typeof(TImplementation), out var existing))
         {
             return (TContract)(object)existing;
         }
-        var helper = RazorSliceHelperActivation<TImplementation>.Create(create);
-        if (helper is null)
-            throw new InvalidOperationException("The helper factory returned null.");
+        var helper = RazorSliceHelperActivation<TImplementation>.Create(create) ?? throw new InvalidOperationException("The helper factory returned null.");
         if (helper is not TContract contract)
         {
             throw new InvalidOperationException($"Helper {helper.GetType()} does not implement {typeof(TContract)}.");
@@ -295,10 +293,14 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
     }
 
     private static ValueTask RenderToPipeWriterAsync(RazorSlice razorSlice, PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
-        => razorSlice.RenderToPipeWriterAsync(pipeWriter, htmlEncoder, cancellationToken);
+    {
+        return razorSlice.RenderToPipeWriterAsync(pipeWriter, htmlEncoder, cancellationToken);
+    }
 
     private static ValueTask RenderToTextWriterAsync(RazorSlice razorSlice, TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
-        => razorSlice.RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
+    {
+        return razorSlice.RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
+    }
 
     private ValueTask RenderViaLayout<TWriter>(Func<RazorSlice, TWriter, HtmlEncoder?, CancellationToken, ValueTask> render, IUsesLayout usesLayout, TWriter writer, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {

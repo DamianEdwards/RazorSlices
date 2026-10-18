@@ -212,12 +212,7 @@ internal static class ModelTypeResolver
         }
 
         var resolvedSimple = ResolveSimpleType(typeName, usingDirectives, compilation, rootNamespace: rootNamespace);
-        if (resolvedSimple is null)
-        {
-            return null;
-        }
-
-        return ResolveNamedTypeSymbol(resolvedSimple, compilation);
+        return resolvedSimple is null ? null : (ITypeSymbol?)ResolveNamedTypeSymbol(resolvedSimple, compilation);
     }
 
     private static string? ResolveGenericType(string typeName, int genericOpen, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace)

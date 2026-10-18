@@ -146,26 +146,38 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
             var html = await Consumer.Host.Create().RenderAsync();
             if (!html.Contains("<p>&lt;package&gt;: 42</p>") ||
                 !html.Contains("async loaded: 43") || !html.Contains("task task") || !html.Contains("42 2"))
+            {
                 throw new InvalidOperationException(html);
+            }
+
             var allocationSlice = new AllocationSlice();
             await allocationSlice.RenderAsync(TextWriter.Null);
             if (allocationSlice.AllocatedBytes != 0)
+            {
                 throw new InvalidOperationException($"Facade calls allocated {allocationSlice.AllocatedBytes} bytes");
+            }
+
             Console.WriteLine("Shared SDK helper rendered with zero warm per-call allocations");
+
             sealed class AllocationSlice : RazorSlice
             {
                 public long AllocatedBytes;
+
                 public override async Task ExecuteAsync()
                 {
-                    for (var i = 0; i < 10_000; i++) {
+                    for (var i = 0; i < 10_000; i++)
+                    {
                         Helpers.Ui.Greeting("warmup", 42);
                         await Helpers.Ui.TaskGreetingAsync("warmup");
                     }
+
                     var before = GC.GetAllocatedBytesForCurrentThread();
-                    for (var i = 0; i < 100_000; i++) {
+                    for (var i = 0; i < 100_000; i++)
+                    {
                         Helpers.Ui.Greeting("measured", 42);
                         await Helpers.Ui.TaskGreetingAsync("measured");
                     }
+
                     AllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - before;
                 }
             }

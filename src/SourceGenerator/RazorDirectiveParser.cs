@@ -86,7 +86,7 @@ internal static class RazorDirectiveParser
         }
         return usings;
     }
-    
+
     /// <summary>
     /// Parses the @namespace directive value from the given source text.
     /// Returns null if no @namespace directive is found.
@@ -156,11 +156,16 @@ internal readonly struct UsingDirective(string namespaceOrType, string? alias) :
     /// </summary>
     public string? Alias { get; } = alias;
 
-    public bool Equals(UsingDirective other) =>
-        string.Equals(NamespaceOrType, other.NamespaceOrType, StringComparison.Ordinal) &&
+    public bool Equals(UsingDirective other)
+    {
+        return string.Equals(NamespaceOrType, other.NamespaceOrType, StringComparison.Ordinal) &&
         string.Equals(Alias, other.Alias, StringComparison.Ordinal);
+    }
 
-    public override bool Equals(object obj) => obj is UsingDirective other && Equals(other);
+    public override bool Equals(object obj)
+    {
+        return obj is UsingDirective other && Equals(other);
+    }
 
     public override int GetHashCode()
     {

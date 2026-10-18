@@ -14,16 +14,20 @@ public class DotNetCli
         return RunCommand("clean", args);
     }
 
-    public static string Publish(IEnumerable<string> args, ITestOutputHelper? testOutput =  null)
+    public static string Publish(IEnumerable<string> args, ITestOutputHelper? testOutput = null)
     {
         return RunCommand("publish", args, testOutput);
     }
 
     public static string Run(IEnumerable<string> args, ITestOutputHelper? testOutput = null)
-        => RunCommand("run", args, testOutput);
+    {
+        return RunCommand("run", args, testOutput);
+    }
 
     public static string Restore(IEnumerable<string> args, ITestOutputHelper? testOutput = null)
-        => RunCommand("restore", args, testOutput);
+    {
+        return RunCommand("restore", args, testOutput);
+    }
 
     public static string Pack(string projectPath, string outputDir, ITestOutputHelper? testOutput = null)
     {
@@ -81,15 +85,12 @@ public class DotNetCli
         var stdOut = stdOutTask.GetAwaiter().GetResult();
         var stdErr = stdErrTask.GetAwaiter().GetResult();
 
-        if (process.ExitCode != 0)
-        {
-            throw new InvalidOperationException($"""
+        return process.ExitCode != 0
+            ? throw new InvalidOperationException($"""
                 dotnet {commandName} failed on exit ({process.ExitCode})
                 Error:  {stdErr}
                 Output: {stdOut}
-                """);
-        }
-
-        return stdOut;
+                """)
+            : stdOut;
     }
 }

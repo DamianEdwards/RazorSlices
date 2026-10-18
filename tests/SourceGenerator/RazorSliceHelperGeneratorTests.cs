@@ -145,11 +145,17 @@ public class RazorSliceHelperGeneratorTests
     private sealed class Text(string path, string content) : AdditionalText
     {
         public override string Path => path;
-        public override SourceText GetText(CancellationToken cancellationToken = default) => SourceText.From(content);
+        public override SourceText GetText(CancellationToken cancellationToken = default)
+        {
+            return SourceText.From(content);
+        }
     }
     private sealed class Options(Dictionary<string, string> values) : AnalyzerConfigOptions
     {
-        public override bool TryGetValue(string key, out string value) => values.TryGetValue(key, out value!);
+        public override bool TryGetValue(string key, out string value)
+        {
+            return values.TryGetValue(key, out value!);
+        }
     }
     private sealed class OptionsProvider(string directory, bool generateSlice) : AnalyzerConfigOptionsProvider
     {
@@ -158,10 +164,17 @@ public class RazorSliceHelperGeneratorTests
             ["build_property.RootNamespace"] = "HelperProject",
             ["build_property.MSBuildProjectDirectory"] = directory
         });
-        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree) => new Options([]);
-        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) => new Options(new()
+        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree)
         {
-            ["build_metadata.RazorGenerate.GenerateRazorSlice"] = generateSlice ? "true" : "false"
-        });
+            return new Options([]);
+        }
+
+        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile)
+        {
+            return new Options(new()
+            {
+                ["build_metadata.RazorGenerate.GenerateRazorSlice"] = generateSlice ? "true" : "false"
+            });
+        }
     }
 }

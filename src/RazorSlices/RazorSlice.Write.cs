@@ -93,7 +93,10 @@ public partial class RazorSlice
     /// </para>
     /// </remarks>
     /// <param name="value"></param>
-    protected internal void Write(bool? value) => WriteBool(value);
+    protected internal void Write(bool? value)
+    {
+        WriteBool(value);
+    }
 
     /// <summary>
     /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.
@@ -103,7 +106,10 @@ public partial class RazorSlice
     /// all matching Razor expressions in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
-    protected void Write(byte[] value) => Write(value.AsSpan());
+    protected void Write(byte[] value)
+    {
+        Write(value.AsSpan());
+    }
 
     /// <summary>
     /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.
@@ -113,7 +119,10 @@ public partial class RazorSlice
     /// all matching Razor expressions in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
-    protected void Write(ReadOnlyMemory<byte> value) => Write(value.Span);
+    protected void Write(ReadOnlyMemory<byte> value)
+    {
+        Write(value.Span);
+    }
 
     /// <summary>
     /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.

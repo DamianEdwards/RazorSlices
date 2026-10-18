@@ -45,14 +45,17 @@ public class RazorSliceHelperTests
         {
             helper = (SampleHelper)context.GetHelper<ISample, SampleHelper>(static () => new());
             if (asynchronous)
+            {
                 await Task.Yield();
+            }
+
             throw new InvalidOperationException("failed");
         });
 
         var error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await slice.RenderAsync(TextWriter.Null));
         Assert.Equal("failed", error.Message);
         Assert.Throws<InvalidOperationException>(() => helper!.Render("after", false));
-        Assert.Throws<InvalidOperationException>(() => slice.Context.EnsureActive());
+        Assert.Throws<InvalidOperationException>(slice.Context.EnsureActive);
     }
 
     [Fact]
@@ -117,10 +120,16 @@ public class RazorSliceHelperTests
         {
             Func<SampleHelper> create = static () => new();
             for (var i = 0; i < 10_000; i++)
+            {
                 await new HelperCompletion(context.GetHelper<ISample, SampleHelper>(create).Complete());
+            }
+
             var before = GC.GetAllocatedBytesForCurrentThread();
             for (var i = 0; i < 100_000; i++)
+            {
                 await new HelperCompletion(context.GetHelper<ISample, SampleHelper>(create).Complete());
+            }
+
             var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
             Assert.Equal(0, allocated);
         });
@@ -130,7 +139,10 @@ public class RazorSliceHelperTests
     private static async Task<string> Render(RazorSlice slice, bool pipe, HtmlEncoder encoder)
     {
         if (!pipe)
+        {
             return await slice.RenderAsync(encoder);
+        }
+
         using var stream = new MemoryStream();
         var writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
         await slice.RenderAsync(writer, encoder);
@@ -141,7 +153,10 @@ public class RazorSliceHelperTests
     private sealed class Host(Func<IHelperContext, Task> render) : RazorSlice
     {
         internal IHelperContext Context => Helpers;
-        public override Task ExecuteAsync() => render(Helpers);
+        public override Task ExecuteAsync()
+        {
+            return render(Helpers);
+        }
     }
 
     public interface ISample
@@ -154,7 +169,11 @@ public class RazorSliceHelperTests
     public class SampleHelper : RazorSliceHelpers, ISample
     {
         [RazorInject] public object? Service { get; set; }
-        public override Task ExecuteAsync() => Task.CompletedTask;
+        public override Task ExecuteAsync()
+        {
+            return Task.CompletedTask;
+        }
+
         public void Render(string text, bool check)
         {
             WriteLiteral("<input");
@@ -175,7 +194,10 @@ public class RazorSliceHelperTests
             Write(text);
             await FlushAsync();
         }
-        public ValueTask Complete() => ValueTask.CompletedTask;
+        public ValueTask Complete()
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 
     public sealed class Original : SampleHelper { }
@@ -185,9 +207,19 @@ public class RazorSliceHelperTests
     private sealed class CompletedSource : IValueTaskSource
     {
         internal int Consumptions;
-        public void GetResult(short token) => Consumptions++;
-        public ValueTaskSourceStatus GetStatus(short token) => ValueTaskSourceStatus.Succeeded;
+        public void GetResult(short token)
+        {
+            Consumptions++;
+        }
+
+        public ValueTaskSourceStatus GetStatus(short token)
+        {
+            return ValueTaskSourceStatus.Succeeded;
+        }
+
         public void OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags)
-            => throw new InvalidOperationException("Already complete");
+        {
+            throw new InvalidOperationException("Already complete");
+        }
     }
 }

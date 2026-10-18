@@ -15,7 +15,9 @@ internal static class RazorSliceHelperActivation<TImplementation> where TImpleme
     }
 
     internal static RazorSliceHelpers Create(Func<TImplementation> create)
-        => _replacement is { } replacement ? replacement() : create();
+    {
+        return _replacement is { } replacement ? replacement() : create();
+    }
 
     [UnconditionalSuppressMessage("Trimming", "IL2072",
         Justification = "Replacement types are used only during Hot Reload, not in trimmed applications.")]
