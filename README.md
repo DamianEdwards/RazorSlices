@@ -184,6 +184,7 @@ The library is still new and features are being actively added.
 
 - DI-activated properties via `@inject`
 - Rendering slices from slices (aka partials) via `@(await RenderPartialAsync<MyPartial>())`
+- [Shareable templated helpers](#shareable-templated-helpers), with `void`/asynchronous implementations and strongly typed `@Helpers.MyHelperSlice.HelperMethod(...)` calls
 - Using slices as layouts for other slices, including layouts with strongly-typed models:
   - For the layout slice, inherit from `RazorLayoutSlice` or `RazorLayoutSlice<TModel>` and use `@await RenderBodyAsync()` in the layout to render the body
 
@@ -249,6 +250,76 @@ The library is still new and features are being actively added.
     </PropertyGroup>
     ```
   
+### Shareable templated helpers
+
+Helpers are ordinary `.cshtml` files compiled **only by the Razor SDK**, using the same `Content`/`RazorGenerate` inputs as other Razor files. There are no custom helper item types, copied inputs, runtime compiler, or additional Razor compiler package.
+
+Declare the exported API in a public C# interface:
+
+```csharp
+namespace MyLibrary.Helpers;
+
+public interface IUiHelpers
+{
+    void StatusBadge(string text, bool success = false);
+    ValueTask NoticeAsync(string heading, Func<CancellationToken, ValueTask<string>> loadMessage);
+}
+```
+
+Implement it in `Helpers/UiHelpers.cshtml`:
+
+```cshtml
+@using RazorSlices
+@using MyLibrary.Helpers
+@inherits RazorSliceHelpers
+@implements IUiHelpers
+
+@functions {
+    public void StatusBadge(string text, bool success = false)
+    {
+        <span class="badge @(success ? "text-bg-success" : "text-bg-secondary")">@text</span>
+    }
+
+    public async ValueTask NoticeAsync(string heading, Func<CancellationToken, ValueTask<string>> loadMessage)
+    {
+        var message = await loadMessage(CancellationToken);
+        <aside><strong>@heading</strong><p>@message</p></aside>
+    }
+}
+```
+
+Import the generated facade's namespace (the owning project's root namespace plus the helper's directory), then invoke it:
+
+```cshtml
+@using MyLibrary.Helpers
+
+@Helpers.UiHelpers.StatusBadge("Completed", success: true)
+@await Helpers.UiHelpers.NoticeAsync("Summary", LoadMessageAsync)
+```
+
+**C# 14 or newer is required in helper producers and consumers** for generated extension properties; .NET 8+ runtime targets remain supported. Set `<LangVersion>14.0</LangVersion>` and use a compatible SDK. The normal slice-only API does not require C# 14.
+
+The generator recognizes `RazorSliceHelpers` (including through `_ViewImports.cshtml` or a derived base), reads exactly one public `@implements` contract, and generates adapters from that **ordinary C# interface**. It never reads SDK-generated method symbols or compiles/rewrites Razor bodies. Normal C# compilation checks the implementation against the interface.
+
+The public extension property returns a small readonly renderer struct, not the SDK's internal implementation type. Synchronous adapters supply `HtmlString.Empty` automatically. `Task`/non-generic `ValueTask` methods are adapted by `HelperCompletion`, a value-type awaitable that forwards completion and exceptions without an extra async wrapper state machine. Do not use `async void`. There is no return marker to remember in authored methods.
+
+Public interfaces and facades can be distributed in compiled Razor class libraries/NuGet packages; consumers do not need the helper source. Stable interface dispatch also allows the runtime to substitute SDK replacement types during Hot Reload for subsequent renders. Public contract/signature changes may still require rebuilding/restarting, as with other C# API changes.
+
+Helpers are initialized **once per implementation type per calling slice instance**, on first use, and reused for subsequent calls. The cache is lazy; there is no per-call slice/context/renderer object allocation. This version does not pool helpers or share them across a whole HTTP request. Each helper forwards writes to its caller's active output/encoder/attribute state, preserving unbuffered `PipeWriter` rendering. Primitive formatting uses the existing low-allocation paths. Genuine asynchronous work retains its normal async costs.
+
+Helpers are deliberately not full slices: no model, layout, sections, top-level body, or `@inject` activation. Use arguments for dependencies. A helper's only framework-owned instance state is its output binding. Build diagnostics reject authored instance fields/properties/events/constructors, injected-member access, and escaping the helper instance; static utilities and constants are allowed. The SDK may still emit its unused default MVC injection properties, but helper activation never initializes them and they are not part of the facade API.
+
+Await async helpers before continuing to write. Do not retain a helper/facade beyond its calling render or write concurrently through it. Bindings are cleared on render completion, cancellation, or failure. The protected `Helpers` and `CancellationToken` members support helper composition and cancellation; `FlushAsync()` explicitly flushes the caller's output.
+
+Contracts may inherit other interfaces and use overloads, generics/constraints, nullable parameters, optional/default arguments, `params`, and by-reference parameters. Only instance methods returning `void`, `Task`, or non-generic `ValueTask` are exportable; `ExecuteAsync()` is reserved for the SDK. Custom delegates can target a facade via a static context-taking lambda without capturing request state:
+
+```csharp
+private static readonly Func<IHelperContext, string, HtmlString> RenderStatus =
+    static (context, text) => context.UiHelpers.StatusBadge(text);
+```
+
+The sample app's `/helpers` page demonstrates local and class-library helpers, custom signatures/delegates, conditional attributes, generic methods, and async callbacks. The existing todo table also uses the shared badge helper.
+
 ### Interested in supporting but not sure yet
 
 - Extensions to help support using HTMX with Razor Slices 

@@ -93,7 +93,9 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             return;
         }
 
-        var distinctTexts = sliceTexts.Distinct();
+        var distinctTexts = allCshtmlFiles.Where(static file =>
+            !string.Equals(Path.GetFileName(file.Path), "_ViewImports.cshtml", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(Path.GetFileName(file.Path), "_ViewStart.cshtml", StringComparison.OrdinalIgnoreCase)).Distinct();
 
         if (!distinctTexts.Any())
         {
@@ -105,6 +107,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         var viewImportsMap = ViewImportsResolver.BuildViewImportsMap(allCshtmlFiles);
 
         HashSet<string> generatedClasses = [];
+        var generatedProxy = false;
 
         var codeBuilder = new StringBuilder();
 
@@ -142,6 +145,30 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 ? rootNamespace
                 : $"{rootNamespace}.{subNamespace}";
 
+            var helperSource = file.GetText(context.CancellationToken);
+            if (helperSource is not null)
+            {
+                var helperDirectives = ViewImportsResolver.ResolveDirectives(file.Path, projectDirectory!, viewImportsMap, helperSource);
+                if (RazorSliceHelperGenerator.IsHelper(helperDirectives, compilation, rootNamespace!))
+                {
+                    if (!generatedClasses.Add($"{fullNamespace}.{className}"))
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(RazorSliceHelperGenerator.InvalidContract,
+                            Location.Create(file.Path, default, default), $"Duplicate helper/proxy name '{fullNamespace}.{className}'"));
+                        continue;
+                    }
+                    var helperType = string.IsNullOrEmpty(subNamespaceAsClassName) ? className : $"{subNamespaceAsClassName}_{className}";
+                    RazorSliceHelperGenerator.Generate(context, file, helperDirectives, compilation,
+                        fullNamespace!, className, $"global::{helperDirectives.NamespaceDirective ?? "AspNetCoreGeneratedDocument"}.{helperType}",
+                        rootNamespace!);
+                    continue;
+                }
+            }
+            if (!sliceTexts.Contains(file))
+            {
+                continue;
+            }
+
             // Duplicate class name check
             if (generatedClasses.Contains($"{fullNamespace}.{className}"))
             {
@@ -159,6 +186,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             else
             {
                 generatedClasses.Add($"{fullNamespace}.{className}");
+                generatedProxy = true;
 
                 // Resolve directives (including _ViewImports hierarchy)
                 var sourceText = file.GetText();
@@ -277,7 +305,10 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             }
         }
 
-        context.AddSource($"{rootNamespace}.RazorSliceProxies.g.cs", SourceText.From(codeBuilder.ToString(), Encoding.UTF8));
+        if (generatedProxy)
+        {
+            context.AddSource($"{rootNamespace}.RazorSliceProxies.g.cs", SourceText.From(codeBuilder.ToString(), Encoding.UTF8));
+        }
     }
 
     private static bool IsDirectRazorSliceBaseType(string baseTypeName) =>

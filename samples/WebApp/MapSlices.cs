@@ -35,6 +35,7 @@ internal static class MapSlicesExtensions
             .DisableResponseBuffering();
         endpoints.MapGet("/unicode", () => Results.RazorSlice<Slices.Unicode>());
         endpoints.MapGet("/templated", (bool async = false) => Results.RazorSlice<Slices.Templated, bool>(async));
+        endpoints.MapGet("/helpers", () => Results.RazorSlice<Slices.HelpersDemo>());
         endpoints.MapGet("/library", () => Results.RazorSlice<LibrarySlices.FromLibrary>());
         endpoints.MapGet("/render-to-string", async () =>
         {
@@ -85,6 +86,7 @@ internal static class MapSlicesExtensions
             .DisableResponseBuffering();
         endpoints.MapGet("/unicode", () => Results.Extensions.RazorSlice<Slices.Unicode>());
         endpoints.MapGet("/templated", (bool async = false) => Results.Extensions.RazorSlice<Slices.Templated, bool>(async));
+        endpoints.MapGet("/helpers", () => Results.Extensions.RazorSlice<Slices.HelpersDemo>());
         endpoints.MapGet("/library", () => Results.Extensions.RazorSlice<LibrarySlices.FromLibrary>());
         endpoints.MapGet("/render-to-string", async () =>
         {

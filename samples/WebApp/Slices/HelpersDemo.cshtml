@@ -1,0 +1,35 @@
+@using RazorSlices.Samples.WebApp.Helpers
+@using RazorSlices.Samples.RazorClassLibrary.Helpers
+@implements IUsesLayout<_Layout, LayoutModel>
+
+<h1 class="mt-5">Reusable todo helpers</h1>
+<p>These stateless Razor helpers implement public interfaces. The SDK compiles their methods; generated value-type facades adapt void and asynchronous methods for rendering.</p>
+<h2>Custom signatures and conditional attributes</h2>
+<div class="d-flex gap-2 mb-3">
+    @Helpers.TodoHelpers.ActionButton("add", 42, "Add task")
+    @Helpers.TodoHelpers.ActionButton("delete", 42, "Delete task", disabled: true)
+    @RenderAction(Helpers, "share", 42, "Share task")
+</div>
+<p>The share button uses a cached custom-signature delegate with no captured request state.</p>
+<div class="row mb-3">
+    @Helpers.TodoHelpers.Statistic("Total tasks", Models.Todos.AllTodos.Length)
+    @Helpers.TodoHelpers.Statistic("Completed tasks", Models.Todos.AllTodos.Count(todo => todo.IsComplete))
+</div>
+<h2>Helpers shared from a Razor class library</h2>
+<p>@Helpers.UiHelpers.StatusBadge("From a Razor class library", success: true)</p>
+<p>@Helpers.UiHelpers.StatusBadge("HTML is encoded: <script>", title: "Shared helper")</p>
+@await Helpers.UiHelpers.AsyncNoticeAsync("Async task summary", LoadSummaryAsync)
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = "Reusable todo helpers" };
+    private delegate HtmlString ActionTemplate(IHelperContext context, string operation, int id, string text, bool disabled = false);
+    private static readonly ActionTemplate RenderAction =
+        static (context, operation, id, text, disabled) => context.TodoHelpers.ActionButton(operation, id, text, disabled);
+
+    private static async ValueTask<string> LoadSummaryAsync(CancellationToken cancellationToken)
+    {
+        // Simulate a cancellable asynchronous data source.
+        await Task.Delay(10, cancellationToken);
+        return $"{Models.Todos.AllTodos.Count(todo => !todo.IsComplete)} tasks still need attention.";
+    }
+}

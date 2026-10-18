@@ -62,6 +62,20 @@ public class WebAppTests
     }
 
     [Fact]
+    public async Task Helpers_RenderVoidAndAsyncMethodsFromLocalAndReferencedProjects()
+    {
+        using var waf = new WebApplicationFactory<Program>();
+        using var client = waf.CreateClient();
+        var html = await client.GetStringAsync("/helpers");
+        Assert.Contains("""data-action="add" data-id="42">Add task</button>""", html);
+        Assert.Contains("""data-action="delete" data-id="42" disabled="disabled">Delete task</button>""", html);
+        Assert.Contains("""data-action="share" data-id="42">Share task</button>""", html);
+        Assert.Contains("""<span class="badge text-bg-success">From a Razor class library</span>""", html);
+        Assert.Contains("HTML is encoded: &lt;script&gt;", html);
+        Assert.Contains("tasks still need attention.", html);
+    }
+
+    [Fact]
     public async Task Streaming_FlushesInitialMessageAndCountdownUpdates()
     {
         using var waf = new WebApplicationFactory<Program>()
@@ -125,6 +139,7 @@ public class WebAppTests
         ["/unicode", "🐻", MediaTypeNames.Text.Html],
         ["/streaming", "Countdown complete!", MediaTypeNames.Text.Html],
         ["/templated", "This is from a partial with a templated model", MediaTypeNames.Text.Html],
+        ["/helpers", "Reusable todo helpers", MediaTypeNames.Text.Html],
         ["/library", "This slice was loaded from a referenced Razor Class Library!", MediaTypeNames.Text.Html],
         ["/render-to-string", "htmlString", MediaTypeNames.Application.Json],
         ["/render-to-stringbuilder", "htmlString", MediaTypeNames.Application.Json],

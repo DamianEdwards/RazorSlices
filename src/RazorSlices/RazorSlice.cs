@@ -13,7 +13,7 @@ namespace RazorSlices;
 /// Base class for a Razor Slice template. Inherit from this class or <see cref="RazorSlice{TModel}"/> in your <c>.cshtml</c> files using the <c>@inherit</c> directive.
 /// </summary>
 /// <seealso cref="RazorSlice{TModel}"/>
-public abstract partial class RazorSlice : IDisposable
+public abstract partial class RazorSlice : IDisposable, IHelperContext
 {
     private const int _autoFlushThreshold = 1_024 * 16; // Auto-flush after each slice rendering if unflushed bytes is over 16 KB
 
@@ -26,6 +26,39 @@ public abstract partial class RazorSlice : IDisposable
     private TextWriter? _textWriter;
     private bool _initialized;
     private bool _disposed;
+    private Dictionary<Type, RazorSliceHelpers>? _helpers;
+
+    /// <summary>Gets the context for invoking generated helper facades during this render.</summary>
+    protected IHelperContext Helpers => this;
+
+    void IHelperContext.EnsureActive()
+    {
+        if (_disposed || (_pipeWriter is null && _textWriter is null))
+        {
+            throw new InvalidOperationException("Helpers can only be invoked during an active render.");
+        }
+    }
+
+    TContract IHelperContext.GetHelper<TContract, TImplementation>(Func<TImplementation> create)
+    {
+        ((IHelperContext)this).EnsureActive();
+        ArgumentNullException.ThrowIfNull(create);
+        _helpers ??= new();
+        if (_helpers.TryGetValue(typeof(TImplementation), out var existing))
+        {
+            return (TContract)(object)existing;
+        }
+        var helper = RazorSliceHelperActivation<TImplementation>.Create(create);
+        if (helper is null)
+            throw new InvalidOperationException("The helper factory returned null.");
+        if (helper is not TContract contract)
+        {
+            throw new InvalidOperationException($"Helper {helper.GetType()} does not implement {typeof(TContract)}.");
+        }
+        helper.Bind(this);
+        _helpers.Add(typeof(TImplementation), helper);
+        return contract;
+    }
 
     /// <summary>
     /// Gets or sets the <see cref="IServiceProvider"/> used to resolve services for injectable properties.
@@ -197,17 +230,25 @@ public abstract partial class RazorSlice : IDisposable
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        if (renderLayout && this is IUsesLayout useLayout)
+        try
         {
-            return RenderViaLayout(RenderToPipeWriterAsync, useLayout, _pipeWriter, htmlEncoder, cancellationToken);
+            if (renderLayout && this is IUsesLayout useLayout)
+            {
+                return RenderViaLayout(RenderToPipeWriterAsync, useLayout, _pipeWriter, htmlEncoder, cancellationToken);
+            }
+            var executeTask = ExecuteAsyncImpl();
+            if (!executeTask.HandleSynchronousCompletion())
+            {
+                return AwaitExecuteTaskFlushAndDispose(this, executeTask);
+            }
         }
-
-        var executeTask = ExecuteAsyncImpl();
-
-        if (!executeTask.HandleSynchronousCompletion())
+        catch
         {
-            // Go async
-            return AwaitExecuteTaskFlushAndDispose(this, executeTask);
+            if (!_disposed)
+            {
+                Dispose();
+            }
+            throw;
         }
 
         Dispose();
@@ -225,17 +266,25 @@ public abstract partial class RazorSlice : IDisposable
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        if (renderLayout && this is IUsesLayout useLayout)
+        try
         {
-            return RenderViaLayout(RenderToTextWriterAsync, useLayout, _textWriter, htmlEncoder, cancellationToken);
+            if (renderLayout && this is IUsesLayout useLayout)
+            {
+                return RenderViaLayout(RenderToTextWriterAsync, useLayout, _textWriter, htmlEncoder, cancellationToken);
+            }
+            var executeTask = ExecuteAsyncImpl();
+            if (!executeTask.IsCompletedSuccessfully)
+            {
+                return AwaitExecuteTaskFlushAndDispose(this, executeTask);
+            }
         }
-
-        var executeTask = ExecuteAsyncImpl();
-
-        if (!executeTask.IsCompletedSuccessfully)
+        catch
         {
-            // Go async
-            return AwaitExecuteTaskFlushAndDispose(this, executeTask);
+            if (!_disposed)
+            {
+                Dispose();
+            }
+            throw;
         }
 
         Dispose();
@@ -311,16 +360,22 @@ public abstract partial class RazorSlice : IDisposable
 
     private static async ValueTask AwaitExecuteTaskFlushAndDispose(RazorSlice slice, Task executeTask)
     {
-        await executeTask;
-        await slice.AutoFlush();
-        slice.Dispose();
+        try
+        {
+            await executeTask;
+            await slice.AutoFlush();
+        }
+        finally
+        {
+            slice.Dispose();
+        }
     }
 
     /// <summary>
     /// Attempts to flush the underlying output the template is being rendered to.
     /// </summary>
     /// <returns>A <see cref="ValueTask"/> representing the flush operation.</returns>
-    protected ValueTask<HtmlString> FlushAsync()
+    protected internal ValueTask<HtmlString> FlushAsync()
     {
         if (_pipeWriter is not null)
         {
@@ -386,13 +441,20 @@ public abstract partial class RazorSlice : IDisposable
 
         Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
 
+        _disposed = true;
+        if (_helpers is not null)
+        {
+            foreach (var helper in _helpers.Values)
+            {
+                helper.Unbind();
+            }
+            _helpers.Clear();
+        }
         if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
         {
             Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
             contentSlice.Dispose();
         }
-
-        _disposed = true;
 
         Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
     }

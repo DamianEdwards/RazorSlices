@@ -26,6 +26,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SourceGenerator\SourceGenerator.csproj" />
+    <ProjectReference Include="..\..\src\RazorSlices\RazorSlices.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>

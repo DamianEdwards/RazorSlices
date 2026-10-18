@@ -9,6 +9,20 @@ namespace RazorSlices.SourceGenerator;
 /// </summary>
 internal static class RazorDirectiveParser
 {
+    internal static List<string> ParseDirectiveValues(SourceText source, string name)
+    {
+        var values = new List<string>();
+        var prefix = "@" + name + " ";
+        foreach (var line in source.Lines)
+        {
+            var text = line.ToString().TrimStart();
+            if (text.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                values.Add(text.Substring(prefix.Length).Trim().TrimEnd(';'));
+            }
+        }
+        return values;
+    }
     /// <summary>
     /// Parses the @inherits directive value from the given source text.
     /// Returns null if no @inherits directive is found.

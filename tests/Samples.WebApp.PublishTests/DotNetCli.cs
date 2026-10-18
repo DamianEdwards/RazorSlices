@@ -19,6 +19,12 @@ public class DotNetCli
         return RunCommand("publish", args, testOutput);
     }
 
+    public static string Run(IEnumerable<string> args, ITestOutputHelper? testOutput = null)
+        => RunCommand("run", args, testOutput);
+
+    public static string Restore(IEnumerable<string> args, ITestOutputHelper? testOutput = null)
+        => RunCommand("restore", args, testOutput);
+
     public static string Pack(string projectPath, string outputDir, ITestOutputHelper? testOutput = null)
     {
         var args = new List<string>

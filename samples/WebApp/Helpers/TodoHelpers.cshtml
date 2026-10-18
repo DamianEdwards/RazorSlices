@@ -1,0 +1,15 @@
+@using RazorSlices
+@using RazorSlices.Samples.WebApp.Helpers
+@inherits RazorSliceHelpers
+@implements ITodoHelpers
+@functions {
+    public void ActionButton(string operation, int id, string text, bool disabled = false)
+    {
+        <button type="button" class="btn btn-outline-primary" data-action="@operation" data-id="@id" disabled="@disabled">@text</button>
+    }
+
+    public void Statistic<T>(string label, T value) where T : ISpanFormattable
+    {
+        <div class="card card-body"><strong>@label</strong><span>@value</span></div>
+    }
+}

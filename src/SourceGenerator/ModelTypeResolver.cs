@@ -129,8 +129,12 @@ internal static class ModelTypeResolver
         return ResolveSimpleType(typeName, usingDirectives, compilation, rootNamespace: rootNamespace);
     }
 
-    private static ITypeSymbol? ResolveTypeSymbolExpression(string typeName, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace)
+    internal static ITypeSymbol? ResolveTypeSymbolExpression(string typeName, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace)
     {
+        if (typeName.StartsWith("global::", StringComparison.Ordinal))
+        {
+            typeName = typeName.Substring("global::".Length);
+        }
         // Handle nullable value/reference types by resolving the underlying type symbol.
         if (typeName.EndsWith("?", StringComparison.Ordinal))
         {

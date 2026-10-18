@@ -20,6 +20,7 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
 
     <InternalsVisibleTo Include="RazorSlices.SourceGenerator.Tests" />
+    <None Remove="AnalyzerReleases.Shipped.md;AnalyzerReleases.Unshipped.md" />
   </ItemGroup>
 
 </Project>

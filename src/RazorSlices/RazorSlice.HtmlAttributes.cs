@@ -17,7 +17,7 @@ public abstract partial class RazorSlice
     /// <param name="suffix">The suffix.</param>
     /// <param name="suffixOffset">The suffix offset.</param>
     /// <param name="attributeValuesCount">The attribute values count.</param>
-    protected virtual void BeginWriteAttribute(
+    protected internal virtual void BeginWriteAttribute(
         string name,
         string prefix,
         int prefixOffset,
@@ -60,7 +60,7 @@ public abstract partial class RazorSlice
     /// <param name="valueOffset">The value offset.</param>
     /// <param name="valueLength">The value length.</param>
     /// <param name="isLiteral">Whether the attribute is a literal.</param>
-    protected void WriteAttributeValue(
+    protected internal void WriteAttributeValue(
         string prefix,
         int prefixOffset,
         bool value,
@@ -84,7 +84,7 @@ public abstract partial class RazorSlice
     /// <param name="valueOffset">The value offset.</param>
     /// <param name="valueLength">The value length.</param>
     /// <param name="isLiteral">Whether the attribute is a literal.</param>
-    protected void WriteAttributeValue(
+    protected internal void WriteAttributeValue(
         string prefix,
         int prefixOffset,
         bool? value,
@@ -168,7 +168,7 @@ public abstract partial class RazorSlice
     /// <param name="valueLength">The value length.</param>
     /// <param name="isLiteral">Whether the attribute is a literal.</param>
     /// <typeparam name="TValue">The type of the attribute value being written.</typeparam>
-    protected void WriteAttributeValue<TValue>(
+    protected internal void WriteAttributeValue<TValue>(
         string prefix,
         int prefixOffset,
         TValue? value,
@@ -230,7 +230,7 @@ public abstract partial class RazorSlice
     /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
     /// all HTML attributes containing Razor expressions in your .cshtml file.
     /// </remarks>
-    protected virtual void EndWriteAttribute()
+    protected internal virtual void EndWriteAttribute()
     {
         if (!_attributeInfo.Suppressed)
         {
