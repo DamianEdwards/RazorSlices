@@ -318,7 +318,7 @@ private static readonly Func<IHelperContext, string, HtmlString> RenderStatus =
     static (context, text) => context.UiHelpers.StatusBadge(text);
 ```
 
-The sample app's `/helpers` page demonstrates local and class-library helpers, custom signatures/delegates, conditional attributes, generic methods, and async callbacks. The existing todo table also uses the shared badge helper.
+The sample app's `/helpers` page demonstrates local and class-library helpers, custom signatures/delegates, conditional attributes, generic methods, and async callbacks. `TodoHelpers.TaskStatus` calls the shared `UiHelpers.StatusBadge`, and `TodoHelpers.TaskSummaryAsync` awaits `UiHelpers.AsyncNoticeAsync`, demonstrating synchronous and asynchronous helper composition. The existing todo table also uses the composed task-status helper.
 
 ### Interested in supporting but not sure yet
 

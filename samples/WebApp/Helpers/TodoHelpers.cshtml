@@ -1,5 +1,6 @@
 @using RazorSlices
 @using RazorSlices.Samples.WebApp.Helpers
+@using RazorSlices.Samples.RazorClassLibrary.Helpers
 @inherits RazorSliceHelpers
 @implements ITodoHelpers
 @functions {
@@ -11,5 +12,17 @@
     public void Statistic<T>(string label, T value) where T : ISpanFormattable
     {
         <div class="card card-body"><strong>@label</strong><span>@value</span></div>
+    }
+
+    public void TaskStatus(bool isComplete)
+    {
+        <span class="todo-status">@Helpers.UiHelpers.StatusBadge(isComplete ? "Completed" : "Incomplete", success: isComplete)</span>
+    }
+
+    public async ValueTask TaskSummaryAsync(Func<CancellationToken, ValueTask<string>> loadSummary)
+    {
+        <section class="todo-summary">
+            @await Helpers.UiHelpers.AsyncNoticeAsync("Async task summary", loadSummary)
+        </section>
     }
 }

@@ -2,6 +2,7 @@
 using System.Net.Mime;
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -73,6 +74,34 @@ public class WebAppTests
         Assert.Contains("""<span class="badge text-bg-success">From a Razor class library</span>""", html);
         Assert.Contains("HTML is encoded: &lt;script&gt;", html);
         Assert.Contains("tasks still need attention.", html);
+    }
+
+    [Theory]
+    [InlineData("/helpers")]
+    [InlineData("/")]
+    public async Task Helpers_CanCallHelpersFromReferencedProjects(string path)
+    {
+        using var waf = new WebApplicationFactory<Program>();
+        using var client = waf.CreateClient();
+
+        var html = await client.GetStringAsync(path);
+        var normalized = Regex.Replace(html, @">\s+<", "><");
+
+        Assert.Contains("""<span class="todo-status"><span class="badge text-bg-success">Completed</span></span>""", normalized);
+        Assert.Contains("""<span class="todo-status"><span class="badge text-bg-secondary">Incomplete</span></span>""", normalized);
+    }
+
+    [Fact]
+    public async Task Helpers_CanAwaitHelpersFromReferencedProjects()
+    {
+        using var waf = new WebApplicationFactory<Program>();
+        using var client = waf.CreateClient();
+
+        var html = await client.GetStringAsync("/helpers");
+        var normalized = Regex.Replace(html, @">\s+<", "><");
+
+        Assert.Contains("""<section class="todo-summary"><aside class="alert alert-info"><strong>Async task summary</strong>""", normalized);
+        Assert.Contains("tasks still need attention.</p></aside></section>", normalized);
     }
 
     [Fact]

@@ -18,7 +18,14 @@
 <h2>Helpers shared from a Razor class library</h2>
 <p>@Helpers.UiHelpers.StatusBadge("From a Razor class library", success: true)</p>
 <p>@Helpers.UiHelpers.StatusBadge("HTML is encoded: <script>", title: "Shared helper")</p>
-@await Helpers.UiHelpers.AsyncNoticeAsync("Async task summary", LoadSummaryAsync)
+
+<h2>Helpers calling other helpers</h2>
+<p>TodoHelpers composes the shared UiHelpers for task statuses and the asynchronous summary below.</p>
+<div class="d-flex gap-2 mb-3">
+    @Helpers.TodoHelpers.TaskStatus(isComplete: true)
+    @Helpers.TodoHelpers.TaskStatus(isComplete: false)
+</div>
+@await Helpers.TodoHelpers.TaskSummaryAsync(LoadSummaryAsync)
 
 @functions {
     public LayoutModel LayoutModel => new() { Title = "Reusable todo helpers" };
