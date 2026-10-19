@@ -19,7 +19,7 @@ public abstract class RazorLayoutSlice<TModel> : RazorSlice<TModel>, IRazorLayou
     /// <returns></returns>
     protected ValueTask<HtmlString> RenderBodyAsync()
     {
-        return ContentSlice is not null ? RenderChildSliceAsync(ContentSlice, disposeSlice: false) : ValueTask.FromResult(HtmlString.Empty);
+        return ContentSlice is not null ? RenderChildSliceAsync(ContentSlice, disposeSlice: false, attachHelperParent: false) : ValueTask.FromResult(HtmlString.Empty);
     }
 
     /// <summary>

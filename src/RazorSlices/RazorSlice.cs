@@ -75,13 +75,18 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
     internal RazorSlice GetActiveHelperSlice()
     {
         var root = GetHelperRoot();
-        var active = root._activeHelperSlice ?? this;
+        var active = root._activeHelperSlice ?? root;
         ((IHelperContext)active).EnsureActive();
         return active;
     }
 
     private RazorSlice? EnterHelperRender()
     {
+        if (_helperParent is null)
+        {
+            return null;
+        }
+
         var root = GetHelperRoot();
         var previous = root._activeHelperSlice;
         root._activeHelperSlice = this;
@@ -90,6 +95,11 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
 
     private void ExitHelperRender(RazorSlice? previous)
     {
+        if (_helperParent is null)
+        {
+            return;
+        }
+
         GetHelperRoot()._activeHelperSlice = previous;
     }
 

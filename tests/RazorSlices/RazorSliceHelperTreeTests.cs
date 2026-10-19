@@ -86,6 +86,127 @@ public class RazorSliceHelperTreeTests
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
+    public async Task CapturedHelperUsesActiveChildWriterAndRestoresRoot(bool pipe, bool asynchronous)
+    {
+        Helper? shared = null;
+        using var childWriter = new StringWriter();
+        var child = new Host(async slice =>
+        {
+            await slice.WithWriter(childWriter, async () =>
+            {
+                if (asynchronous)
+                {
+                    await Task.Yield();
+                }
+
+                shared!.Text("child");
+            });
+        });
+        var root = new Host(async slice =>
+        {
+            shared = slice.Get(static () => new());
+            shared.Text("before|");
+            await slice.Partial(child);
+            shared.Text("after");
+        });
+
+        Assert.Equal("before|after", await Render(root, pipe));
+        Assert.Equal("child", childWriter.ToString());
+        Assert.Throws<InvalidOperationException>(() => shared!.Text("disposed"));
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task InitializationHelperUsesOutermostLayoutWriter(bool pipe, bool asynchronous)
+    {
+        Helper? shared = null;
+        using var layoutWriter = new StringWriter();
+        var outer = new OuterLayout(async layout =>
+        {
+            await layout.WithWriter(layoutWriter, async () =>
+            {
+                shared!.Text("before|");
+                await layout.Body();
+                shared.Text("after");
+            });
+        });
+        var inner = new ModelLayout(async layout =>
+        {
+            shared!.Text("inner|");
+            await layout.Body();
+            shared.Text("inner-end|");
+        }, () => outer)
+        { Model = 42 };
+        var content = new Content(async _ =>
+        {
+            if (asynchronous)
+            {
+                await Task.Yield();
+            }
+
+            shared!.Text("body|");
+        }, static (_, _) => Task.CompletedTask, () => inner)
+        {
+            Initialize = (slice, _, _) =>
+            {
+                shared = ((Host)slice).Get(static () => new());
+                shared.Text("init|");
+            }
+        };
+
+        Assert.Equal("init|", await Render(content, pipe));
+        Assert.Equal("before|inner|body|inner-end|after", layoutWriter.ToString());
+        Assert.Throws<InvalidOperationException>(() => shared!.Text("disposed"));
+    }
+
+#if DEBUG
+    [Theory(Skip = "Debug render tracing allocates; run allocation checks in Release.")]
+#else
+    [Theory]
+#endif
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(8)]
+    public async Task HelperFreeRenderingDoesNotAllocateBeyondSliceInstances(int depth)
+    {
+        const int iterations = 10_000;
+        for (var i = 0; i < 1_000; i++)
+        {
+            var renderTask = new HelperFreeHost(depth).RenderAsync(TextWriter.Null);
+            Assert.True(renderTask.IsCompletedSuccessfully);
+            await renderTask;
+        }
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < iterations; i++)
+        {
+            for (var childDepth = depth; childDepth >= 0; childDepth--)
+            {
+                GC.KeepAlive(new HelperFreeHost(childDepth));
+            }
+        }
+        var instanceAllocations = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < iterations; i++)
+        {
+            var renderTask = new HelperFreeHost(depth).RenderAsync(TextWriter.Null);
+            Assert.True(renderTask.IsCompletedSuccessfully);
+            await renderTask;
+        }
+        var renderAllocations = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.Equal(instanceAllocations, renderAllocations);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
     public async Task NestedLayoutsBodiesAndSectionsShareInitializationHelperUntilRootFinishes(bool pipe, bool asynchronous)
     {
         var created = new List<Helper>();
@@ -131,10 +252,12 @@ public class RazorSliceHelperTreeTests
             }
 
             slice.Get(Create).Text(name + "|");
-        }, () => inner);
-        content.Initialize = (slice, _, _) =>
+        }, () => inner)
         {
-            ((Content)slice).Get(Create).Text("init|");
+            Initialize = (slice, _, _) =>
+            {
+                ((Content)slice).Get(Create).Text("init|");
+            }
         };
 
         Assert.Equal("init|outer|inner|before|body|partial|after|inner-end|outer-end", await Render(content, pipe));
@@ -258,6 +381,17 @@ public class RazorSliceHelperTreeTests
         }
     }
 
+    private sealed class HelperFreeHost(int depth) : RazorSlice
+    {
+        public override async Task ExecuteAsync()
+        {
+            if (depth > 0)
+            {
+                await RenderPartialAsync(new HelperFreeHost(depth - 1));
+            }
+        }
+    }
+
     private class Host(Func<Host, Task> render) : RazorSlice
     {
         internal int Disposals;
@@ -326,6 +460,19 @@ public class RazorSliceHelperTreeTests
         internal ValueTask<Microsoft.AspNetCore.Html.HtmlString> Section(string name)
         {
             return RenderSectionAsync(name);
+        }
+
+        internal async Task WithWriter(TextWriter writer, Func<Task> renderContent)
+        {
+            PushWriter(writer);
+            try
+            {
+                await renderContent();
+            }
+            finally
+            {
+                PopWriter();
+            }
         }
 
         public override Task ExecuteAsync()
