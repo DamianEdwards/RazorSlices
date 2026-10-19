@@ -11,7 +11,7 @@ public abstract class RazorSliceHelpers
 {
     private RazorSlice? _owner;
 
-    private RazorSlice Owner => _owner ?? throw new InvalidOperationException("The helper is not bound to an active render.");
+    private RazorSlice Owner => (_owner ?? throw new InvalidOperationException("The helper is not bound to an active render.")).GetActiveHelperSlice();
 
     internal void Bind(RazorSlice owner)
     {

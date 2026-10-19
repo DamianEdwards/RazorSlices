@@ -252,9 +252,9 @@ The library is still new and features are being actively added.
   
 ### Shareable templated helpers
 
-Helpers are ordinary `.cshtml` files compiled **only by the Razor SDK**, using the same `Content`/`RazorGenerate` inputs as other Razor files. There are no custom helper item types, copied inputs, runtime compiler, or additional Razor compiler package.
+Use helpers to share reusable pieces of Razor markup across slices and projects. Define their methods in a public C# interface and implement them in a `.cshtml` file.
 
-Declare the exported API in a public C# interface:
+Declare the helper methods:
 
 ```csharp
 namespace MyLibrary.Helpers;
@@ -288,7 +288,7 @@ Implement it in `Helpers/UiHelpers.cshtml`:
 }
 ```
 
-Import the generated facade's namespace (the owning project's root namespace plus the helper's directory), then invoke it:
+Import the helper's namespace (the owning project's root namespace plus the helper's directory), then call its methods through `Helpers`. The helper property name matches the `.cshtml` filename:
 
 ```cshtml
 @using MyLibrary.Helpers
@@ -297,21 +297,19 @@ Import the generated facade's namespace (the owning project's root namespace plu
 @await Helpers.UiHelpers.NoticeAsync("Summary", LoadMessageAsync)
 ```
 
-**C# 14 or newer is required in helper producers and consumers** for generated extension properties; .NET 8+ runtime targets remain supported. Set `<LangVersion>14.0</LangVersion>` and use a compatible SDK. The normal slice-only API does not require C# 14.
+**Helpers require C# 14 or newer**, both in the project defining them and in projects using them. Set `<LangVersion>14.0</LangVersion>` and use a compatible SDK. .NET 8+ runtime targets remain supported; regular slices do not require C# 14.
 
-The generator recognizes `RazorSliceHelpers` (including through `_ViewImports.cshtml` or a derived base), reads exactly one public `@implements` contract, and generates adapters from that **ordinary C# interface**. It never reads SDK-generated method symbols or compiles/rewrites Razor bodies. Normal C# compilation checks the implementation against the interface.
+Each helper file must inherit from `RazorSliceHelpers` (or a derived base) and declare exactly one public interface with `@implements`. Directives can be shared through `_ViewImports.cshtml`.
 
-The public extension property returns a small readonly renderer struct, not the SDK's internal implementation type. Synchronous adapters supply `HtmlString.Empty` automatically. `Task`/non-generic `ValueTask` methods are adapted by `HelperCompletion`, a value-type awaitable that forwards completion and exceptions without an extra async wrapper state machine. Do not use `async void`. There is no return marker to remember in authored methods.
+Helper methods return `void`, `Task`, or non-generic `ValueTask`. Call asynchronous methods with `@await`; do not use `async void`. There is no need to return `HtmlString.Empty` from a helper. Interfaces can inherit other interfaces, and methods can use overloads, generics/constraints, nullable parameters, optional/default arguments, `params`, and by-reference parameters. Do not declare `ExecuteAsync()`, which is reserved.
 
-Public interfaces and facades can be distributed in compiled Razor class libraries/NuGet packages; consumers do not need the helper source. Stable interface dispatch also allows the runtime to substitute SDK replacement types during Hot Reload for subsequent renders. Public contract/signature changes may still require rebuilding/restarting, as with other C# API changes.
+To share helpers with another project, reference their Razor class library or NuGet package and import the helper namespace. Consumers use the same `Helpers.UiHelpers.Method(...)` syntax and do not need the helper source. Method bodies support Hot Reload; changing public method signatures may require rebuilding/restarting.
 
-Helpers are initialized **once per implementation type per calling slice instance**, on first use, and reused for subsequent calls. The cache is lazy; there is no per-call slice/context/renderer object allocation. This version does not pool helpers or share them across a whole HTTP request. Each helper forwards writes to its caller's active output/encoder/attribute state, preserving unbuffered `PipeWriter` rendering. Primitive formatting uses the existing low-allocation paths. Genuine asynchronous work retains its normal async costs.
+Put helper markup inside methods in `@functions`, not in a top-level slice body. Helpers do not support models, layouts, sections, or `@inject`. Pass dependencies as method arguments. Do not use `this` or declare instance fields, properties, events, or constructors in helpers; static utilities and constants are allowed.
 
-Helpers are deliberately not full slices: no model, layout, sections, top-level body, or `@inject` activation. Use arguments for dependencies. A helper's only framework-owned instance state is its output binding. Build diagnostics reject authored instance fields/properties/events/constructors, injected-member access, and escaping the helper instance; static utilities and constants are allowed. The SDK may still emit its unused default MVC injection properties, but helper activation never initializes them and they are not part of the facade API.
+Helpers write directly into the calling slice's output, using its HTML encoder. A root render shares one instance of each helper implementation across its layouts, partials, and sections; separate root renders remain independent. Only use helpers during the current render: await asynchronous calls before continuing to write, do not save helper references for later, and do not write through them concurrently. Within a helper, use `Helpers` to call other helpers, `CancellationToken` for cancellable operations, and `FlushAsync()` to explicitly flush the output.
 
-Await async helpers before continuing to write. Do not retain a helper/facade beyond its calling render or write concurrently through it. Bindings are cleared on render completion, cancellation, or failure. The protected `Helpers` and `CancellationToken` members support helper composition and cancellation; `FlushAsync()` explicitly flushes the caller's output.
-
-Contracts may inherit other interfaces and use overloads, generics/constraints, nullable parameters, optional/default arguments, `params`, and by-reference parameters. Only instance methods returning `void`, `Task`, or non-generic `ValueTask` are exportable; `ExecuteAsync()` is reserved for the SDK. Custom delegates can target a facade via a static context-taking lambda without capturing request state:
+To share a helper call as a delegate without capturing the current render, use a static context-taking lambda:
 
 ```csharp
 private static readonly Func<IHelperContext, string, HtmlString> RenderStatus =

@@ -27,6 +27,8 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
     private bool _initialized;
     private bool _disposed;
     private Dictionary<Type, RazorSliceHelpers>? _helpers;
+    private RazorSlice? _helperParent;
+    private RazorSlice? _activeHelperSlice;
 
     /// <summary>Gets the context for invoking generated helper facades during this render.</summary>
     protected IHelperContext Helpers => this;
@@ -43,8 +45,9 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
     {
         ((IHelperContext)this).EnsureActive();
         ArgumentNullException.ThrowIfNull(create);
-        _helpers ??= [];
-        if (_helpers.TryGetValue(typeof(TImplementation), out var existing))
+        var root = GetHelperRoot();
+        root._helpers ??= [];
+        if (root._helpers.TryGetValue(typeof(TImplementation), out var existing))
         {
             return (TContract)(object)existing;
         }
@@ -53,9 +56,41 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
         {
             throw new InvalidOperationException($"Helper {helper.GetType()} does not implement {typeof(TContract)}.");
         }
-        helper.Bind(this);
-        _helpers.Add(typeof(TImplementation), helper);
+        helper.Bind(root);
+        root._helpers.Add(typeof(TImplementation), helper);
         return contract;
+    }
+
+    private RazorSlice GetHelperRoot()
+    {
+        var root = this;
+        while (root._helperParent is not null)
+        {
+            root = root._helperParent;
+        }
+
+        return root;
+    }
+
+    internal RazorSlice GetActiveHelperSlice()
+    {
+        var root = GetHelperRoot();
+        var active = root._activeHelperSlice ?? this;
+        ((IHelperContext)active).EnsureActive();
+        return active;
+    }
+
+    private RazorSlice? EnterHelperRender()
+    {
+        var root = GetHelperRoot();
+        var previous = root._activeHelperSlice;
+        root._activeHelperSlice = this;
+        return previous;
+    }
+
+    private void ExitHelperRender(RazorSlice? previous)
+    {
+        GetHelperRoot()._activeHelperSlice = previous;
     }
 
     /// <summary>
@@ -219,7 +254,7 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
     }
 
     [MemberNotNull(nameof(_pipeWriter))]
-    private ValueTask RenderToPipeWriterAsync(PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken, bool renderLayout = true)
+    private ValueTask RenderToPipeWriterAsync(PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken, bool renderLayout = true, bool disposeSlice = true)
     {
         Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a PipeWriter");
 
@@ -228,20 +263,31 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        try
+        if (renderLayout && this is IUsesLayout useLayout)
         {
-            if (renderLayout && this is IUsesLayout useLayout)
+            try
             {
                 return RenderViaLayout(RenderToPipeWriterAsync, useLayout, _pipeWriter, htmlEncoder, cancellationToken);
             }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
+
+        var previous = EnterHelperRender();
+        try
+        {
             var executeTask = ExecuteAsyncImpl();
             if (!executeTask.HandleSynchronousCompletion())
             {
-                return AwaitExecuteTaskFlushAndDispose(this, executeTask);
+                return AwaitExecuteTaskFlushAndDispose(this, executeTask, previous, disposeSlice);
             }
         }
         catch
         {
+            ExitHelperRender(previous);
             if (!_disposed)
             {
                 Dispose();
@@ -249,13 +295,17 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
             throw;
         }
 
-        Dispose();
+        ExitHelperRender(previous);
+        if (disposeSlice)
+        {
+            Dispose();
+        }
 
         return AutoFlush();
     }
 
     [MemberNotNull(nameof(_textWriter))]
-    private ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken, bool renderLayout = true)
+    private ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken, bool renderLayout = true, bool disposeSlice = true)
     {
         Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a TextWriter");
 
@@ -264,20 +314,31 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
         _htmlEncoder = htmlEncoder ?? _htmlEncoder;
         CancellationToken = cancellationToken;
 
-        try
+        if (renderLayout && this is IUsesLayout useLayout)
         {
-            if (renderLayout && this is IUsesLayout useLayout)
+            try
             {
                 return RenderViaLayout(RenderToTextWriterAsync, useLayout, _textWriter, htmlEncoder, cancellationToken);
             }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
+
+        var previous = EnterHelperRender();
+        try
+        {
             var executeTask = ExecuteAsyncImpl();
             if (!executeTask.IsCompletedSuccessfully)
             {
-                return AwaitExecuteTaskFlushAndDispose(this, executeTask);
+                return AwaitExecuteTaskFlushAndDispose(this, executeTask, previous, disposeSlice);
             }
         }
         catch
         {
+            ExitHelperRender(previous);
             if (!_disposed)
             {
                 Dispose();
@@ -285,7 +346,11 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
             throw;
         }
 
-        Dispose();
+        ExitHelperRender(previous);
+        if (disposeSlice)
+        {
+            Dispose();
+        }
 
         // REVIEW: call AutoFlush here?
 
@@ -304,13 +369,33 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
 
     private ValueTask RenderViaLayout<TWriter>(Func<RazorSlice, TWriter, HtmlEncoder?, CancellationToken, ValueTask> render, IUsesLayout usesLayout, TWriter writer, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
     {
-        EnsureInitialized();
-        var layoutSlice = usesLayout.CreateLayoutImpl();
+        var previous = EnterHelperRender();
+        RazorSlice layoutSlice;
+        try
+        {
+            EnsureInitialized();
+            layoutSlice = usesLayout.CreateLayoutImpl();
+        }
+        finally
+        {
+            ExitHelperRender(previous);
+        }
 
         if (layoutSlice is IRazorLayoutSlice razorLayoutSlice and RazorSlice)
         {
             razorLayoutSlice.ContentSlice = this;
             CopySliceState(this, (RazorSlice)razorLayoutSlice);
+
+            // The outermost layout owns the tree's helpers, including those created during initialization.
+            var root = GetHelperRoot();
+            if (ReferenceEquals(layoutSlice, root) || layoutSlice._helperParent is not null)
+            {
+                throw new InvalidOperationException("A layout must be a fresh slice outside the current render tree.");
+            }
+
+            layoutSlice._helpers = root._helpers;
+            root._helpers = null;
+            root._helperParent = layoutSlice;
 
             return render(layoutSlice, writer, htmlEncoder, cancellationToken);
         }
@@ -326,10 +411,38 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
         destination.ServiceProvider = source._serviceProvider;
     }
 
-    internal static async ValueTask<HtmlString> AwaitRenderTask(Task renderTask)
+    internal ValueTask<HtmlString> RenderSectionAsyncImpl(string sectionName)
     {
-        await renderTask;
-        return HtmlString.Empty;
+        var previous = EnterHelperRender();
+        try
+        {
+            var task = ExecuteSectionAsync(sectionName);
+            if (!task.HandleSynchronousCompletion())
+            {
+                return AwaitSection(task, previous);
+            }
+        }
+        catch
+        {
+            ExitHelperRender(previous);
+            throw;
+        }
+
+        ExitHelperRender(previous);
+        return ValueTask.FromResult(HtmlString.Empty);
+    }
+
+    private async ValueTask<HtmlString> AwaitSection(Task task, RazorSlice? previous)
+    {
+        try
+        {
+            await task;
+            return HtmlString.Empty;
+        }
+        finally
+        {
+            ExitHelperRender(previous);
+        }
     }
 
     private void EnsureInitialized()
@@ -360,7 +473,7 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
         await flushTask;
     }
 
-    private static async ValueTask AwaitExecuteTaskFlushAndDispose(RazorSlice slice, Task executeTask)
+    private static async ValueTask AwaitExecuteTaskFlushAndDispose(RazorSlice slice, Task executeTask, RazorSlice? previous, bool disposeSlice)
     {
         try
         {
@@ -369,7 +482,11 @@ public abstract partial class RazorSlice : IDisposable, IHelperContext
         }
         finally
         {
-            slice.Dispose();
+            slice.ExitHelperRender(previous);
+            if (disposeSlice)
+            {
+                slice.Dispose();
+            }
         }
     }
 
