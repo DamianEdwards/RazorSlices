@@ -288,10 +288,17 @@ Implement it in `Helpers/UiHelpers.cshtml`:
 }
 ```
 
-Import the helper's namespace (the owning project's root namespace plus the helper's directory), then call its methods through `Helpers`. The helper property name matches the `.cshtml` filename:
+Register helpers with DI:
+
+```csharp
+builder.Services.AddRazorSliceHelpers();
+```
+
+Inject the manager on slices that use helpers and import the helper's namespace (the owning project's root namespace plus the helper's directory). The helper property name matches the `.cshtml` filename:
 
 ```cshtml
 @using MyLibrary.Helpers
+@inject IHelperManager Helpers
 
 @Helpers.UiHelpers.StatusBadge("Completed", success: true)
 @await Helpers.UiHelpers.NoticeAsync("Summary", LoadMessageAsync)
@@ -301,22 +308,36 @@ Import the helper's namespace (the owning project's root namespace plus the help
 
 Each helper file must inherit from `RazorSliceHelpers` (or a derived base) and declare exactly one public interface with `@implements`. Directives can be shared through `_ViewImports.cshtml`.
 
+Put the manager injection in individual slices or a slice-folder `_ViewImports.cshtml`, such as `Slices/_ViewImports.cshtml`. Keep helper implementations outside that injecting hierarchy, such as `Helpers/`. Helpers inherit an initialized `Helpers` property from their base class and must not declare or inherit `@inject`; injecting at the project root also affects helper files in child folders.
+
+When rendering outside HTTP result execution, set the slice's `ServiceProvider` to a scoped provider (or set its `HttpContext`). Slices that do not opt into helper services require no helper registration.
+
+Slice proxies generate initialization for effective `@inject` directives and supported injections on C# base classes. Slices without injections have no initializer, and ordinary DI-only slices have no binding callbacks. Informational diagnostic `RSG0003` identifies cases that retain runtime activation, such as a non-public setter on a generic base; Hot Reload replacement types also use that runtime path.
+
 Helper methods return `void`, `Task`, or non-generic `ValueTask`. Call asynchronous methods with `@await`; do not use `async void`. There is no need to return `HtmlString.Empty` from a helper. Interfaces can inherit other interfaces, and methods can use overloads, generics/constraints, nullable parameters, optional/default arguments, `params`, and by-reference parameters. Do not declare `ExecuteAsync()`, which is reserved.
 
 To share helpers with another project, reference their Razor class library or NuGet package and import the helper namespace. Consumers use the same `Helpers.UiHelpers.Method(...)` syntax and do not need the helper source. Method bodies support Hot Reload; changing public method signatures may require rebuilding/restarting.
 
 Put helper markup inside methods in `@functions`, not in a top-level slice body. Helpers do not support models, layouts, sections, or `@inject`. Pass dependencies as method arguments. Do not use `this` or declare instance fields, properties, events, or constructors in helpers; static utilities and constants are allowed.
 
-Helpers write directly into the calling slice's output, using its HTML encoder. A root render shares one instance of each helper implementation across its layouts, partials, and sections; separate root renders remain independent. Only use helpers during the current render: await asynchronous calls before continuing to write, do not save helper references for later, and do not write through them concurrently. Within a helper, use `Helpers` to call other helpers, `CancellationToken` for cancellable operations, and `FlushAsync()` to explicitly flush the output.
+Helpers write directly into the currently bound slice's output, using its HTML encoder. One manager and one instance of each helper implementation are shared per DI scope, normally an HTTP request, including sequential root renders in that scope. Participating partials, layouts, and sections temporarily become current and restore their caller on completion. A slice that does not inject the manager does not change its current caller, even when invoking a captured helper delegate.
+
+Await asynchronous helpers before continuing to write. Only sequential, nested rendering is supported; concurrent rendering in the same scope or other misuse has undefined behavior and is not explicitly detected. Do not retain helpers beyond their service scope or use them outside an active participating render. Within a helper, use its built-in `Helpers` property to call other helpers, `CancellationToken` for cancellable operations, and `FlushAsync()` to explicitly flush the output.
 
 To share a helper call as a delegate without capturing the current render, use a static context-taking lambda:
 
 ```csharp
-private static readonly Func<IHelperContext, string, HtmlString> RenderStatus =
+private static readonly Func<IHelperManager, string, HtmlString> RenderStatus =
     static (context, text) => context.UiHelpers.StatusBadge(text);
 ```
 
 The sample app's `/helpers` page demonstrates local and class-library helpers, custom signatures/delegates, conditional attributes, generic methods, and async callbacks. `TodoHelpers.TaskStatus` calls the shared `UiHelpers.StatusBadge`, and `TodoHelpers.TaskSummaryAsync` awaits `UiHelpers.AsyncNoticeAsync`, demonstrating synchronous and asynchronous helper composition. The existing todo table also uses the composed task-status helper.
+
+### Slice-bound services
+
+Other opt-in services can implement `IRazorSliceBindable` on their declared injected contract. Razor Slices populates the injected properties once, then calls `Bind(RazorSlice)` on each render/body/section entry and `Unbind(RazorSlice)` in reverse order on exit, including failures. A scoped service can keep a stack of slices to restore its caller after nested rendering.
+
+Slice-bound services must be reference types. `Bind` must restore any partial changes if it throws; previously completed bindings are unwound before the error propagates. Cleanup attempts all remaining services if an `Unbind` throws, and cleanup errors are propagated together with the original error. Do not reassign injected properties during rendering. This lifecycle, like helper rendering, is non-concurrent.
 
 ### Interested in supporting but not sure yet
 

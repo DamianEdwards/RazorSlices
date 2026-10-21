@@ -3,11 +3,19 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Razor.Internal;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RazorSlices.Tests;
 
-public class RazorSliceHelperTreeTests
+public class RazorSliceHelperTreeTests : IDisposable
 {
+    private readonly ServiceProvider _services = new ServiceCollection().AddRazorSliceHelpers().BuildServiceProvider();
+
+    public void Dispose()
+    {
+        _services.Dispose();
+    }
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -21,24 +29,24 @@ public class RazorSliceHelperTreeTests
             return helper;
         }
 
-        var grandchild = new Host(async slice =>
+        var grandchild = CreateHost(async slice =>
         {
             var helper = slice.Get(Create);
             await Task.Yield();
             helper.Text("grandchild|");
         });
-        var first = new Host(async slice =>
+        var first = CreateHost(async slice =>
         {
             slice.Get(Create).Text("first|");
             await slice.Partial(grandchild);
             slice.Get(Create).Text("first-after|");
         });
-        var sibling = new Host(slice =>
+        var sibling = CreateHost(slice =>
         {
             slice.Get(Create).Text("sibling|");
             return Task.CompletedTask;
         });
-        var root = new Host(async slice =>
+        var root = CreateHost(async slice =>
         {
             slice.Get(Create).Text("root|");
             await slice.Partial(first);
@@ -59,7 +67,7 @@ public class RazorSliceHelperTreeTests
     {
         Helper? shared = null;
         using var nestedWriter = new StringWriter();
-        var child = new Host(async slice =>
+        var child = CreateHost(async slice =>
         {
             shared = slice.Get(static () => new());
             await slice.WithWriter(nestedWriter, async () =>
@@ -69,7 +77,7 @@ public class RazorSliceHelperTreeTests
             });
             throw new InvalidOperationException("child failed");
         });
-        var root = new Host(async slice =>
+        var root = CreateHost(async slice =>
         {
             await Assert.ThrowsAsync<InvalidOperationException>(async () => await slice.Partial(child));
             Assert.Same(shared, slice.Get(static () => throw new Exception("Second instance")));
@@ -90,7 +98,7 @@ public class RazorSliceHelperTreeTests
     {
         Helper? shared = null;
         using var childWriter = new StringWriter();
-        var child = new Host(async slice =>
+        var child = CreateHost(async slice =>
         {
             await slice.WithWriter(childWriter, async () =>
             {
@@ -102,7 +110,7 @@ public class RazorSliceHelperTreeTests
                 shared!.Text("child");
             });
         });
-        var root = new Host(async slice =>
+        var root = CreateHost(async slice =>
         {
             shared = slice.Get(static () => new());
             shared.Text("before|");
@@ -150,7 +158,7 @@ public class RazorSliceHelperTreeTests
             shared!.Text("body|");
         }, static (_, _) => Task.CompletedTask, () => inner)
         {
-            Initialize = (slice, _, _) =>
+            OnCreatingLayout = slice =>
             {
                 shared = ((Host)slice).Get(static () => new());
                 shared.Text("init|");
@@ -216,7 +224,7 @@ public class RazorSliceHelperTreeTests
             created.Add(helper);
             return helper;
         }
-        var partial = new Host(async slice =>
+        var partial = CreateHost(async slice =>
         {
             if (asynchronous)
             {
@@ -254,7 +262,7 @@ public class RazorSliceHelperTreeTests
             slice.Get(Create).Text(name + "|");
         }, () => inner)
         {
-            Initialize = (slice, _, _) =>
+            OnCreatingLayout = slice =>
             {
                 ((Content)slice).Get(Create).Text("init|");
             }
@@ -272,40 +280,40 @@ public class RazorSliceHelperTreeTests
     public async Task RootFailureUnbindsHelperCreatedInDescendant(bool pipe)
     {
         Helper? shared = null;
-        var child = new Host(async slice =>
+        var child = CreateHost(async slice =>
         {
             shared = slice.Get(static () => new());
             await Task.Yield();
             throw new OperationCanceledException();
         });
-        var root = new Host(async slice => await slice.Partial(child));
+        var root = CreateHost(async slice => await slice.Partial(child));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await Render(root, pipe));
         Assert.Throws<InvalidOperationException>(() => shared!.Text("after"));
     }
 
     [Fact]
-    public async Task IndependentRootsWithSameRequestDoNotShareHelpers()
+    public async Task IndependentRootsInSameServiceScopeShareHelpers()
     {
         var request = new DefaultHttpContext();
         Helper? first = null;
         Helper? second = null;
-        var root = new Host(slice =>
+        var root = CreateHost(slice =>
         {
             first = slice.Get(static () => new());
             return Task.CompletedTask;
-        })
-        { HttpContext = request };
-        var other = new Host(slice =>
+        });
+        root.HttpContext = request;
+        var other = CreateHost(slice =>
         {
             second = slice.Get(static () => new());
             return Task.CompletedTask;
-        })
-        { HttpContext = request };
+        });
+        other.HttpContext = request;
 
         await root.RenderAsync(TextWriter.Null);
         await other.RenderAsync(TextWriter.Null);
-        Assert.NotSame(first, second);
+        Assert.Same(first, second);
     }
 
     [Theory]
@@ -334,14 +342,23 @@ public class RazorSliceHelperTreeTests
         {
             await Task.Yield();
             throw new InvalidOperationException("section failed");
-        }, () => layout);
+        }, () => layout)
+        {
+            ServiceProvider = _services
+        };
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await content.RenderAsync(TextWriter.Null));
         Assert.Throws<InvalidOperationException>(() => shared!.Text("after"));
     }
 
-    private static async Task<string> Render(RazorSlice slice, bool pipe)
+    private Host CreateHost(Func<Host, Task> render)
     {
+        return new(render) { ServiceProvider = _services };
+    }
+
+    private async Task<string> Render(RazorSlice slice, bool pipe)
+    {
+        slice.ServiceProvider = _services;
         var encoder = HtmlEncoder.Create(UnicodeRanges.All);
         if (!pipe)
         {
@@ -392,8 +409,16 @@ public class RazorSliceHelperTreeTests
         }
     }
 
-    private class Host(Func<Host, Task> render) : RazorSlice
+    private class Host : RazorSlice
     {
+        private readonly Func<Host, Task> _render;
+        internal Host(Func<Host, Task> render)
+        {
+            _render = render;
+            Activation = RazorSliceFactory.GetActivation(GetType());
+        }
+        [RazorInject]
+        public IHelperManager Helpers { get; set; } = null!;
         internal int Disposals;
 
         internal Helper Get(Func<Helper> create)
@@ -421,7 +446,7 @@ public class RazorSliceHelperTreeTests
 
         public override Task ExecuteAsync()
         {
-            return render(this);
+            return _render(this);
         }
 
         public override void Dispose()
@@ -434,9 +459,13 @@ public class RazorSliceHelperTreeTests
     private sealed class Content(Func<Host, Task> render, Func<Content, string, Task> section, Func<RazorSlice> layout)
         : Host(render), IUsesLayout<LayoutProxy>
     {
+        internal Action<Content>? OnCreatingLayout { get; set; }
         public RazorSlice CreateLayout()
         {
-            return layout();
+            OnCreatingLayout?.Invoke(this);
+            var slice = layout();
+            slice.Activation = RazorSliceFactory.GetActivation(slice.GetType());
+            return slice;
         }
 
         protected internal override Task ExecuteSectionAsync(string sectionName)
@@ -447,6 +476,8 @@ public class RazorSliceHelperTreeTests
 
     private sealed class OuterLayout(Func<OuterLayout, Task> render) : RazorLayoutSlice
     {
+        [RazorInject]
+        public IHelperManager Helpers { get; set; } = null!;
         internal Helper Get(Func<Helper> create)
         {
             return (Helper)Helpers.GetHelper<ITextHelper, Helper>(create);
@@ -484,6 +515,8 @@ public class RazorSliceHelperTreeTests
     private sealed class ModelLayout(Func<ModelLayout, Task> render, Func<RazorSlice> layout)
         : RazorLayoutSlice<int>, IUsesLayout<LayoutProxy>
     {
+        [RazorInject]
+        public IHelperManager Helpers { get; set; } = null!;
         internal Helper Get(Func<Helper> create)
         {
             return (Helper)Helpers.GetHelper<ITextHelper, Helper>(create);
@@ -501,7 +534,9 @@ public class RazorSliceHelperTreeTests
 
         public RazorSlice CreateLayout()
         {
-            return layout();
+            var slice = layout();
+            slice.Activation = RazorSliceFactory.GetActivation(slice.GetType());
+            return slice;
         }
 
         public override Task ExecuteAsync()

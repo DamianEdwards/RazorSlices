@@ -25,6 +25,7 @@ internal static class MapSlicesExtensions
         endpoints.MapGet("/lorem-stream", async (HttpResponse httpResponse) =>
         {
             var slice = Slices.Lorem.LoremStatic.Create();
+            slice.HttpContext = httpResponse.HttpContext;
             httpResponse.StatusCode = StatusCodes.Status200OK;
             httpResponse.ContentType = "text/html; charset=utf-8";
             await slice.RenderAsync(httpResponse.Body);
@@ -37,9 +38,10 @@ internal static class MapSlicesExtensions
         endpoints.MapGet("/templated", (bool async = false) => Results.RazorSlice<Slices.Templated, bool>(async));
         endpoints.MapGet("/helpers", () => Results.RazorSlice<Slices.HelpersDemo>());
         endpoints.MapGet("/library", () => Results.RazorSlice<LibrarySlices.FromLibrary>());
-        endpoints.MapGet("/render-to-string", async () =>
+        endpoints.MapGet("/render-to-string", async (IServiceProvider serviceProvider) =>
         {
             var slice = Slices.Lorem.LoremFormattable.Create(new LoremParams(1, 4));
+            slice.ServiceProvider = serviceProvider;
             var template = await slice.RenderAsync();
             return Results.Ok(new ResultDto(template));
         });
@@ -76,6 +78,7 @@ internal static class MapSlicesExtensions
         endpoints.MapGet("/lorem-stream", async (HttpResponse httpResponse) =>
         {
             var slice = Slices.Lorem.LoremStatic.Create();
+            slice.HttpContext = httpResponse.HttpContext;
             httpResponse.StatusCode = StatusCodes.Status200OK;
             httpResponse.ContentType = "text/html; charset=utf-8";
             await slice.RenderAsync(httpResponse.Body);
@@ -88,9 +91,10 @@ internal static class MapSlicesExtensions
         endpoints.MapGet("/templated", (bool async = false) => Results.Extensions.RazorSlice<Slices.Templated, bool>(async));
         endpoints.MapGet("/helpers", () => Results.Extensions.RazorSlice<Slices.HelpersDemo>());
         endpoints.MapGet("/library", () => Results.Extensions.RazorSlice<LibrarySlices.FromLibrary>());
-        endpoints.MapGet("/render-to-string", async () =>
+        endpoints.MapGet("/render-to-string", async (IServiceProvider serviceProvider) =>
         {
             var slice = Slices.Lorem.LoremFormattable.Create(new LoremParams(1, 4));
+            slice.ServiceProvider = serviceProvider;
             var template = await slice.RenderAsync();
             return Results.Ok(new ResultDto(template));
         });

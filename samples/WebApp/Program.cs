@@ -12,6 +12,7 @@ builder.WebHost.UseKestrelHttpsConfiguration();
 #endif
 
 builder.Services.AddWebEncoders();
+builder.Services.AddRazorSliceHelpers();
 builder.Services.AddSingleton<LoremService>();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {

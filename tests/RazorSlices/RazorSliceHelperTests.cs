@@ -6,18 +6,25 @@ using System.Text.Unicode;
 using System.Threading.Tasks.Sources;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Razor.Internal;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RazorSlices.Tests;
 
-public class RazorSliceHelperTests
+public class RazorSliceHelperTests : IDisposable
 {
+    private readonly ServiceProvider _services = new ServiceCollection().AddRazorSliceHelpers().BuildServiceProvider();
+
+    public void Dispose()
+    {
+        _services.Dispose();
+    }
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task ReusesHelperAndPreservesWriterEncodingAttributesAndAsync(bool pipe)
     {
         SampleHelper? captured = null;
-        var slice = new Host(async context =>
+        var slice = CreateHost(async context =>
         {
             var first = context.GetHelper<ISample, SampleHelper>(static () => new());
             var second = context.GetHelper<ISample, SampleHelper>(static () => throw new Exception("Allocated twice"));
@@ -32,7 +39,6 @@ public class RazorSliceHelperTests
 
         Assert.Equal("<input checked=\"checked\" value=\"&lt;\u00e9&gt;\" />True|async", html);
         Assert.Throws<InvalidOperationException>(() => captured!.Render("after", false));
-        Assert.Throws<InvalidOperationException>(() => slice.Context.GetHelper<ISample, SampleHelper>(static () => new()));
     }
 
     [Theory]
@@ -41,7 +47,7 @@ public class RazorSliceHelperTests
     public async Task FailureAlwaysUnbindsHelpers(bool asynchronous)
     {
         SampleHelper? helper = null;
-        var slice = new Host(async context =>
+        var slice = CreateHost(async context =>
         {
             helper = (SampleHelper)context.GetHelper<ISample, SampleHelper>(static () => new());
             if (asynchronous)
@@ -55,14 +61,14 @@ public class RazorSliceHelperTests
         var error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await slice.RenderAsync(TextWriter.Null));
         Assert.Equal("failed", error.Message);
         Assert.Throws<InvalidOperationException>(() => helper!.Render("after", false));
-        Assert.Throws<InvalidOperationException>(slice.Context.EnsureActive);
+        Assert.Throws<InvalidOperationException>(() => slice.Context.CurrentSlice);
     }
 
     [Fact]
     public async Task SynchronousExecuteFailureUnbindsHelpers()
     {
         SampleHelper? helper = null;
-        var slice = new Host(context =>
+        var slice = CreateHost(context =>
         {
             helper = (SampleHelper)context.GetHelper<ISample, SampleHelper>(static () => new());
             throw new InvalidOperationException("sync");
@@ -89,7 +95,7 @@ public class RazorSliceHelperTests
     {
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
-        var slice = new Host(async context =>
+        var slice = CreateHost(async context =>
             await new HelperCompletion(context.GetHelper<ISample, SampleHelper>(static () => new()).RenderAsync("cancel")));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
             await slice.RenderAsync(TextWriter.Null, cancellationToken: cancellation.Token));
@@ -98,25 +104,27 @@ public class RazorSliceHelperTests
     [Fact]
     public async Task HotReloadSubstitutesImplementationThroughStableContract()
     {
-        var before = new Host(context =>
+        var before = CreateHost(context =>
         {
             Assert.IsType<Original>(context.GetHelper<ISample, Original>(static () => new()));
             return Task.CompletedTask;
         });
         await before.RenderAsync(TextWriter.Null);
         RazorSliceHelperActivation<Original>.Replace([typeof(Updated)]);
-        var after = new Host(context =>
+        var after = CreateHost(context =>
         {
             Assert.IsType<Updated>(context.GetHelper<ISample, Original>(static () => throw new Exception("Old factory")));
             return Task.CompletedTask;
         });
+        using var request = _services.CreateScope();
+        after.ServiceProvider = request.ServiceProvider;
         await after.RenderAsync(TextWriter.Null);
     }
 
     [Fact]
     public async Task WarmHelperLookupAndCompletionDoNotAllocatePerCall()
     {
-        var slice = new Host(async context =>
+        var slice = CreateHost(async context =>
         {
             Func<SampleHelper> create = static () => new();
             for (var i = 0; i < 10_000; i++)
@@ -136,6 +144,16 @@ public class RazorSliceHelperTests
         await slice.RenderAsync(TextWriter.Null);
     }
 
+    private Host CreateHost(Func<IHelperManager, Task> render)
+    {
+        Host slice = new(render)
+        {
+            Activation = RazorSliceFactory.GetActivation(typeof(Host)),
+            ServiceProvider = _services
+        };
+        return slice;
+    }
+
     private static async Task<string> Render(RazorSlice slice, bool pipe, HtmlEncoder encoder)
     {
         if (!pipe)
@@ -150,9 +168,11 @@ public class RazorSliceHelperTests
         return Encoding.UTF8.GetString(stream.ToArray());
     }
 
-    private sealed class Host(Func<IHelperContext, Task> render) : RazorSlice
+    private sealed class Host(Func<IHelperManager, Task> render) : RazorSlice
     {
-        internal IHelperContext Context => Helpers;
+        [RazorInject]
+        public IHelperManager Helpers { get; set; } = null!;
+        internal IHelperManager Context => Helpers;
         public override Task ExecuteAsync()
         {
             return render(Helpers);

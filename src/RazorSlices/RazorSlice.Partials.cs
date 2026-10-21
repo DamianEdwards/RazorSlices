@@ -70,16 +70,11 @@ public partial class RazorSlice
         return RenderChildSliceAsync(slice);
     }
 
-    internal ValueTask<HtmlString> RenderChildSliceAsync(RazorSlice child, bool disposeSlice = true, bool attachHelperParent = true)
+    internal ValueTask<HtmlString> RenderChildSliceAsync(RazorSlice child, bool disposeSlice = true)
     {
         Debug.WriteLine($"Rendering child slice of type '{child.GetType().Name}' from parent slice of type '{GetType().Name}'");
 
         CopySliceState(this, child);
-        // Layout bodies are already linked to their helper root.
-        if (attachHelperParent)
-        {
-            child._helperParent = GetHelperRoot();
-        }
 
         ValueTask renderPartialTask;
 

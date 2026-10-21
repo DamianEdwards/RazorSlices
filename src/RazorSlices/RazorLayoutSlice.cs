@@ -18,7 +18,7 @@ public abstract class RazorLayoutSlice : RazorSlice, IRazorLayoutSlice
     /// <returns><see cref="HtmlString.Empty"/> just to allow for easy calling within <c>.cshtml</c> files, e.g. <c>@await RenderBodyAsync()</c>.</returns>
     protected ValueTask<HtmlString> RenderBodyAsync()
     {
-        return ContentSlice is not null ? RenderChildSliceAsync(ContentSlice, disposeSlice: false, attachHelperParent: false) : ValueTask.FromResult(HtmlString.Empty);
+        return ContentSlice is not null ? RenderChildSliceAsync(ContentSlice, disposeSlice: false) : ValueTask.FromResult(HtmlString.Empty);
     }
 
     /// <summary>

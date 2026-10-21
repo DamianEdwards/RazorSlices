@@ -69,9 +69,13 @@ public class RazorSliceProxyGeneratorTests
                 public static class RazorSliceFactory
                 {
                     public static RazorSlice Create<TSlice>(System.Func<TSlice> create) where TSlice : RazorSlice => create();
+                    public static RazorSlice Create<TSlice>(System.Func<TSlice> create, RazorSliceActivation<TSlice> activation) where TSlice : RazorSlice => create();
                     public static RazorSlice<TModel> Create<TSlice, TModel>(TModel model, System.Func<TModel, TSlice> create)
                         where TSlice : RazorSlice<TModel> => create(model);
+                    public static RazorSlice<TModel> Create<TSlice, TModel>(TModel model, System.Func<TModel, TSlice> create, RazorSliceActivation<TSlice> activation)
+                        where TSlice : RazorSlice<TModel> => create(model);
                 }
+                public sealed class RazorSliceActivation<TSlice> where TSlice : RazorSlice { }
             }
             namespace TestApp
             {
@@ -113,12 +117,18 @@ public class RazorSliceProxyGeneratorTests
     private sealed class TestText(string path, string content) : AdditionalText
     {
         public override string Path => path;
-        public override SourceText GetText(CancellationToken cancellationToken = default) => SourceText.From(content);
+        public override SourceText GetText(CancellationToken cancellationToken = default)
+        {
+            return SourceText.From(content);
+        }
     }
 
     private sealed class TestOptions(Dictionary<string, string> values) : AnalyzerConfigOptions
     {
-        public override bool TryGetValue(string key, out string value) => values.TryGetValue(key, out value!);
+        public override bool TryGetValue(string key, out string value)
+        {
+            return values.TryGetValue(key, out value!);
+        }
     }
 
     private sealed class TestOptionsProvider(string projectDirectory, bool useRecords) : AnalyzerConfigOptionsProvider
@@ -130,12 +140,18 @@ public class RazorSliceProxyGeneratorTests
             ["build_property.RazorSliceProxiesAsRecords"] = useRecords.ToString()
         });
 
-        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree) => new TestOptions([]);
-
-        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) => new TestOptions(new()
+        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree)
         {
-            ["build_metadata.RazorGenerate.GenerateRazorSlice"] =
+            return new TestOptions([]);
+        }
+
+        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile)
+        {
+            return new TestOptions(new()
+            {
+                ["build_metadata.RazorGenerate.GenerateRazorSlice"] =
                 (Path.GetFileName(textFile.Path) != "_ViewImports.cshtml").ToString()
-        });
+            });
+        }
     }
 }

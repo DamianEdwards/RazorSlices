@@ -9,27 +9,15 @@ namespace RazorSlices;
 /// </summary>
 public abstract class RazorSliceHelpers
 {
-    private RazorSlice? _owner;
+    private RazorSlice Owner => Helpers.CurrentSlice;
 
-    private RazorSlice Owner => (_owner ?? throw new InvalidOperationException("The helper is not bound to an active render.")).GetActiveHelperSlice();
-
-    internal void Bind(RazorSlice owner)
+    internal void Initialize(IHelperManager helpers)
     {
-        if (_owner is not null)
-        {
-            throw new InvalidOperationException("A helper instance cannot be shared between active renders.");
-        }
-
-        _owner = owner;
-    }
-
-    internal void Unbind()
-    {
-        _owner = null;
+        Helpers = helpers;
     }
 
     /// <summary>Gets the caller context for invoking other helper facades.</summary>
-    protected IHelperContext Helpers => Owner;
+    protected IHelperManager Helpers { get; private set; } = null!;
 
     /// <summary>Gets the calling render's cancellation token.</summary>
     protected CancellationToken CancellationToken => Owner.CancellationToken;

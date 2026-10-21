@@ -50,11 +50,6 @@ internal static class RazorSliceHelperGenerator
             Error("Generated helper extension properties require C# 14 or newer; set LangVersion to 14.0 or newer");
             return;
         }
-        if (directives.Injections.Count != 0)
-        {
-            Error("Helpers do not support @inject, including inherited @inject directives");
-            return;
-        }
         var interfaceNames = directives.Interfaces.Distinct(StringComparer.Ordinal).ToArray();
         if (interfaceNames.Length != 1 ||
             ModelTypeResolver.ResolveTypeSymbolExpression(interfaceNames[0], directives.UsingDirectives,
@@ -115,12 +110,10 @@ internal static class RazorSliceHelperGenerator
         code.AppendLine();
         code.AppendLine($"public readonly struct {renderer}");
         code.AppendLine("{");
-        code.AppendLine("    private readonly global::RazorSlices.IHelperContext _context;");
         code.AppendLine($"    private readonly {contractName} _helper;");
         code.AppendLine();
-        code.AppendLine($"    internal {renderer}(global::RazorSlices.IHelperContext context, {contractName} helper)");
+        code.AppendLine($"    internal {renderer}({contractName} helper)");
         code.AppendLine("    {");
-        code.AppendLine("        _context = context;");
         code.AppendLine("        _helper = helper;");
         code.AppendLine("    }");
         foreach (var method in methods)
@@ -163,7 +156,6 @@ internal static class RazorSliceHelperGenerator
                 }
             }
             code.AppendLine("    {");
-            code.AppendLine("        (this._context ?? throw new global::System.InvalidOperationException(\"Obtain a helper facade from an active render.\")).EnsureActive();");
             var arguments = string.Join(", ", method.Parameters.Select(static parameter => RefPrefix(parameter.RefKind, argument: true) + "@" + parameter.Name));
             var call = $"(({method.ContainingType.ToDisplayString(TypeFormat)})this._helper).@{method.Name}{generic}({arguments})";
             if (method.ReturnsVoid)
@@ -188,10 +180,10 @@ internal static class RazorSliceHelperGenerator
 
             public static class {{name}}HelperExtensions
             {
-                extension(global::RazorSlices.IHelperContext context)
+                extension(global::RazorSlices.IHelperManager manager)
                 {
                     public {{renderer}} {{name}} =>
-                        new(context, context.GetHelper<{{contractName}}, {{implementation}}>(
+                        new(manager.GetHelper<{{contractName}}, {{implementation}}>(
                             static () => new {{implementation}}()));
                 }
             }

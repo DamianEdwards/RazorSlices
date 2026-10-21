@@ -194,10 +194,12 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 bool hasModel = false;
 
                 var templateNameSpace = "AspNetCoreGeneratedDocument";
+                ResolvedDirectives? resolvedDirectives = null;
 
                 if (sourceText is not null)
                 {
                     var directives = ViewImportsResolver.ResolveDirectives(file.Path, projectDirectory!, viewImportsMap, sourceText);
+                    resolvedDirectives = directives;
 
                     if (directives.InheritsDirective is not null)
                     {
@@ -259,6 +261,18 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 var genericParameter = hasModel && resolvedModelType is not null ? $"<{resolvedModelType}>" : "";
 
                 var fullyQualifiedGeneratedTypeName = $"global::{templateNameSpace}.{generatedTypeName}";
+                string? activation = null;
+                if (resolvedDirectives is { } resolved)
+                {
+                    activation = RazorSliceActivationGenerator.Generate(compilation, resolved, rootNamespace!,
+                        fullyQualifiedGeneratedTypeName, out var reason);
+                    if (activation is null)
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(RazorSliceActivationGenerator.RuntimeFallback,
+                            Location.Create(file.Path, default, default), reason));
+                    }
+                }
+                var activationArgument = activation is null ? "" : ", __Activation";
 
                 codeBuilder.AppendLine($$"""
                         /// <summary>
@@ -275,7 +289,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                             /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> with the given model.
                             /// </summary>
                             public static global::RazorSlices.RazorSlice<{{resolvedModelType}}> Create({{resolvedModelType}} model) =>
-                                global::RazorSlices.RazorSliceFactory.Create(model, static model => new {{fullyQualifiedGeneratedTypeName}} { Model = model });
+                                global::RazorSlices.RazorSliceFactory.Create(model, static model => new {{fullyQualifiedGeneratedTypeName}} { Model = model }{{activationArgument}});
 
                             // Explicit interface implementation, workaround for https://github.com/dotnet/runtime/issues/102796
                             static global::RazorSlices.RazorSlice<{{resolvedModelType}}> global::RazorSlices.IRazorSliceProxy<{{resolvedModelType}}>.CreateSlice({{resolvedModelType}} model) => Create(model);
@@ -288,11 +302,16 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                             /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c>.
                             /// </summary>
                             public static global::RazorSlices.RazorSlice Create() =>
-                                global::RazorSlices.RazorSliceFactory.Create(static () => new {{fullyQualifiedGeneratedTypeName}}());
+                                global::RazorSlices.RazorSliceFactory.Create(static () => new {{fullyQualifiedGeneratedTypeName}}(){{activationArgument}});
 
                             // Explicit interface implementation, workaround for https://github.com/dotnet/runtime/issues/102796
                             static global::RazorSlices.RazorSlice global::RazorSlices.IRazorSliceProxy.CreateSlice() => Create();
                     """);
+                }
+
+                if (activation is not null)
+                {
+                    codeBuilder.AppendLine(activation);
                 }
 
                 // Close class & namespace

@@ -40,7 +40,7 @@ public class RazorSliceHelperGeneratorTests
         Assert.Contains("where @T : class", facade);
         Assert.Contains("ref @value, out @result", facade);
         Assert.Contains("HtmlString.Empty", facade);
-        Assert.Contains("extension(global::RazorSlices.IHelperContext context)", string.Join("\n", result.Sources));
+        Assert.Contains("extension(global::RazorSlices.IHelperManager manager)", string.Join("\n", result.Sources));
         Assert.DoesNotContain("CreateSlice()", string.Join("\n", result.Sources));
         var tree = CSharpSyntaxTree.ParseText(facade, new CSharpParseOptions(LanguageVersion.Preview));
         Assert.Empty(result.Input.AddSyntaxTrees(tree).GetDiagnostics().Where(static d => d.Severity == DiagnosticSeverity.Error));
@@ -59,14 +59,36 @@ public class RazorSliceHelperGeneratorTests
     }
 
     [Fact]
-    public void RejectsExplicitInjectionAndMissingContract()
+    public void InjectionIsDiagnosedByAnalyzerAndMissingContractByGenerator()
     {
-        Assert.Contains(Generate("public interface IHelpers { void Render(); }", "@inject object Service").Diagnostics,
-            static d => d.Id == "RSG0100");
+        Assert.Empty(Generate("public interface IHelpers { void Render(); }", "@inject object Service").Diagnostics);
         Assert.Contains(Generate("public interface IHelpers { void Render(); }", implements: "").Diagnostics,
             static d => d.Id == "RSG0100");
     }
 
+    [Theory]
+    [InlineData("Helpers.cshtml")]
+    [InlineData("_ViewImports.cshtml")]
+    public async Task AnalyzerExplainsHowToAvoidInheritedHelperInjection(string file)
+    {
+        var source = $$"""
+            using RazorSlices;
+            using Microsoft.AspNetCore.Mvc.Razor.Internal;
+            class SdkHelper : RazorSliceHelpers
+            {
+            #line 1 "{{file}}"
+                [RazorInject] public IHelperManager Injected { get; private set; } = null!;
+            #line default
+                public override System.Threading.Tasks.Task ExecuteAsync() => System.Threading.Tasks.Task.CompletedTask;
+            }
+            """;
+        var input = CSharpCompilation.Create("Analyzer", [CSharpSyntaxTree.ParseText(source)], References,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var diagnostics = await input.WithAnalyzers(ImmutableArray.Create<DiagnosticAnalyzer>(new RazorSliceHelperAnalyzer()))
+            .GetAnalyzerDiagnosticsAsync();
+        var diagnostic = Assert.Single(diagnostics, static diagnostic => diagnostic.Id == "RSG0102");
+        Assert.Contains("~/Helpers", diagnostic.GetMessage());
+    }
     [Fact]
     public void HelperDiscoveryDoesNotDependOnOrdinarySliceGeneration()
     {

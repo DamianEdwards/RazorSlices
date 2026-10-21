@@ -12,11 +12,28 @@ internal static class RazorDirectiveParser
     internal static List<string> ParseDirectiveValues(SourceText source, string name)
     {
         var values = new List<string>();
-        var prefix = "@" + name + " ";
+        var prefix = "@" + name;
+        var comment = false;
         foreach (var line in source.Lines)
         {
-            var text = line.ToString().TrimStart();
-            if (text.StartsWith(prefix, StringComparison.Ordinal))
+            var text = line.ToString();
+            var visible = new System.Text.StringBuilder();
+            var position = 0;
+            while (position < text.Length)
+            {
+                var marker = text.IndexOf(comment ? "*@" : "@*", position, StringComparison.Ordinal);
+                if (marker < 0)
+                {
+                    if (!comment) { visible.Append(text.Substring(position)); }
+                    break;
+                }
+                if (!comment) { visible.Append(text.Substring(position, marker - position)); }
+                comment = !comment;
+                position = marker + 2;
+            }
+            text = visible.ToString().TrimStart();
+            if (text.StartsWith(prefix, StringComparison.Ordinal) && text.Length > prefix.Length &&
+                char.IsWhiteSpace(text[prefix.Length]))
             {
                 values.Add(text.Substring(prefix.Length).Trim().TrimEnd(';'));
             }

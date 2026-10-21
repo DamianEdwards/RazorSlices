@@ -12,8 +12,12 @@ internal sealed class RazorSliceHelperAnalyzer : DiagnosticAnalyzer
 {
     private static readonly DiagnosticDescriptor Unsupported = new(
         "RSG0101", "Helpers must be stateless", "{0}", "RazorSlices", DiagnosticSeverity.Error, true);
+    private static readonly DiagnosticDescriptor Injection = new(
+        "RSG0102", "Helpers cannot inject services",
+        "Helpers do not support @inject, including inherited injections. Move helpers outside the injecting _ViewImports.cshtml hierarchy (for example, ~/Helpers and ~/Slices/_ViewImports.cshtml).",
+        "RazorSlices", DiagnosticSeverity.Error, true);
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Unsupported);
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Unsupported, Injection);
 
     public override void Initialize(AnalysisContext context)
     {
@@ -55,9 +59,13 @@ internal sealed class RazorSliceHelperAnalyzer : DiagnosticAnalyzer
                     }
 
                     var authored = member.Locations.FirstOrDefault(static location => location.IsInSource);
-                    if (member is IPropertySymbol property && HasInjection(property) &&
-                        !member.Locations.Any(IsAuthored))
+                    if (member is IPropertySymbol property && HasInjection(property))
                     {
+                        var injection = member.Locations.FirstOrDefault(IsAuthored);
+                        if (injection is not null)
+                        {
+                            symbolContext.ReportDiagnostic(Diagnostic.Create(Injection, injection));
+                        }
                         continue;
                     }
 
