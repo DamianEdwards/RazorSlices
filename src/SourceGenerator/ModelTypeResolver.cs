@@ -56,8 +56,8 @@ internal static class ModelTypeResolver
 
     /// <summary>
     /// Resolves the model type by resolving an inherited slice base type and walking its base type hierarchy
-    /// until a <c>RazorSlices.RazorSlice&lt;TModel&gt;</c> base type is found.
-    /// Returns null when the inherited type cannot be resolved or does not derive from a generic RazorSlice.
+    /// until a <c>RazorSlices.RazorSlice&lt;TModel&gt;</c> or <c>RazorSlices.RazorSliceBase&lt;TModel&gt;</c> base type is found.
+    /// Returns null when the inherited type cannot be resolved or has no slice model.
     /// </summary>
     internal static string? ResolveModelTypeFromSliceBaseType(string baseTypeName, List<UsingDirective> usingDirectives, Compilation compilation, string? rootNamespace = null)
     {
@@ -75,7 +75,7 @@ internal static class ModelTypeResolver
 
         for (var currentType = baseTypeSymbol; currentType is not null; currentType = currentType.BaseType)
         {
-            if (!string.Equals(currentType.Name, "RazorSlice", StringComparison.Ordinal) ||
+            if ((currentType.Name != "RazorSlice" && currentType.Name != "RazorSliceBase") ||
                 !string.Equals(currentType.ContainingNamespace.ToDisplayString(), "RazorSlices", StringComparison.Ordinal))
             {
                 continue;

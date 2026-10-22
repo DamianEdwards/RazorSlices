@@ -250,6 +250,43 @@ The library is still new and features are being actively added.
     </PropertyGroup>
     ```
   
+### Minimal slices
+
+`RazorSlice` remains the normal base, including helpers, layouts, partials, property injection, and `IResult`.
+For templates that do not need those features, inherit `RazorSliceBase` or `RazorSliceBase<TModel>`:
+
+```cshtml
+@using RazorSlices
+@inherits RazorSliceBase<string>
+<p class="message @Model">@Model</p>
+```
+
+Minimal slices retain HTML encoding, conditional HTML attributes, formatting, cancellation, flushing, asynchronous
+execution, and direct rendering to `PipeWriter`, `TextWriter`, `Stream`, `StringBuilder`, or a string. Their generated
+proxies have the same `Create()` / `Create(model)` syntax, implementing `IRazorSliceBaseProxy` /
+`IRazorSliceBaseProxy<TModel>` instead of the full-slice proxy contracts. `RazorSlice<TModel>` still inherits
+`RazorSlice`, while `RazorSliceBase<TModel>` inherits the minimal base.
+
+```csharp
+var html = await MyApp.Minimal.Greeting.Create("Hello").RenderAsync();
+app.MapGet("/minimal", RazorSliceBaseResult () => MyApp.Minimal.Greeting.Create("Hello").AsResult());
+```
+
+`AsResult` explicitly allocates an HTTP adapter; the minimal slice itself has no HTTP result fields. The adapter
+uses `HtmlEncoder.Default` unless an encoder is passed and does not resolve request services. For a wrapper-free
+HTTP path, render directly to the response writer. A normal slice can render a minimal child with
+`@await RenderPartialAsync(MyApp.Minimal.Greeting.Create("Hello"))`.
+An explicit lambda return type, as above, lets the ASP.NET Core request-delegate generator identify the result
+without needing to inspect the proxy emitted by the Razor Slices generator in the same compilation.
+
+Minimal slices do not support `@inject`, helpers, layouts, sections, partial calls of their own, or templated Razor
+delegates requiring a writer stack. The generator reports `RSG0004` for effective injections and layouts, including
+inherited declarations; keep minimal templates outside import hierarchies that inject services. Choose `RazorSlice`
+when those features are needed. The protected virtual rendering pipeline permits custom bases to add lifecycle
+behavior without adding application state to every minimal slice.
+
+See `/minimal` and `/minimal-partial` in the sample app.
+
 ### Shareable templated helpers
 
 Use helpers to share reusable pieces of Razor markup across slices and projects. Define their methods in a public C# interface and implement them in a `.cshtml` file.
@@ -288,17 +325,13 @@ Implement it in `Helpers/UiHelpers.cshtml`:
 }
 ```
 
-Register helpers with DI:
-
-```csharp
-builder.Services.AddRazorSliceHelpers();
-```
-
-Inject the manager on slices that use helpers and import the helper's namespace (the owning project's root namespace plus the helper's directory). The helper property name matches the `.cshtml` filename:
+The normal `RazorSlice` base provides `Helpers`; no service registration or injection is required.
+Import the helper's namespace (the owning project's root namespace plus the helper's directory).
+The helper property name matches the `.cshtml` filename:
 
 ```cshtml
 @using MyLibrary.Helpers
-@inject IHelperManager Helpers
+@inherits RazorSlice
 
 @Helpers.UiHelpers.StatusBadge("Completed", success: true)
 @await Helpers.UiHelpers.NoticeAsync("Summary", LoadMessageAsync)
@@ -308,11 +341,14 @@ Inject the manager on slices that use helpers and import the helper's namespace 
 
 Each helper file must inherit from `RazorSliceHelpers` (or a derived base) and declare exactly one public interface with `@implements`. Directives can be shared through `_ViewImports.cshtml`.
 
-Put the manager injection in individual slices or a slice-folder `_ViewImports.cshtml`, such as `Slices/_ViewImports.cshtml`. Keep helper implementations outside that injecting hierarchy, such as `Helpers/`. Helpers inherit an initialized `Helpers` property from their base class and must not declare or inherit `@inject`; injecting at the project root also affects helper files in child folders.
+Helper implementations inherit their own `Helpers` property for composition and must not declare or inherit `@inject`.
+Keep them outside import hierarchies that inject services, for example `Helpers/` next to `Slices/`.
+Injecting at the project root also affects helper files in child folders. Rendering helpers outside HTTP does not
+require a service provider; only ordinary injected slice properties require one.
 
-When rendering outside HTTP result execution, set the slice's `ServiceProvider` to a scoped provider (or set its `HttpContext`). Slices that do not opt into helper services require no helper registration.
-
-Slice proxies generate initialization for effective `@inject` directives and supported injections on C# base classes. Slices without injections have no initializer, and ordinary DI-only slices have no binding callbacks. Informational diagnostic `RSG0003` identifies cases that retain runtime activation, such as a non-public setter on a generic base; Hot Reload replacement types also use that runtime path.
+Slice proxies generate initialization for effective `@inject` directives and supported injections on C# base classes.
+Slices without injections have no initializer. Informational diagnostic `RSG0003` identifies cases that retain runtime
+activation, such as a non-public setter on a generic base; full-slice Hot Reload replacement types also use that runtime path.
 
 Helper methods return `void`, `Task`, or non-generic `ValueTask`. Call asynchronous methods with `@await`; do not use `async void`. There is no need to return `HtmlString.Empty` from a helper. Interfaces can inherit other interfaces, and methods can use overloads, generics/constraints, nullable parameters, optional/default arguments, `params`, and by-reference parameters. Do not declare `ExecuteAsync()`, which is reserved.
 
@@ -320,24 +356,24 @@ To share helpers with another project, reference their Razor class library or Nu
 
 Put helper markup inside methods in `@functions`, not in a top-level slice body. Helpers do not support models, layouts, sections, or `@inject`. Pass dependencies as method arguments. Do not use `this` or declare instance fields, properties, events, or constructors in helpers; static utilities and constants are allowed.
 
-Helpers write directly into the currently bound slice's output, using its HTML encoder. One manager and one instance of each helper implementation are shared per DI scope, normally an HTTP request, including sequential root renders in that scope. Participating partials, layouts, and sections temporarily become current and restore their caller on completion. A slice that does not inject the manager does not change its current caller, even when invoking a captured helper delegate.
+Helpers write directly into the active slice's output, using its HTML encoder. One instance of each helper
+implementation is created lazily per root render and shared throughout its nested/sibling partials, layouts,
+sections, and helper composition. Captured facades follow the active slice, including minimal children.
+Independent root renders have independent helper instances, even within the same HTTP request.
 
-Await asynchronous helpers before continuing to write. Only sequential, nested rendering is supported; concurrent rendering in the same scope or other misuse has undefined behavior and is not explicitly detected. Do not retain helpers beyond their service scope or use them outside an active participating render. Within a helper, use its built-in `Helpers` property to call other helpers, `CancellationToken` for cancellable operations, and `FlushAsync()` to explicitly flush the output.
+Await asynchronous helpers before continuing to write. Only sequential, nested use of a render graph is supported;
+concurrent use or other misuse has undefined behavior and is not explicitly detected. Do not retain helpers beyond
+their root render or invoke them outside an active render. Within a helper, use its built-in `Helpers` property to
+call other helpers, `CancellationToken` for cancellable operations, and `FlushAsync()` to explicitly flush the output.
 
 To share a helper call as a delegate without capturing the current render, use a static context-taking lambda:
 
 ```csharp
-private static readonly Func<IHelperManager, string, HtmlString> RenderStatus =
+private static readonly Func<IHelperContext, string, HtmlString> RenderStatus =
     static (context, text) => context.UiHelpers.StatusBadge(text);
 ```
 
 The sample app's `/helpers` page demonstrates local and class-library helpers, custom signatures/delegates, conditional attributes, generic methods, and async callbacks. `TodoHelpers.TaskStatus` calls the shared `UiHelpers.StatusBadge`, and `TodoHelpers.TaskSummaryAsync` awaits `UiHelpers.AsyncNoticeAsync`, demonstrating synchronous and asynchronous helper composition. The existing todo table also uses the composed task-status helper.
-
-### Slice-bound services
-
-Other opt-in services can implement `IRazorSliceBindable` on their declared injected contract. Razor Slices populates the injected properties once, then calls `Bind(RazorSlice)` on each render/body/section entry and `Unbind(RazorSlice)` in reverse order on exit, including failures. A scoped service can keep a stack of slices to restore its caller after nested rendering.
-
-Slice-bound services must be reference types. `Bind` must restore any partial changes if it throws; previously completed bindings are unwound before the error propagates. Cleanup attempts all remaining services if an `Unbind` throws, and cleanup errors are propagated together with the original error. Do not reassign injected properties during rendering. This lifecycle, like helper rendering, is non-concurrent.
 
 ### Interested in supporting but not sure yet
 

@@ -17,19 +17,16 @@ public class GeneratedActivationTests
     }
 
     [Fact]
-    public async Task TypedInitializerAndBindingsAreUsedWithoutReflection()
+    public async Task TypedInitializerIsUsedWithoutReflection()
     {
         var tracker = new Tracker();
         using var services = new ServiceCollection().AddSingleton(tracker).BuildServiceProvider();
         var plan = new RazorSliceActivation<Original>(
-            static (slice, provider, _) => ((Original)slice).Service = provider!.GetRequiredService<Tracker>(),
-            static slice => ((Original)slice).Service.Bind(slice),
-            static slice => { ((Original)slice).Service.Unbind(slice); return null; });
+            static (slice, provider, _) => ((Original)slice).Service = provider!.GetRequiredService<Tracker>());
         using var root = (Original)RazorSliceFactory.Create(static () => new Original(), plan);
         root.ServiceProvider = services;
         await root.RenderAsync(TextWriter.Null);
-        Assert.Equal(1, tracker.Binds);
-        Assert.Equal(1, tracker.Unbinds);
+        Assert.Same(tracker, root.Service);
     }
 
     [Fact]
@@ -66,20 +63,7 @@ public class GeneratedActivationTests
             return Task.CompletedTask;
         }
     }
-    public class Tracker : IRazorSliceBindable
-    {
-        public int Binds;
-        public int Unbinds;
-        public void Bind(RazorSlice slice)
-        {
-            Binds++;
-        }
-
-        public void Unbind(RazorSlice slice)
-        {
-            Unbinds++;
-        }
-    }
+    public class Tracker { }
     public sealed class Original : RazorSlice
     {
         public Tracker Service { get; set; } = null!;

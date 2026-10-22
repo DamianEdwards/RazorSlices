@@ -6,18 +6,11 @@ using System.Text.Unicode;
 using System.Threading.Tasks.Sources;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Razor.Internal;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace RazorSlices.Tests;
 
-public class RazorSliceHelperTests : IDisposable
+public class RazorSliceHelperTests
 {
-    private readonly ServiceProvider _services = new ServiceCollection().AddRazorSliceHelpers().BuildServiceProvider();
-
-    public void Dispose()
-    {
-        _services.Dispose();
-    }
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -61,7 +54,7 @@ public class RazorSliceHelperTests : IDisposable
         var error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await slice.RenderAsync(TextWriter.Null));
         Assert.Equal("failed", error.Message);
         Assert.Throws<InvalidOperationException>(() => helper!.Render("after", false));
-        Assert.Throws<InvalidOperationException>(() => slice.Context.CurrentSlice);
+        Assert.Throws<InvalidOperationException>(slice.Context.EnsureActive);
     }
 
     [Fact]
@@ -116,8 +109,6 @@ public class RazorSliceHelperTests : IDisposable
             Assert.IsType<Updated>(context.GetHelper<ISample, Original>(static () => throw new Exception("Old factory")));
             return Task.CompletedTask;
         });
-        using var request = _services.CreateScope();
-        after.ServiceProvider = request.ServiceProvider;
         await after.RenderAsync(TextWriter.Null);
     }
 
@@ -144,14 +135,9 @@ public class RazorSliceHelperTests : IDisposable
         await slice.RenderAsync(TextWriter.Null);
     }
 
-    private Host CreateHost(Func<IHelperManager, Task> render)
+    private static Host CreateHost(Func<IHelperContext, Task> render)
     {
-        Host slice = new(render)
-        {
-            Activation = RazorSliceFactory.GetActivation(typeof(Host)),
-            ServiceProvider = _services
-        };
-        return slice;
+        return new(render);
     }
 
     private static async Task<string> Render(RazorSlice slice, bool pipe, HtmlEncoder encoder)
@@ -168,11 +154,9 @@ public class RazorSliceHelperTests : IDisposable
         return Encoding.UTF8.GetString(stream.ToArray());
     }
 
-    private sealed class Host(Func<IHelperManager, Task> render) : RazorSlice
+    private sealed class Host(Func<IHelperContext, Task> render) : RazorSlice
     {
-        [RazorInject]
-        public IHelperManager Helpers { get; set; } = null!;
-        internal IHelperManager Context => Helpers;
+        internal IHelperContext Context => Helpers;
         public override Task ExecuteAsync()
         {
             return render(Helpers);

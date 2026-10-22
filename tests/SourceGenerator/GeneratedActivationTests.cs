@@ -25,6 +25,47 @@ public class GeneratedActivationTests
     }
 
     [Theory]
+    [InlineData("RazorSliceBase", "")]
+    [InlineData("RazorSliceBase<string>", "<global::System.String>")]
+    public void MinimalSlicesUseTheirOwnFactoryWithoutActivation(string inherits, string generic)
+    {
+        var (code, diagnostics) = Generate(inherits: inherits);
+        Assert.Empty(diagnostics);
+        Assert.Contains("global::RazorSlices.IRazorSliceBaseProxy" + generic, code);
+        Assert.Contains("global::RazorSlices.RazorSliceBaseFactory.Create(", code);
+        Assert.DoesNotContain("__Activation", code);
+        Assert.DoesNotContain("global::RazorSlices.RazorSliceFactory", code);
+    }
+
+    [Fact]
+    public void CustomMinimalModelBaseIsResolvedThroughItsHierarchy()
+    {
+        var (code, diagnostics) = Generate(inherits: "MinimalBase<string>",
+            custom: "public abstract class MinimalBase<T> : RazorSliceBase<T> { }");
+        Assert.Empty(diagnostics);
+        Assert.Contains("IRazorSliceBaseProxy<global::System.String>", code);
+        Assert.Contains("RazorSliceBaseFactory.Create(model", code);
+    }
+
+    [Theory]
+    [InlineData("@inject Service Value", "")]
+    [InlineData("", "public abstract class MinimalBase : RazorSliceBase { [RazorInject] public Service Value { get; set; } = null!; }")]
+    public void MinimalSlicesRejectDirectOrInheritedInjections(string imports, string custom)
+    {
+        var (_, diagnostics) = Generate(inherits: custom.Length == 0 ? "RazorSliceBase" : "MinimalBase",
+            imports: imports, custom: custom);
+        Assert.Contains(diagnostics, static diagnostic => diagnostic.Id == "RSG0004");
+    }
+
+    [Fact]
+    public void MinimalSlicesRejectLayoutDeclarations()
+    {
+        var (_, diagnostics) = Generate(inherits: "RazorSliceBase", child: "@implements IUsesLayout<LayoutProxy>",
+            custom: "public sealed class LayoutProxy : IRazorSliceProxy { public static RazorSlice CreateSlice() => throw new System.NotSupportedException(); }");
+        Assert.Contains(diagnostics, static diagnostic => diagnostic.Id == "RSG0004");
+    }
+
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void GeneratesRequiredAndOptionalInjectionWithoutBinding(bool nullable)
@@ -63,17 +104,16 @@ public class GeneratedActivationTests
     }
 
     [Fact]
-    public void BindingCallbacksAreUnrolledAndUnwindInReverseOrder()
+    public void MultipleServicesOnlyGenerateInitialization()
     {
         var (code, diagnostics) = Generate(
             imports: "@inject ITracker First\n@inject ITracker? Second",
             members: "public ITracker First { get; private set; } = null!; public ITracker? Second { get; private set; }");
         Assert.Empty(diagnostics);
-        Assert.Contains("__Initialize, __Bind, __Unbind", code);
-        Assert.Contains("completed = 1", code);
-        Assert.Contains("catch (global::System.Exception error)", code);
-        Assert.True(code.IndexOf("slice.@Second)?.Unbind", StringComparison.Ordinal) <
-            code.IndexOf("slice.@First)?.Unbind", StringComparison.Ordinal));
+        Assert.Contains("__Activation = new(__Initialize)", code);
+        Assert.Contains("slice", code);
+        Assert.DoesNotContain("__Bind", code);
+        Assert.DoesNotContain("__Unbind", code);
         Assert.DoesNotContain("foreach", code);
         Assert.DoesNotContain("Expression", code);
     }
@@ -171,7 +211,7 @@ public class GeneratedActivationTests
             {
                 public class Service { }
                 public class Alternate { }
-                public interface ITracker : IRazorSliceBindable { }
+                public interface ITracker { }
                 {{custom}}
             }
             namespace AspNetCoreGeneratedDocument

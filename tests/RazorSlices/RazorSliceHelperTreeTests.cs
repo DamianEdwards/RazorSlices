@@ -10,7 +10,7 @@ namespace RazorSlices.Tests;
 
 public class RazorSliceHelperTreeTests : IDisposable
 {
-    private readonly ServiceProvider _services = new ServiceCollection().AddRazorSliceHelpers().BuildServiceProvider();
+    private readonly ServiceProvider _services = new ServiceCollection().BuildServiceProvider();
 
     public void Dispose()
     {
@@ -293,7 +293,7 @@ public class RazorSliceHelperTreeTests : IDisposable
     }
 
     [Fact]
-    public async Task IndependentRootsInSameServiceScopeShareHelpers()
+    public async Task IndependentRootsInSameServiceScopeDoNotShareHelpers()
     {
         var request = new DefaultHttpContext();
         Helper? first = null;
@@ -313,7 +313,7 @@ public class RazorSliceHelperTreeTests : IDisposable
 
         await root.RenderAsync(TextWriter.Null);
         await other.RenderAsync(TextWriter.Null);
-        Assert.Same(first, second);
+        Assert.NotSame(first, second);
     }
 
     [Theory]
@@ -417,8 +417,6 @@ public class RazorSliceHelperTreeTests : IDisposable
             _render = render;
             Activation = RazorSliceFactory.GetActivation(GetType());
         }
-        [RazorInject]
-        public IHelperManager Helpers { get; set; } = null!;
         internal int Disposals;
 
         internal Helper Get(Func<Helper> create)
@@ -476,8 +474,6 @@ public class RazorSliceHelperTreeTests : IDisposable
 
     private sealed class OuterLayout(Func<OuterLayout, Task> render) : RazorLayoutSlice
     {
-        [RazorInject]
-        public IHelperManager Helpers { get; set; } = null!;
         internal Helper Get(Func<Helper> create)
         {
             return (Helper)Helpers.GetHelper<ITextHelper, Helper>(create);
@@ -515,8 +511,6 @@ public class RazorSliceHelperTreeTests : IDisposable
     private sealed class ModelLayout(Func<ModelLayout, Task> render, Func<RazorSlice> layout)
         : RazorLayoutSlice<int>, IUsesLayout<LayoutProxy>
     {
-        [RazorInject]
-        public IHelperManager Helpers { get; set; } = null!;
         internal Helper Get(Func<Helper> create)
         {
             return (Helper)Helpers.GetHelper<ITextHelper, Helper>(create);

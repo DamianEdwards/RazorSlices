@@ -104,6 +104,11 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
             }
             """);
         DotNetCli.Restore([producerProject], testOutput);
+        File.WriteAllText(Path.Combine(producer, "Lean.cshtml"), """
+            @using RazorSlices
+            @inherits RazorSliceBase<string>
+            <em>@Model</em>
+            """);
         DotNetCli.Pack(producerProject, outputDir, testOutput);
         using (var package = ZipFile.OpenRead(Path.Combine(outputDir, "SharedHelpers.1.0.0.nupkg")))
         {
@@ -135,31 +140,28 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
             @using RazorSlices
             @using SharedHelpers
             @inherits RazorSlice
-            @inject IHelperManager Helpers
             @inject ISliceProbe Probe
             @inject IOptionalProbe? Optional
-            @{ if (!Probe.Active || Optional is not null) { throw new InvalidOperationException("Generated binding failed"); } }
+            @{ if (Probe is null || Optional is not null) { throw new InvalidOperationException("Generated injection failed"); } }
             @Helpers.Ui.Greeting("<package>")
             @await Helpers.Ui.GreetingAsync("loaded", 43)
             @await Helpers.Ui.TaskGreetingAsync("task")
             @Helpers.Ui.Values(42, "one", "two")
+            @await RenderPartialAsync(SharedHelpers.Lean.Create("<lean>"))
             """);
         File.WriteAllText(Path.Combine(consumer, "Program.cs"), """
             using RazorSlices;
             using SharedHelpers;
             using Microsoft.Extensions.DependencyInjection;
-            using var services = new ServiceCollection().AddRazorSliceHelpers()
+            using var services = new ServiceCollection()
                 .AddScoped<ISliceProbe, SliceProbe>().BuildServiceProvider();
             using var scope = services.CreateScope();
             var host = Consumer.Host.Create();
             host.ServiceProvider = scope.ServiceProvider;
             var html = await host.RenderAsync();
-            if (scope.ServiceProvider.GetRequiredService<ISliceProbe>().Active)
-            {
-                throw new InvalidOperationException("Generated cleanup failed");
-            }
             if (!html.Contains("<p>&lt;package&gt;: 42</p>") ||
-                !html.Contains("async loaded: 43") || !html.Contains("task task") || !html.Contains("42 2"))
+                !html.Contains("async loaded: 43") || !html.Contains("task task") || !html.Contains("42 2") ||
+                !html.Contains("<em>&lt;lean&gt;</em>"))
             {
                 throw new InvalidOperationException(html);
             }
@@ -174,23 +176,12 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
 
             Console.WriteLine("Shared SDK helper rendered with zero warm per-call allocations");
 
-            public interface ISliceProbe : IRazorSliceBindable
-            {
-                bool Active { get; }
-            }
-            public interface IOptionalProbe : IRazorSliceBindable { }
-            public sealed class SliceProbe : ISliceProbe
-            {
-                private int _depth;
-                public bool Active => _depth > 0;
-                void IRazorSliceBindable.Bind(RazorSlice slice) { _depth++; }
-                void IRazorSliceBindable.Unbind(RazorSlice slice) { _depth--; }
-            }
+            public interface ISliceProbe { }
+            public interface IOptionalProbe { }
+            public sealed class SliceProbe : ISliceProbe { }
 
             sealed class AllocationSlice : RazorSlice
             {
-                [Microsoft.AspNetCore.Mvc.Razor.Internal.RazorInject]
-                public IHelperManager Helpers { get; set; } = null!;
                 public long AllocatedBytes;
 
                 public override async Task ExecuteAsync()

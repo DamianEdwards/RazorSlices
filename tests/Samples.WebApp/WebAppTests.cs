@@ -169,6 +169,8 @@ public class WebAppTests
         ["/streaming", "Countdown complete!", MediaTypeNames.Text.Html],
         ["/templated", "This is from a partial with a templated model", MediaTypeNames.Text.Html],
         ["/helpers", "Reusable todo helpers", MediaTypeNames.Text.Html],
+        ["/minimal", """<p class="minimal &lt;minimal&gt;">&lt;minimal&gt;</p>""", MediaTypeNames.Text.Html],
+        ["/minimal-partial", """<p class="minimal &lt;partial&gt;">&lt;partial&gt;</p>""", MediaTypeNames.Text.Html],
         ["/library", "This slice was loaded from a referenced Razor Class Library!", MediaTypeNames.Text.Html],
         ["/render-to-string", "htmlString", MediaTypeNames.Application.Json],
         ["/render-to-stringbuilder", "htmlString", MediaTypeNames.Application.Json],

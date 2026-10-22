@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Razor.TagHelpers;
 
 namespace RazorSlices;
 
-public abstract partial class RazorSlice
+public abstract partial class RazorSliceBase
 {
     private const string TagHelpersNotSupportedMessage = "Tag Helpers are not supported in Razor Slices";
     private const string RazorPagesNotSupportedMessage = "The @page directive is not supported on Razor Slices";

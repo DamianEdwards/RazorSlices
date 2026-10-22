@@ -40,7 +40,7 @@ public class RazorSliceHelperGeneratorTests
         Assert.Contains("where @T : class", facade);
         Assert.Contains("ref @value, out @result", facade);
         Assert.Contains("HtmlString.Empty", facade);
-        Assert.Contains("extension(global::RazorSlices.IHelperManager manager)", string.Join("\n", result.Sources));
+        Assert.Contains("extension(global::RazorSlices.IHelperContext context)", string.Join("\n", result.Sources));
         Assert.DoesNotContain("CreateSlice()", string.Join("\n", result.Sources));
         var tree = CSharpSyntaxTree.ParseText(facade, new CSharpParseOptions(LanguageVersion.Preview));
         Assert.Empty(result.Input.AddSyntaxTrees(tree).GetDiagnostics().Where(static d => d.Severity == DiagnosticSeverity.Error));
@@ -77,7 +77,7 @@ public class RazorSliceHelperGeneratorTests
             class SdkHelper : RazorSliceHelpers
             {
             #line 1 "{{file}}"
-                [RazorInject] public IHelperManager Injected { get; private set; } = null!;
+                [RazorInject] public IHelperContext Injected { get; private set; } = null!;
             #line default
                 public override System.Threading.Tasks.Task ExecuteAsync() => System.Threading.Tasks.Task.CompletedTask;
             }

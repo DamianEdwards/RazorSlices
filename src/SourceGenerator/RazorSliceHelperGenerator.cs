@@ -180,10 +180,10 @@ internal static class RazorSliceHelperGenerator
 
             public static class {{name}}HelperExtensions
             {
-                extension(global::RazorSlices.IHelperManager manager)
+                extension(global::RazorSlices.IHelperContext context)
                 {
                     public {{renderer}} {{name}} =>
-                        new(manager.GetHelper<{{contractName}}, {{implementation}}>(
+                        new(context.GetHelper<{{contractName}}, {{implementation}}>(
                             static () => new {{implementation}}()));
                 }
             }

@@ -121,12 +121,6 @@ with(StringComparer.OrdinalIgnoreCase),         "IModelExpressionProvider", "IUr
                     reason = "a non-public setter on a generic base requires runtime activation";
                     return null;
                 }
-                if (IsBound(property.Type) &&
-                    property.GetMethod?.DeclaredAccessibility != Accessibility.Public)
-                {
-                    reason = "a non-public inherited service getter requires runtime activation";
-                    return null;
-                }
                 var optional = IsOptional(property.Type, property.NullableAnnotation != NullableAnnotation.None);
                 if (property.GetAttributes().Any(static attribute => attribute.AttributeClass?.Name == "AllowNullAttribute")) { optional = true; }
                 if (property.GetAttributes().Any(static attribute => attribute.AttributeClass?.Name == "DisallowNullAttribute")) { optional = false; }
@@ -134,11 +128,6 @@ with(StringComparer.OrdinalIgnoreCase),         "IModelExpressionProvider", "IUr
             }
         }
 
-        if (injections.Any(static injection => injection.Bound && injection.Type.IsValueType))
-        {
-            reason = "a slice-bound service must be a reference type";
-            return null;
-        }
         if (injections.Any(static injection => injection.Accessor) &&
             compilation.GetTypeByMetadataName("System.Runtime.CompilerServices.UnsafeAccessorAttribute") is null)
         {
@@ -151,11 +140,9 @@ with(StringComparer.OrdinalIgnoreCase),         "IModelExpressionProvider", "IUr
     private static string Emit(List<Injection> injections, string implementation)
     {
         var code = new StringBuilder();
-        var bound = injections.Where(static injection => injection.Bound).ToArray();
         code.Append("    private static readonly global::RazorSlices.RazorSliceActivation<").Append(implementation)
             .Append("> __Activation = new(");
         if (injections.Count > 0) { code.Append("__Initialize"); }
-        if (bound.Length > 0) { code.Append(", __Bind, __Unbind"); }
         code.AppendLine(");");
         if (injections.Count == 0) { return code.ToString(); }
 
@@ -187,62 +174,6 @@ with(StringComparer.OrdinalIgnoreCase),         "IModelExpressionProvider", "IUr
                     ? injection.Type.WithNullableAnnotation(NullableAnnotation.Annotated) : injection.Type)
                     .ToDisplayString(TypeFormat)).AppendLine(" value);");
         }
-        if (bound.Length == 0) { return code.ToString(); }
-
-        code.AppendLine("    private static void __Bind(global::RazorSlices.RazorSlice instance)");
-        code.AppendLine("    {");
-        code.Append("        var slice = (").Append(implementation).AppendLine(")instance;");
-        if (bound.Length > 1)
-        {
-            code.AppendLine("        var completed = 0;");
-            code.AppendLine("        try");
-            code.AppendLine("        {");
-        }
-        for (var i = 0; i < bound.Length; i++)
-        {
-            code.Append(bound.Length > 1 ? "            " : "        ")
-                .Append("((global::RazorSlices.IRazorSliceBindable?)slice.@").Append(bound[i].Name)
-                .AppendLine(")?.Bind(slice);");
-            if (bound.Length > 1) { code.Append("            completed = ").Append(i + 1).AppendLine(";"); }
-        }
-        if (bound.Length > 1)
-        {
-            code.AppendLine("        }");
-            code.AppendLine("        catch (global::System.Exception error)");
-            code.AppendLine("        {");
-            code.AppendLine("            var cleanup = __UnbindCompleted(slice, completed);");
-            code.AppendLine("            if (cleanup is not null)");
-            code.AppendLine("            {");
-            code.AppendLine("                throw new global::System.AggregateException(error, cleanup);");
-            code.AppendLine("            }");
-            code.AppendLine("            throw;");
-            code.AppendLine("        }");
-        }
-        code.AppendLine("    }");
-        code.AppendLine("    private static global::System.Exception? __Unbind(global::RazorSlices.RazorSlice instance)");
-        code.AppendLine("    {");
-        code.Append("        return __UnbindCompleted((").Append(implementation).Append(")instance, ").Append(bound.Length).AppendLine(");");
-        code.AppendLine("    }");
-        code.Append("    private static global::System.Exception? __UnbindCompleted(").Append(implementation).AppendLine(" slice, int completed)");
-        code.AppendLine("    {");
-        code.AppendLine("        global::System.Exception? failure = null;");
-        for (var i = bound.Length - 1; i >= 0; i--)
-        {
-            code.Append("        if (completed > ").Append(i).AppendLine(")");
-            code.AppendLine("        {");
-            code.AppendLine("            try");
-            code.AppendLine("            {");
-            code.Append("                ((global::RazorSlices.IRazorSliceBindable?)slice.@").Append(bound[i].Name)
-                .AppendLine(")?.Unbind(slice);");
-            code.AppendLine("            }");
-            code.AppendLine("            catch (global::System.Exception error)");
-            code.AppendLine("            {");
-            code.AppendLine("                failure = failure is null ? error : new global::System.AggregateException(failure, error);");
-            code.AppendLine("            }");
-            code.AppendLine("        }");
-        }
-        code.AppendLine("        return failure;");
-        code.AppendLine("    }");
         return code.ToString();
     }
 
@@ -269,13 +200,6 @@ with(StringComparer.OrdinalIgnoreCase),         "IModelExpressionProvider", "IUr
             type.IsReferenceType && (!annotations || type.NullableAnnotation == NullableAnnotation.Annotated);
     }
 
-    private static bool IsBound(ITypeSymbol type)
-    {
-        return type is INamedTypeSymbol named &&
-            (named.ToDisplayString() == "RazorSlices.IRazorSliceBindable" ||
-             named.AllInterfaces.Any(static contract => contract.ToDisplayString() == "RazorSlices.IRazorSliceBindable"));
-    }
-
     private sealed class Injection(string name, ITypeSymbol type, string owner, bool optional, bool accessor)
     {
         internal string Name { get; } = name;
@@ -283,6 +207,5 @@ with(StringComparer.OrdinalIgnoreCase),         "IModelExpressionProvider", "IUr
         internal string Owner { get; } = owner;
         internal bool Optional { get; } = optional;
         internal bool Accessor { get; } = accessor;
-        internal bool Bound { get; } = IsBound(type);
     }
 }

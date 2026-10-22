@@ -17,6 +17,18 @@ public static class RazorSliceStringBuilderExtensions
     private static readonly ObjectPool<StringBuilder> _stringBuilderPool = _poolProvider.CreateStringBuilderPool(256, 4 * 1024);
     private static readonly ObjectPool<ReusableStringWriter> _stringWriterPool = _poolProvider.CreateStringWriterPool();
 
+    /// <summary>Renders a full-featured slice to the specified builder.</summary>
+    public static ValueTask RenderAsync(this RazorSlice slice, StringBuilder stringBuilder, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
+    {
+        return RenderAsync((RazorSliceBase)slice, stringBuilder, htmlEncoder, cancellationToken);
+    }
+
+    /// <summary>Renders a full-featured slice to a string.</summary>
+    public static ValueTask<string> RenderAsync(this RazorSlice slice, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
+    {
+        return RenderAsync((RazorSliceBase)slice, htmlEncoder, cancellationToken);
+    }
+
     /// <summary>
     /// Renders the template to the specified <see cref="StringBuilder"/>.
     /// </summary>
@@ -25,7 +37,7 @@ public static class RazorSliceStringBuilderExtensions
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
     /// <param name="cancellationToken"></param>
     /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
-    public static ValueTask RenderAsync(this RazorSlice slice, StringBuilder stringBuilder, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
+    public static ValueTask RenderAsync(this RazorSliceBase slice, StringBuilder stringBuilder, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
         var sw = _stringWriterPool.Get();
         sw.SetStringBuilder(stringBuilder);
@@ -46,7 +58,7 @@ public static class RazorSliceStringBuilderExtensions
         return AwaitRenderTask(task, sw);
     }
 
-    private static async ValueTask  AwaitRenderTask(ValueTask task, ReusableStringWriter sw)
+    private static async ValueTask AwaitRenderTask(ValueTask task, ReusableStringWriter sw)
     {
         await task;
 
@@ -60,7 +72,7 @@ public static class RazorSliceStringBuilderExtensions
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
     /// <param name="cancellationToken"></param>
     /// <returns>The template rendered to a <see cref="string"/>.</returns>
-    public static ValueTask<string> RenderAsync(this RazorSlice slice, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
+    public static ValueTask<string> RenderAsync(this RazorSliceBase slice, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
         var sb = _stringBuilderPool.Get();
         var task = slice.RenderAsync(sb, htmlEncoder, cancellationToken);

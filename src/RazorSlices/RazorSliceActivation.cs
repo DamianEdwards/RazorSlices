@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace RazorSlices;
 
-/// <summary>Holds compiler-generated initialization and service-binding callbacks for a slice.</summary>
+/// <summary>Holds compiler-generated initialization callbacks for a slice.</summary>
 /// <remarks>This infrastructure type is used by generated proxies, not application code.</remarks>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class RazorSliceActivation<TSlice> where TSlice : RazorSlice
@@ -13,17 +13,11 @@ public sealed class RazorSliceActivation<TSlice> where TSlice : RazorSlice
 
     /// <summary>Creates an activation plan without discovering properties at runtime.</summary>
     public RazorSliceActivation(
-        Action<RazorSlice, IServiceProvider?, HttpContext?>? initialize = null,
-        Action<RazorSlice>? bind = null,
-        Func<RazorSlice, Exception?>? unbind = null)
+        Action<RazorSlice, IServiceProvider?, HttpContext?>? initialize = null)
     {
-        if ((bind is null) != (unbind is null))
-        {
-            throw new ArgumentException("Binding and unbinding callbacks must be supplied together.");
-        }
-        _current = initialize is null && bind is null
+        _current = initialize is null
             ? SliceActivation.Empty
-            : new(initialize, bind is null ? null : new(bind, unbind!));
+            : new(initialize);
         if (HotReloadService.IsSupported)
         {
             HotReloadService.ClearCacheEvent += ReplaceSliceType;

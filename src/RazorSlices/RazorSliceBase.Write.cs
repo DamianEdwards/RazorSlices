@@ -7,7 +7,7 @@ using System.Globalization;
 
 namespace RazorSlices;
 
-public partial class RazorSlice
+public partial class RazorSliceBase
 {
     /// <summary>
     /// Writes a string value to the output without HTML encoding it.

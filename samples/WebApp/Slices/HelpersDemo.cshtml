@@ -29,7 +29,7 @@
 
 @functions {
     public LayoutModel LayoutModel => new() { Title = "Reusable todo helpers" };
-    private delegate HtmlString ActionTemplate(IHelperManager context, string operation, int id, string text, bool disabled = false);
+    private delegate HtmlString ActionTemplate(IHelperContext context, string operation, int id, string text, bool disabled = false);
     private static readonly ActionTemplate RenderAction =
         static (context, operation, id, text, disabled) => context.TodoHelpers.ActionButton(operation, id, text, disabled);
 

@@ -57,7 +57,7 @@ public static class RazorSliceFactory
         where TSlice : RazorSlice
     {
         var slice = activation.CreateReplacement is { } createReplacement ? createReplacement() : createSlice();
-        slice.Activation = activation.Initialize is not null || activation.Services is not null ? activation : null;
+        slice.Activation = activation.Initialize is not null ? activation : null;
         return slice;
     }
 
@@ -104,7 +104,7 @@ public static class RazorSliceFactory
         {
             slice = createSlice(model);
         }
-        slice.Activation = activation.Initialize is not null || activation.Services is not null ? activation : null;
+        slice.Activation = activation.Initialize is not null ? activation : null;
         return slice;
     }
 
@@ -157,33 +157,7 @@ public static class RazorSliceFactory
         var initialize = !reflection
             ? GetExpressionInitAction(sliceType, properties).Compile()
             : GetReflectionInitAction(sliceType, properties);
-        var boundProperties = properties.NonNullable.Concat(properties.Nullable)
-            .Where(static property => typeof(IRazorSliceBindable).IsAssignableFrom(property.PropertyType)).ToArray();
-        if (boundProperties.Length == 0)
-        {
-            return new(initialize);
-        }
-        var getters = new Func<RazorSlice, IRazorSliceBindable?>[boundProperties.Length];
-        for (var i = 0; i < getters.Length; i++)
-        {
-            var property = boundProperties[i];
-            if (property.PropertyType.IsValueType)
-            {
-                throw new InvalidOperationException($"Slice-bound service {property.Name} must be a reference type.");
-            }
-            if (reflection)
-            {
-                getters[i] = slice => (IRazorSliceBindable?)property.GetValue(slice);
-            }
-            else
-            {
-                var slice = Expression.Parameter(typeof(RazorSlice), "slice");
-                getters[i] = Expression.Lambda<Func<RazorSlice, IRazorSliceBindable?>>(
-                    Expression.Convert(Expression.Property(Expression.Convert(slice, sliceType), property),
-                        typeof(IRazorSliceBindable)), slice).Compile();
-            }
-        }
-        return new(initialize, new(getters));
+        return new(initialize);
     }
 
     [UnconditionalSuppressMessage("Trimming", "IL2075",
