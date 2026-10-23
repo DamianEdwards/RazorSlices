@@ -2,6 +2,7 @@
 using System.Net.Mime;
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -59,6 +60,48 @@ public class WebAppTests
             <input type="checkbox" name="null" />
             """,
             html.ReplaceLineEndings());
+    }
+
+    [Fact]
+    public async Task Helpers_RenderVoidAndAsyncMethodsFromLocalAndReferencedProjects()
+    {
+        using var waf = new WebApplicationFactory<Program>();
+        using var client = waf.CreateClient();
+        var html = await client.GetStringAsync("/helpers");
+        Assert.Contains("""data-action="add" data-id="42">Add task</button>""", html);
+        Assert.Contains("""data-action="delete" data-id="42" disabled="disabled">Delete task</button>""", html);
+        Assert.Contains("""data-action="share" data-id="42">Share task</button>""", html);
+        Assert.Contains("""<span class="badge text-bg-success">From a Razor class library</span>""", html);
+        Assert.Contains("HTML is encoded: &lt;script&gt;", html);
+        Assert.Contains("tasks still need attention.", html);
+    }
+
+    [Theory]
+    [InlineData("/helpers")]
+    [InlineData("/")]
+    public async Task Helpers_CanCallHelpersFromReferencedProjects(string path)
+    {
+        using var waf = new WebApplicationFactory<Program>();
+        using var client = waf.CreateClient();
+
+        var html = await client.GetStringAsync(path);
+        var normalized = Regex.Replace(html, @">\s+<", "><");
+
+        Assert.Contains("""<span class="todo-status"><span class="badge text-bg-success">Completed</span></span>""", normalized);
+        Assert.Contains("""<span class="todo-status"><span class="badge text-bg-secondary">Incomplete</span></span>""", normalized);
+    }
+
+    [Fact]
+    public async Task Helpers_CanAwaitHelpersFromReferencedProjects()
+    {
+        using var waf = new WebApplicationFactory<Program>();
+        using var client = waf.CreateClient();
+
+        var html = await client.GetStringAsync("/helpers");
+        var normalized = Regex.Replace(html, @">\s+<", "><");
+
+        Assert.Contains("""<section class="todo-summary"><aside class="alert alert-info"><strong>Async task summary</strong>""", normalized);
+        Assert.Contains("tasks still need attention.</p></aside></section>", normalized);
     }
 
     [Fact]
@@ -125,6 +168,9 @@ public class WebAppTests
         ["/unicode", "🐻", MediaTypeNames.Text.Html],
         ["/streaming", "Countdown complete!", MediaTypeNames.Text.Html],
         ["/templated", "This is from a partial with a templated model", MediaTypeNames.Text.Html],
+        ["/helpers", "Reusable todo helpers", MediaTypeNames.Text.Html],
+        ["/minimal", """<p class="minimal &lt;minimal&gt;">&lt;minimal&gt;</p>""", MediaTypeNames.Text.Html],
+        ["/minimal-partial", """<p class="minimal &lt;partial&gt;">&lt;partial&gt;</p>""", MediaTypeNames.Text.Html],
         ["/library", "This slice was loaded from a referenced Razor Class Library!", MediaTypeNames.Text.Html],
         ["/render-to-string", "htmlString", MediaTypeNames.Application.Json],
         ["/render-to-stringbuilder", "htmlString", MediaTypeNames.Application.Json],

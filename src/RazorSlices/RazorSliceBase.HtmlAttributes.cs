@@ -1,6 +1,6 @@
 ﻿namespace RazorSlices;
 
-public abstract partial class RazorSlice
+public abstract partial class RazorSliceBase
 {
     private AttributeInfo _attributeInfo;
 
@@ -17,7 +17,7 @@ public abstract partial class RazorSlice
     /// <param name="suffix">The suffix.</param>
     /// <param name="suffixOffset">The suffix offset.</param>
     /// <param name="attributeValuesCount">The attribute values count.</param>
-    protected virtual void BeginWriteAttribute(
+    protected internal virtual void BeginWriteAttribute(
         string name,
         string prefix,
         int prefixOffset,
@@ -33,10 +33,8 @@ public abstract partial class RazorSlice
         {
             Name = name,
             Prefix = prefix,
-            PrefixOffset = prefixOffset,
             Suffix = suffix,
-            SuffixOffset = suffixOffset,
-            AttributeValuesCount = attributeValuesCount
+            SingleValue = attributeValuesCount == 1
         };
 
         // Single valued attributes might be omitted in entirety if it the attribute value strictly evaluates to
@@ -60,7 +58,7 @@ public abstract partial class RazorSlice
     /// <param name="valueOffset">The value offset.</param>
     /// <param name="valueLength">The value length.</param>
     /// <param name="isLiteral">Whether the attribute is a literal.</param>
-    protected void WriteAttributeValue(
+    protected internal void WriteAttributeValue(
         string prefix,
         int prefixOffset,
         bool value,
@@ -84,7 +82,7 @@ public abstract partial class RazorSlice
     /// <param name="valueOffset">The value offset.</param>
     /// <param name="valueLength">The value length.</param>
     /// <param name="isLiteral">Whether the attribute is a literal.</param>
-    protected void WriteAttributeValue(
+    protected internal void WriteAttributeValue(
         string prefix,
         int prefixOffset,
         bool? value,
@@ -96,7 +94,7 @@ public abstract partial class RazorSlice
     {
         var valueIsAttributeName = false;
 
-        if (_attributeInfo.AttributeValuesCount == 1)
+        if (_attributeInfo.SingleValue)
         {
             if (IsBoolFalseOrNullValue(prefix, value))
             {
@@ -106,7 +104,7 @@ public abstract partial class RazorSlice
             }
 
             // We are not omitting the attribute. Write the prefix.
-            WritePositionTaggedLiteral(_attributeInfo.Prefix, _attributeInfo.PrefixOffset);
+            WriteLiteral(_attributeInfo.Prefix);
 
             if (IsBoolTrueWithEmptyPrefixValue(prefix, value))
             {
@@ -168,7 +166,7 @@ public abstract partial class RazorSlice
     /// <param name="valueLength">The value length.</param>
     /// <param name="isLiteral">Whether the attribute is a literal.</param>
     /// <typeparam name="TValue">The type of the attribute value being written.</typeparam>
-    protected void WriteAttributeValue<TValue>(
+    protected internal void WriteAttributeValue<TValue>(
         string prefix,
         int prefixOffset,
         TValue? value,
@@ -184,7 +182,7 @@ public abstract partial class RazorSlice
             return;
         }
 
-        if (_attributeInfo.AttributeValuesCount == 1)
+        if (_attributeInfo.SingleValue)
         {
             if (IsNullValue(prefix, value))
             {
@@ -194,7 +192,7 @@ public abstract partial class RazorSlice
             }
 
             // We are not omitting the attribute. Write the prefix.
-            WritePositionTaggedLiteral(_attributeInfo.Prefix, _attributeInfo.PrefixOffset);
+            WriteLiteral(_attributeInfo.Prefix);
         }
 
         // This block handles two cases.
@@ -230,11 +228,11 @@ public abstract partial class RazorSlice
     /// You generally shouldn't call this method directly. The Razor compiler will emit the appropriate calls to this method for
     /// all HTML attributes containing Razor expressions in your .cshtml file.
     /// </remarks>
-    protected virtual void EndWriteAttribute()
+    protected internal virtual void EndWriteAttribute()
     {
         if (!_attributeInfo.Suppressed)
         {
-            WritePositionTaggedLiteral(_attributeInfo.Suffix, _attributeInfo.SuffixOffset);
+            WriteLiteral(_attributeInfo.Suffix);
         }
     }
 
@@ -247,17 +245,13 @@ public abstract partial class RazorSlice
 
     private struct AttributeInfo
     {
-        public int AttributeValuesCount { get; init; }
+        public bool SingleValue { get; init; }
 
         public string Name { get; init; }
 
         public string Prefix { get; init; }
 
-        public int PrefixOffset { get; init; }
-
         public string Suffix { get; init; }
-
-        public int SuffixOffset { get; init; }
 
         public bool Suppressed { get; set; }
     }

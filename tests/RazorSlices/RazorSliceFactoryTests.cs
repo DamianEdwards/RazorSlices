@@ -8,6 +8,21 @@ namespace RazorSlices.Tests;
 public class RazorSliceFactoryTests
 {
     [Fact]
+    public async Task InitializerCanClearItself()
+    {
+        var calls = 0;
+        using var slice = RazorSliceFactory.Create(static () => new ConstructorSlice("test"));
+        slice.Initialize = (instance, _, _) =>
+        {
+            calls++;
+            instance.Initialize = null;
+        };
+        await slice.RenderAsync(TextWriter.Null);
+        Assert.Equal(1, calls);
+        Assert.Null(slice.Initialize);
+    }
+
+    [Fact]
     public void Create_UsesDirectConstructorAndReturnsFreshInstances()
     {
         using var first = RazorSliceFactory.Create(static () => new ConstructorSlice("first"));
@@ -105,7 +120,7 @@ public class RazorSliceFactoryTests
     {
         using var slice = CreateInjectableSlice(reflection);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => slice.ExecuteAsyncImpl());
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(slice.ExecuteAsyncImpl);
 
         Assert.Contains("ServiceProvider property is null", exception.Message);
     }
@@ -119,7 +134,7 @@ public class RazorSliceFactoryTests
         using var slice = CreateInjectableSlice(reflection);
         slice.ServiceProvider = services;
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => slice.ExecuteAsyncImpl());
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(slice.ExecuteAsyncImpl);
 
         Assert.Contains(nameof(TestService), exception.Message);
     }
@@ -195,12 +210,18 @@ public class RazorSliceFactoryTests
     public sealed class ConstructorSlice(string value) : RazorSlice
     {
         public string Value { get; } = value;
-        public override Task ExecuteAsync() => Task.CompletedTask;
+        public override Task ExecuteAsync()
+        {
+            return Task.CompletedTask;
+        }
     }
 
     public sealed class ModelSlice : RazorSlice<string?>
     {
-        public override Task ExecuteAsync() => Task.CompletedTask;
+        public override Task ExecuteAsync()
+        {
+            return Task.CompletedTask;
+        }
     }
 
     public abstract class InjectableBaseSlice : RazorSlice
@@ -220,7 +241,10 @@ public class RazorSliceFactoryTests
         [RazorInject]
         public Microsoft.AspNetCore.Mvc.IUrlHelper MvcService { get; set; } = null!;
 
-        public override Task ExecuteAsync() => Task.CompletedTask;
+        public override Task ExecuteAsync()
+        {
+            return Task.CompletedTask;
+        }
     }
 
     public sealed class TestService;
@@ -228,24 +252,36 @@ public class RazorSliceFactoryTests
 
     public sealed class OriginalSlice : RazorSlice
     {
-        public override Task ExecuteAsync() => Task.CompletedTask;
+        public override Task ExecuteAsync()
+        {
+            return Task.CompletedTask;
+        }
     }
 
     [MetadataUpdateOriginalType(typeof(OriginalSlice))]
     public sealed class ReplacementSlice : InjectableBaseSlice
     {
-        public override Task ExecuteAsync() => Task.CompletedTask;
+        public override Task ExecuteAsync()
+        {
+            return Task.CompletedTask;
+        }
     }
 
     [MetadataUpdateOriginalType(typeof(OriginalSlice))]
     public sealed class SecondReplacementSlice : RazorSlice
     {
-        public override Task ExecuteAsync() => Task.CompletedTask;
+        public override Task ExecuteAsync()
+        {
+            return Task.CompletedTask;
+        }
     }
 
     [MetadataUpdateOriginalType(typeof(ModelSlice))]
     public sealed class ReplacementModelSlice : RazorSlice<string?>
     {
-        public override Task ExecuteAsync() => Task.CompletedTask;
+        public override Task ExecuteAsync()
+        {
+            return Task.CompletedTask;
+        }
     }
 }

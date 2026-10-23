@@ -24,7 +24,7 @@ public static class ResultsExtensions
         /// </example>
         /// </para>
         /// <para>
-        /// This method sets the <see cref="RazorSlice.HtmlEncoder"/> property to <see cref="HtmlEncoder.Default"/>, if it's not already set, to avoid looking it
+        /// This method sets the <see cref="RazorSlices.RazorSliceBase.HtmlEncoder"/> property to <see cref="HtmlEncoder.Default"/>, if it's not already set, to avoid looking it
         /// up from the DI container and paying the cost of the request services scope. If you need to use a custom <see cref="HtmlEncoder"/>,
         /// set it on the slice before passing it to this method, or return the slice directly without using this method to have the <see cref="HtmlEncoder"/>
         /// resolved from <see cref="HttpContext.RequestServices"/>, e.g.:
@@ -39,6 +39,13 @@ public static class ResultsExtensions
         /// <param name="statusCode">The HTTP status code to set on the response.</param>
         /// <returns>The Razor slice with the specified status code.</returns>
         public static IResult RazorSlice(RazorSlice razorSlice, int statusCode = StatusCodes.Status200OK)
+            => TypedResultsExtensions.RazorSlice(razorSlice, statusCode);
+
+        /// <summary>Renders a minimal or full slice directly, without allocating an HTTP adapter.</summary>
+        /// <param name="razorSlice">The slice to render.</param>
+        /// <param name="statusCode">The HTTP status code.</param>
+        /// <returns>The configured slice.</returns>
+        public static IResult RazorSlice(RazorSliceBase razorSlice, int statusCode = StatusCodes.Status200OK)
             => TypedResultsExtensions.RazorSlice(razorSlice, statusCode);
 
         /// <summary>
@@ -85,7 +92,7 @@ public static class TypedResultsExtensions
         /// </example>
         /// </para>
         /// <para>
-        /// This method sets the <see cref="RazorSlice.HtmlEncoder"/> property to <see cref="HtmlEncoder.Default"/>, if it's not already set, to avoid looking it
+        /// This method sets the <see cref="RazorSlices.RazorSliceBase.HtmlEncoder"/> property to <see cref="HtmlEncoder.Default"/>, if it's not already set, to avoid looking it
         /// up from the DI container and paying the cost of the request services scope. If you need to use a custom <see cref="HtmlEncoder"/>,
         /// set it on the slice before passing it to this method, or return the slice directly without using this method to have the <see cref="HtmlEncoder"/>
         /// resolved from <see cref="HttpContext.RequestServices"/>, e.g.:
@@ -107,13 +114,25 @@ public static class TypedResultsExtensions
             return razorSlice;
         }
 
+        /// <summary>Configures a minimal or full slice as a direct HTTP result, preserving an explicitly set encoder.</summary>
+        /// <param name="razorSlice">The slice to render.</param>
+        /// <param name="statusCode">The HTTP status code.</param>
+        /// <returns>The same slice, using the default encoder if none was set, without resolving request services.</returns>
+        public static RazorSliceBase RazorSlice(RazorSliceBase razorSlice, int statusCode = StatusCodes.Status200OK)
+        {
+            ArgumentNullException.ThrowIfNull(razorSlice);
+            razorSlice.HtmlEncoder ??= HtmlEncoder.Default;
+            razorSlice.StatusCode = statusCode;
+            return razorSlice;
+        }
+
         /// <summary>
         /// Render a <see cref="RazorSlices.RazorSlice" /> template to the response.
         /// </summary>
         /// <remarks>
-        /// This method sets the <see cref="RazorSlice.HtmlEncoder"/> property to <see cref="HtmlEncoder.Default"/>, if it's not already set, to avoid looking it
+        /// This method sets the <see cref="RazorSlices.RazorSliceBase.HtmlEncoder"/> property to <see cref="HtmlEncoder.Default"/>, if it's not already set, to avoid looking it
         /// up from the DI container and paying the cost of the request services scope. If you need to use a custom <see cref="HtmlEncoder"/>,
-        /// use the <see cref="RazorSlice"/> overload and set <see cref="RazorSlice.HtmlEncoder"/> before passing it in. Alternatively, return the slice directly
+        /// use the <see cref="RazorSlice(RazorSlices.RazorSlice, int)"/> overload and set <see cref="RazorSlices.RazorSliceBase.HtmlEncoder"/> before passing it in. Alternatively, return the slice directly
         /// without using these methods to have the <see cref="HtmlEncoder"/> resolved from <see cref="HttpContext.RequestServices"/>, e.g.:
         /// <example>
         /// <code language="csharp">
@@ -138,9 +157,9 @@ public static class TypedResultsExtensions
         /// Render a <see cref="RazorSlices.RazorSlice{TModel}" /> template to the response.
         /// </summary>
         /// <remarks>
-        /// This method sets the <see cref="RazorSlice.HtmlEncoder"/> property to <see cref="HtmlEncoder.Default"/>, if it's not already set, to avoid looking it
+        /// This method sets the <see cref="RazorSlices.RazorSliceBase.HtmlEncoder"/> property to <see cref="HtmlEncoder.Default"/>, if it's not already set, to avoid looking it
         /// up from the DI container and paying the cost of the request services scope. If you need to use a custom <see cref="HtmlEncoder"/>,
-        /// use the <see cref="RazorSlice"/> overload and set <see cref="RazorSlice.HtmlEncoder"/> before passing it in. Alternatively, return the slice directly
+        /// use the <see cref="RazorSlice(RazorSlices.RazorSlice, int)"/> overload and set <see cref="RazorSlices.RazorSliceBase.HtmlEncoder"/> before passing it in. Alternatively, return the slice directly
         /// without using these methods to have the <see cref="HtmlEncoder"/> resolved from <see cref="HttpContext.RequestServices"/>, e.g.:
         /// <example>
         /// <code language="csharp">

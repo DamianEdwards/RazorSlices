@@ -8,12 +8,13 @@
     <AssemblyName>RazorSlices.Samples.WebApp</AssemblyName>
     <RootNamespace>RazorSlices.Samples.WebApp</RootNamespace>
     <Nullable>enable</Nullable>
+    <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <PropertyGroup>
-    <PublishAot>true</PublishAot>
+    <PublishAot Condition="'$(Configuration)' != 'Debug'">true</PublishAot>
     <!-- Startup hooks are disabled when publishing aot/trimmed but are required for Hot Reload to work so enabling it here -->
     <StartupHookSupport Condition="'$(Configuration)' == 'Debug'">true</StartupHookSupport>
     <!--<PublishTrimmed>true</PublishTrimmed>-->

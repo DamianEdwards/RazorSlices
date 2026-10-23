@@ -46,7 +46,9 @@ internal static class ViewImportsResolver
             var usingDirectives = RazorDirectiveParser.ParseUsingDirectives(sourceText);
             var namespaceDirective = RazorDirectiveParser.ParseNamespaceDirective(sourceText);
 
-            map[directory] = new ViewImportsDirectives(inheritsDirective, usingDirectives, namespaceDirective);
+            map[directory] = new ViewImportsDirectives(inheritsDirective, usingDirectives, namespaceDirective,
+                RazorDirectiveParser.ParseDirectiveValues(sourceText, "implements"),
+                RazorDirectiveParser.ParseDirectiveValues(sourceText, "inject"));
         }
 
         return map;
@@ -71,12 +73,16 @@ internal static class ViewImportsResolver
         var sliceInherits = RazorDirectiveParser.ParseInheritsDirective(sliceSourceText);
         var sliceUsings = RazorDirectiveParser.ParseUsingDirectives(sliceSourceText);
         var sliceNamespace = RazorDirectiveParser.ParseNamespaceDirective(sliceSourceText);
+        var interfaces = new List<string>();
+        var injections = new List<string>();
 
         // Build the directory chain from project root down to the slice's directory
         var sliceDirectory = Path.GetDirectoryName(sliceFilePath);
         if (sliceDirectory is null)
         {
-            return new ResolvedDirectives(sliceInherits, sliceUsings, sliceNamespace);
+            return new ResolvedDirectives(sliceInherits, sliceUsings, sliceNamespace,
+                RazorDirectiveParser.ParseDirectiveValues(sliceSourceText, "implements"),
+                RazorDirectiveParser.ParseDirectiveValues(sliceSourceText, "inject"));
         }
 
         // Collect all _ViewImports directories from project root down to slice directory
@@ -93,6 +99,8 @@ internal static class ViewImportsResolver
             {
                 // @using accumulates
                 accumulatedUsings.AddRange(directives.UsingDirectives);
+                interfaces.AddRange(directives.Interfaces);
+                injections.AddRange(directives.Injections);
                 // @inherits: innermost (child) wins, so keep overwriting
                 if (directives.InheritsDirective is not null)
                 {
@@ -120,7 +128,9 @@ internal static class ViewImportsResolver
             effectiveNamespace = sliceNamespace;
         }
 
-        return new ResolvedDirectives(effectiveInherits, accumulatedUsings, effectiveNamespace);
+        interfaces.AddRange(RazorDirectiveParser.ParseDirectiveValues(sliceSourceText, "implements"));
+        injections.AddRange(RazorDirectiveParser.ParseDirectiveValues(sliceSourceText, "inject"));
+        return new ResolvedDirectives(effectiveInherits, accumulatedUsings, effectiveNamespace, interfaces, injections);
     }
 
     /// <summary>
@@ -162,15 +172,19 @@ internal static class ViewImportsResolver
     }
 }
 
-internal readonly struct ViewImportsDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives, string? namespaceDirective)
+internal readonly struct ViewImportsDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives, string? namespaceDirective,
+    List<string> interfaces, List<string> injections)
 {
     public string? InheritsDirective { get; } = inheritsDirective;
     public List<UsingDirective> UsingDirectives { get; } = usingDirectives;
 
     public string? NamespaceDirective { get; } = namespaceDirective;
+    public List<string> Interfaces { get; } = interfaces;
+    public List<string> Injections { get; } = injections;
 }
 
-internal readonly struct ResolvedDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives, string? namespaceDirective)
+internal readonly struct ResolvedDirectives(string? inheritsDirective, List<UsingDirective> usingDirectives, string? namespaceDirective,
+    List<string> interfaces, List<string> injections)
 {
 
     /// <summary>
@@ -187,4 +201,6 @@ internal readonly struct ResolvedDirectives(string? inheritsDirective, List<Usin
     /// The effective @namespace directive value (from the slice or nearest _ViewImports).
     /// </summary>
     public string? NamespaceDirective { get; } = namespaceDirective;
+    public List<string> Interfaces { get; } = interfaces;
+    public List<string> Injections { get; } = injections;
 }

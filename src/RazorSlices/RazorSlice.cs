@@ -1,399 +1,251 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
-using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Internal;
 
 namespace RazorSlices;
 
 /// <summary>
-/// Base class for a Razor Slice template. Inherit from this class or <see cref="RazorSlice{TModel}"/> in your <c>.cshtml</c> files using the <c>@inherit</c> directive.
+/// The normal Razor template base, supporting dependency injection, helpers, layouts, partials, and HTTP results.
 /// </summary>
-/// <seealso cref="RazorSlice{TModel}"/>
-public abstract partial class RazorSlice : IDisposable
+public abstract partial class RazorSlice : RazorSliceBase, IHelperContext
 {
-    private const int _autoFlushThreshold = 1_024 * 16; // Auto-flush after each slice rendering if unflushed bytes is over 16 KB
-
-    // Used to support nested writers emitted by the Razor compiler when using templated razor delegates
     private Stack<(PipeWriter?, TextWriter?)>? _writerStack;
-
     private IServiceProvider? _serviceProvider;
-    private HtmlEncoder _htmlEncoder = HtmlEncoder.Default;
-    private PipeWriter? _pipeWriter;
-    private TextWriter? _textWriter;
     private bool _initialized;
-    private bool _disposed;
+    private RazorSliceHelperCache? _helpers;
+    private RazorSlice? _helperParent;
+    private RazorSliceBase? _activeHelperSlice;
+    internal SliceActivation? Activation { get; set; }
 
-    /// <summary>
-    /// Gets or sets the <see cref="IServiceProvider"/> used to resolve services for injectable properties.
-    /// </summary>
+    /// <summary>Gets the context for helpers shared throughout this render graph.</summary>
+    protected IHelperContext Helpers => this;
+
+    /// <summary>Gets or sets the provider used for property injection.</summary>
     public IServiceProvider? ServiceProvider
     {
-        // Ensure service provider can be lazily initialized from HttpContext.RequestServices so we don't pay the scope cost
-        // if it's not needed.
         get => _serviceProvider ??= HttpContext?.RequestServices;
         set => _serviceProvider = value;
     }
 
-    /// <summary>
-    /// Gets or sets the <see cref="HttpContext"/> associated with the current request.
-    /// </summary>
+    /// <summary>Gets or sets the current HTTP context.</summary>
     public HttpContext? HttpContext { get; set; }
 
-    /// <summary>
-    /// A token to monitor for cancellation requests.
-    /// </summary>
-    public CancellationToken CancellationToken { get; protected set; }
-
-    /// <summary>
-    /// Gets or sets a delegate used to initialize the template class before <see cref="ExecuteAsync"/> is called.
-    /// </summary>
-    /// <remarks>
-    /// This property should not be interacted with directly. It's used by the Razor Slices infrastructure.
-    /// </remarks>
+    /// <summary>Gets or sets the infrastructure callback for deferred property injection.</summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public Action<RazorSlice, IServiceProvider?, HttpContext?>? Initialize { get; set; }
-
-    /// <summary>
-    /// Implemented by the generated template class.
-    /// </summary>
-    /// <remarks>
-    /// This method should not be called directly. Call
-    /// <see cref="RenderAsync(PipeWriter, HtmlEncoder?, CancellationToken)"/> or
-    /// <see cref="RenderAsync(TextWriter, HtmlEncoder?, CancellationToken)"/> instead to render the template.
-    /// </remarks>
-    /// <returns>A <see cref="Task"/> representing the execution of the template.</returns>
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public abstract Task ExecuteAsync();
-
-    internal Task ExecuteAsyncImpl()
+    public Action<RazorSlice, IServiceProvider?, HttpContext?>? Initialize
     {
-        EnsureInitialized();
-
-        return ExecuteAsync();
+        get => Activation?.Initialize;
+        set => Activation = value is null ? null : Activation is { } activation ? activation with { Initialize = value } : new(value);
     }
 
-    /// <summary>
-    /// Puts a text writer on the stack.
-    /// </summary>
-    /// <remarks>
-    /// This method should not be interacted with directly. It's used by the Razor Slices infrastructure.
-    /// </remarks>
-    /// <param name="writer"></param>
+    void IHelperContext.EnsureActive()
+    {
+        GetActiveHelperSlice();
+    }
+
+    TContract IHelperContext.GetHelper<TContract, TImplementation>(Func<TImplementation> create)
+    {
+        ((IHelperContext)this).EnsureActive();
+        ArgumentNullException.ThrowIfNull(create);
+        var root = GetHelperRoot();
+        var helpers = root._helpers ??= new();
+        if (helpers.TryGetValue(typeof(TImplementation), out var existing))
+        {
+            return (TContract)(object)existing;
+        }
+        var helper = RazorSliceHelperActivation<TImplementation>.Create(create)
+            ?? throw new InvalidOperationException("The helper factory returned null.");
+        if (helper is not TContract contract)
+        {
+            throw new InvalidOperationException($"Helper {helper.GetType()} does not implement {typeof(TContract)}.");
+        }
+        helper.Bind(root);
+        helpers.Add(typeof(TImplementation), helper);
+        return contract;
+    }
+
+    private RazorSlice GetHelperRoot()
+    {
+        var root = this;
+        while (root._helperParent is not null) { root = root._helperParent; }
+        return root;
+    }
+
+    internal RazorSliceBase GetActiveHelperSlice()
+    {
+        var root = GetHelperRoot();
+        var active = root._activeHelperSlice ?? root;
+        active.EnsureRendering();
+        return active;
+    }
+
+    private RazorSliceBase? EnterHelperRender()
+    {
+        if (_helperParent is null) { return null; }
+        var root = GetHelperRoot();
+        var previous = root._activeHelperSlice;
+        root._activeHelperSlice = this;
+        return previous;
+    }
+
+    private void ExitHelperRender(RazorSliceBase? previous)
+    {
+        if (_helperParent is not null) { GetHelperRoot()._activeHelperSlice = previous; }
+    }
+
+    /// <summary>Required by the Razor SDK for templated Razor delegates.</summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected void PushWriter(TextWriter writer)
     {
-        Debug.WriteLine($"Pushing current writers to stack. Now rendering to passed {writer.GetType().Name}.");
-
-        _writerStack ??= new();
-        _writerStack.Push((_pipeWriter, _textWriter));
-
+        ArgumentNullException.ThrowIfNull(writer);
+        (_writerStack ??= new()).Push((_pipeWriter, _textWriter));
         _textWriter = writer;
         _pipeWriter = null;
     }
 
-    /// <summary>
-    /// Retrieves a text writer from the stack.
-    /// </summary>
-    /// <remarks>
-    /// This method should not be interacted with directly. It's used by the Razor Slices infrastructure.
-    /// </remarks>
+    /// <summary>Restores the writer after a templated Razor delegate.</summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected void PopWriter()
     {
-        Debug.Assert(_writerStack is not null, "No writer to pop from the stack. PushWriter should have been called first.");
-        Debug.Assert(_textWriter is not null, $"{nameof(_textWriter)} should not be null!");
-        Debug.Assert(_pipeWriter is null, $"{nameof(_pipeWriter)} should be null!");
-
+        Debug.Assert(_writerStack is not null);
         (_pipeWriter, _textWriter) = _writerStack.Pop();
-        Debug.WriteLine($"Popping previous writers off stack. Now rendering to {(_pipeWriter is not null ? "PipeWriter" : "TextWriter")}.");
     }
 
-    /// <summary>
-    /// Renders the template to the specified <see cref="PipeWriter"/>.
-    /// </summary>
-    /// <param name="pipeWriter">The <see cref="PipeWriter"/> to render the template to.</param>
-    /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
-    public ValueTask RenderAsync(PipeWriter pipeWriter, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
+    internal Task ExecuteAsyncImpl()
     {
-        ArgumentNullException.ThrowIfNull(pipeWriter);
+        EnsureInitialized();
+        return ExecuteAsync();
+    }
 
-        var pipe = FlushTrackingPipeWriter.Create(pipeWriter);
-
-        if (ReferenceEquals(pipe, pipeWriter))
-        {
-            var unwrappedRenderTask = RenderToPipeWriterAsync(pipe, htmlEncoder, cancellationToken);
-
-            if (!unwrappedRenderTask.IsCompletedSuccessfully)
-            {
-                // Go async
-                return unwrappedRenderTask;
-            }
-
-            return ValueTask.CompletedTask;
-        }
-
-        ValueTask renderTask;
+    /// <inheritdoc />
+    protected override ValueTask RenderCoreAsync(bool renderLayout, bool disposeSlice)
+    {
         try
         {
-            renderTask = RenderToPipeWriterAsync(pipe, htmlEncoder, cancellationToken);
+            EnsureInitialized();
+            if (renderLayout && this is IUsesLayout usesLayout)
+            {
+                var layout = CreateLayoutForRender(usesLayout);
+                return _pipeWriter is not null
+                    ? layout.RenderToPipeWriterAsync(_pipeWriter, _htmlEncoder, CancellationToken)
+                    : layout.RenderToTextWriterAsync(_textWriter!, _htmlEncoder, CancellationToken);
+            }
         }
-        catch (Exception)
+        catch (Exception error)
         {
-            FlushTrackingPipeWriter.Return(pipe);
+            DisposeAfterFailure(error);
             throw;
         }
 
-        if (!renderTask.IsCompletedSuccessfully)
-        {
-            // Go async
-            return AwaitRenderTaskAndReturnPipe(renderTask, pipe);
-        }
-
-        FlushTrackingPipeWriter.Return(pipe);
-
-        return ValueTask.CompletedTask;
-    }
-
-    private static async ValueTask AwaitRenderTaskAndReturnPipe(ValueTask renderTask, PipeWriter pipe)
-    {
+        var previous = EnterHelperRender();
         try
         {
-            await renderTask;
+            var execute = ExecuteAsync();
+            if (!execute.HandleSynchronousCompletion())
+            {
+                return AwaitExecute(this, execute, previous, disposeSlice);
+            }
         }
-        finally
+        catch (Exception error)
         {
-            FlushTrackingPipeWriter.Return(pipe);
+            ExitHelperRender(previous);
+            DisposeAfterFailure(error);
+            throw;
         }
-    }
-
-    /// <summary>
-    /// Renders the template to the specified <see cref="TextWriter"/>.
-    /// </summary>
-    /// <param name="textWriter">The <see cref="TextWriter"/> to render the template to.</param>
-    /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A <see cref="ValueTask"/> representing the rendering of the template.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="textWriter"/> is <c>null</c>.</exception>
-    public ValueTask RenderAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(textWriter);
-
-        return RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
-    }
-
-    [MemberNotNull(nameof(_pipeWriter))]
-    private ValueTask RenderToPipeWriterAsync(PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken, bool renderLayout = true)
-    {
-        Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a PipeWriter");
-
-        _pipeWriter = pipeWriter;
-        _textWriter = null;
-        _htmlEncoder = htmlEncoder ?? _htmlEncoder;
-        CancellationToken = cancellationToken;
-
-        if (renderLayout && this is IUsesLayout useLayout)
-        {
-            return RenderViaLayout(RenderToPipeWriterAsync, useLayout, _pipeWriter, htmlEncoder, cancellationToken);
-        }
-
-        var executeTask = ExecuteAsyncImpl();
-
-        if (!executeTask.HandleSynchronousCompletion())
-        {
-            // Go async
-            return AwaitExecuteTaskFlushAndDispose(this, executeTask);
-        }
-
-        Dispose();
-
+        ExitHelperRender(previous);
+        if (disposeSlice) { Dispose(); }
         return AutoFlush();
     }
 
-    [MemberNotNull(nameof(_textWriter))]
-    private ValueTask RenderToTextWriterAsync(TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken, bool renderLayout = true)
+    private static async ValueTask AwaitExecute(RazorSlice slice, Task execute, RazorSliceBase? previous, bool dispose)
     {
-        Debug.WriteLine($"Rendering slice of type '{GetType().Name}' to a TextWriter");
-
-        _pipeWriter = null;
-        _textWriter = textWriter;
-        _htmlEncoder = htmlEncoder ?? _htmlEncoder;
-        CancellationToken = cancellationToken;
-
-        if (renderLayout && this is IUsesLayout useLayout)
+        try
         {
-            return RenderViaLayout(RenderToTextWriterAsync, useLayout, _textWriter, htmlEncoder, cancellationToken);
+            await execute;
+            await slice.AutoFlush();
         }
-
-        var executeTask = ExecuteAsyncImpl();
-
-        if (!executeTask.IsCompletedSuccessfully)
+        catch (Exception error)
         {
-            // Go async
-            return AwaitExecuteTaskFlushAndDispose(this, executeTask);
+            slice.ExitHelperRender(previous);
+            if (dispose) { slice.DisposeAfterFailure(error); }
+            throw;
         }
-
-        Dispose();
-
-        // REVIEW: call AutoFlush here?
-
-        return ValueTask.CompletedTask;
+        slice.ExitHelperRender(previous);
+        if (dispose) { slice.Dispose(); }
     }
 
-    private static ValueTask RenderToPipeWriterAsync(RazorSlice razorSlice, PipeWriter pipeWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
-        => razorSlice.RenderToPipeWriterAsync(pipeWriter, htmlEncoder, cancellationToken);
-
-    private static ValueTask RenderToTextWriterAsync(RazorSlice razorSlice, TextWriter textWriter, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
-        => razorSlice.RenderToTextWriterAsync(textWriter, htmlEncoder, cancellationToken);
-
-    private ValueTask RenderViaLayout<TWriter>(Func<RazorSlice, TWriter, HtmlEncoder?, CancellationToken, ValueTask> render, IUsesLayout usesLayout, TWriter writer, HtmlEncoder? htmlEncoder, CancellationToken cancellationToken)
+    private RazorSlice CreateLayoutForRender(IUsesLayout usesLayout)
     {
-        EnsureInitialized();
-        var layoutSlice = usesLayout.CreateLayoutImpl();
-
-        if (layoutSlice is IRazorLayoutSlice razorLayoutSlice and RazorSlice)
+        var layout = usesLayout.CreateLayoutImpl();
+        if (ReferenceEquals(layout, this))
         {
-            razorLayoutSlice.ContentSlice = this;
-            CopySliceState(this, (RazorSlice)razorLayoutSlice);
-
-            return render(layoutSlice, writer, htmlEncoder, cancellationToken);
+            throw new InvalidOperationException("A layout must be a fresh slice outside the current render tree.");
         }
-
-        throw new InvalidOperationException($"Layout slices must inherit from {nameof(RazorLayoutSlice)} or {nameof(RazorLayoutSlice)}<TModel>.");
+        if (layout is not IRazorLayoutSlice container)
+        {
+            throw new InvalidOperationException($"Layout slices must inherit from {nameof(RazorLayoutSlice)} or {nameof(RazorLayoutSlice)}<TModel>.");
+        }
+        container.ContentSlice = this;
+        CopySliceState(this, layout);
+        var root = GetHelperRoot();
+        layout._helpers = root._helpers;
+        root._helpers = null;
+        root._helperParent = layout;
+        return layout;
     }
 
     internal static void CopySliceState(RazorSlice source, RazorSlice destination)
     {
         destination.HttpContext = source.HttpContext;
-        // Avoid setting the service provider directly from our ServiceProvider property so it can be lazily initialized from HttpContext.RequestServices
-        // only if needed
         destination.ServiceProvider = source._serviceProvider;
     }
 
-    internal static async ValueTask<HtmlString> AwaitRenderTask(Task renderTask)
+    internal ValueTask<HtmlString> RenderSectionAsyncImpl(string sectionName)
     {
-        await renderTask;
-        return HtmlString.Empty;
+        EnsureInitialized();
+        var previous = EnterHelperRender();
+        try
+        {
+            var section = ExecuteSectionAsync(sectionName);
+            if (!section.HandleSynchronousCompletion()) { return AwaitSection(this, section, previous); }
+        }
+        catch { ExitHelperRender(previous); throw; }
+        ExitHelperRender(previous);
+        return ValueTask.FromResult(HtmlString.Empty);
+    }
+
+    private static async ValueTask<HtmlString> AwaitSection(RazorSlice slice, Task section, RazorSliceBase? previous)
+    {
+        try { await section; return HtmlString.Empty; }
+        finally { slice.ExitHelperRender(previous); }
     }
 
     private void EnsureInitialized()
     {
-        if (!_initialized && Initialize is not null)
+        if (!_initialized && Activation?.Initialize is { } initialize)
         {
-            Debug.WriteLine($"Initializing slice of type '{GetType().Name}'. {nameof(_serviceProvider)} is currently {(_serviceProvider is null ? "null" : "not null")}.");
-            Initialize(this, _serviceProvider, HttpContext);
+            initialize(this, _serviceProvider, HttpContext);
             _initialized = true;
         }
     }
 
-    private ValueTask AutoFlush()
+    /// <inheritdoc />
+    [SuppressMessage("Usage", "CA1816", Justification = "Base.Dispose calls GC.SuppressFinalize.")]
+    public override void Dispose()
     {
-        Debug.Assert(_pipeWriter is null || _pipeWriter.CanGetUnflushedBytes, "PipeWriter must support unflushed bytes to auto-flush.");
-
-        if (_pipeWriter is not null && _pipeWriter.UnflushedBytes >= _autoFlushThreshold)
+        if (IsDisposed) { return; }
+        base.Dispose();
+        try
         {
-            Debug.WriteLine($"Auto-flushing slice of type '{GetType().Name}' to a PipeWriter");
-            return _pipeWriter.FlushAsync(CancellationToken).GetAsValueTask();
+            if (this is IRazorLayoutSlice { ContentSlice: { } content }) { content.Dispose(); }
         }
-
-        return ValueTask.CompletedTask;
-    }
-
-    private static async ValueTask AwaitOutputFlushTask(Task flushTask)
-    {
-        await flushTask;
-    }
-
-    private static async ValueTask AwaitExecuteTaskFlushAndDispose(RazorSlice slice, Task executeTask)
-    {
-        await executeTask;
-        await slice.AutoFlush();
-        slice.Dispose();
-    }
-
-    /// <summary>
-    /// Attempts to flush the underlying output the template is being rendered to.
-    /// </summary>
-    /// <returns>A <see cref="ValueTask"/> representing the flush operation.</returns>
-    protected ValueTask<HtmlString> FlushAsync()
-    {
-        if (_pipeWriter is not null)
+        finally
         {
-            var pipeWriterFlushTask = _pipeWriter.FlushAsync(CancellationToken);
-            if (!pipeWriterFlushTask.IsCompletedSuccessfully)
-            {
-                // Go async
-                return AwaitPipeWriterFlushAsyncTask(pipeWriterFlushTask);
-            }
-
-            return ValueTask.FromResult(HtmlString.Empty);
+            _helpers?.Clear();
+            _helpers = null;
         }
-        else if (_textWriter is not null)
-        {
-            var textWriterFlushTask = _textWriter.FlushAsync(CancellationToken);
-            if (!textWriterFlushTask.IsCompletedSuccessfully)
-            {
-                // Go async
-                return AwaitTextWriterFlushAsyncTask(textWriterFlushTask);
-            }
-
-            return ValueTask.FromResult(HtmlString.Empty);
-        }
-
-        throw new UnreachableException();
-    }
-
-    private static async ValueTask<HtmlString> AwaitPipeWriterFlushAsyncTask(ValueTask<FlushResult> flushTask)
-    {
-        await flushTask;
-        return HtmlString.Empty;
-    }
-
-    private static async ValueTask<HtmlString> AwaitTextWriterFlushAsyncTask(Task flushTask)
-    {
-        await flushTask;
-        return HtmlString.Empty;
-    }
-
-    /// <summary>
-    /// Disposes the instance. Overriding implementations should ensure they call <c>base.Dispose()</c> after performing their
-    /// custom dispose logic, e.g.:
-    /// <code>
-    /// public override void Dispose()
-    /// {
-    ///     // Custom dispose logic here...
-    ///     base.Dispose();
-    /// }
-    /// </code>
-    /// </summary>
-    public virtual void Dispose()
-    {
-        GC.SuppressFinalize(this);
-        DisposeInternal();
-    }
-
-    private void DisposeInternal()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        Debug.WriteLine($"Disposing slice of type '{GetType().Name}'");
-
-        if (this is IRazorLayoutSlice { ContentSlice: { } contentSlice })
-        {
-            Debug.WriteLine($"Disposing content slice of type '{contentSlice.GetType().Name}'");
-            contentSlice.Dispose();
-        }
-
-        _disposed = true;
-
-        Debug.WriteLine($"Disposed slice of type '{GetType().Name}'");
     }
 }

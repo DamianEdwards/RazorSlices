@@ -19,12 +19,7 @@ public abstract class RazorLayoutSlice<TModel> : RazorSlice<TModel>, IRazorLayou
     /// <returns></returns>
     protected ValueTask<HtmlString> RenderBodyAsync()
     {
-        if (ContentSlice is not null)
-        {
-            return RenderChildSliceAsync(ContentSlice);
-        }
-
-        return ValueTask.FromResult(HtmlString.Empty);
+        return ContentSlice is not null ? RenderChildSliceAsync(ContentSlice, disposeSlice: false) : ValueTask.FromResult(HtmlString.Empty);
     }
 
     /// <summary>
@@ -44,12 +39,7 @@ public abstract class RazorLayoutSlice<TModel> : RazorSlice<TModel>, IRazorLayou
         {
             Debug.WriteLine($"Rendering section '{sectionName}' on child slice of type '{ContentSlice.GetType().Name}' from layout slice of type '{GetType().Name}'");
 
-            var renderTask = ContentSlice.ExecuteSectionAsync(sectionName);
-
-            if (!renderTask.HandleSynchronousCompletion())
-            {
-                return AwaitRenderTask(renderTask);
-            }
+            return ContentSlice.RenderSectionAsyncImpl(sectionName);
         }
 
         return ValueTask.FromResult(HtmlString.Empty);

@@ -35,17 +35,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="RazorSlice.Formattables.cs">
+    <Compile Update="RazorSliceBase.Formattables.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
-      <DependentUpon>RazorSlice.Formattables.tt</DependentUpon>
+      <DependentUpon>RazorSliceBase.Formattables.tt</DependentUpon>
     </Compile>
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="RazorSlice.Formattables.tt">
+    <None Update="RazorSliceBase.Formattables.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>RazorSlice.Formattables.cs</LastGenOutput>
+      <LastGenOutput>RazorSliceBase.Formattables.cs</LastGenOutput>
     </None>
   </ItemGroup>
 
