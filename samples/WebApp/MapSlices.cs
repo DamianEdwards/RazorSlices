@@ -9,7 +9,7 @@ internal static class MapSlicesExtensions
     public static IEndpointRouteBuilder MapSlices(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet("/lorem", () => Results.Redirect("/lorem-static"));
-        endpoints.MapGet("/minimal", RazorSliceBaseResult () => Minimal.Greeting.Create("<minimal>").AsResult());
+        endpoints.MapGet("/minimal", RazorSliceBase () => Minimal.Greeting.Create("<minimal>"));
         endpoints.MapGet("/minimal-partial", RazorSlice () => Slices.MinimalHost.Create());
 
 #if NET10_0_OR_GREATER

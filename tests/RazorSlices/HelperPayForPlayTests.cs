@@ -6,7 +6,7 @@ public class HelperPayForPlayTests
     public void MinimalSliceHasNoApplicationOrHelperState()
     {
         Assert.False(typeof(Minimal).IsAssignableTo(typeof(RazorSlice)));
-        Assert.False(typeof(Minimal).IsAssignableTo(typeof(Microsoft.AspNetCore.Http.IResult)));
+        Assert.True(typeof(Minimal).IsAssignableTo(typeof(Microsoft.AspNetCore.Http.IResult)));
         var fields = typeof(RazorSliceBase).GetFields(System.Reflection.BindingFlags.Instance |
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
         Assert.DoesNotContain(fields, static field =>

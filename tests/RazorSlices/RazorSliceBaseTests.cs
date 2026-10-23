@@ -93,32 +93,40 @@ public class RazorSliceBaseTests
     }
 
     [Fact]
-    public async Task ExplicitHttpResultDoesNotResolveRequestServices()
+    public async Task DirectHttpResultWithExplicitEncoderDoesNotResolveRequestServices()
     {
         var context = new DefaultHttpContext { RequestServices = new ThrowingProvider() };
         using var output = new MemoryStream();
         context.Response.Body = output;
-        var result = new MinimalModel { Model = "<http>" }.AsResult(StatusCodes.Status201Created, "text/html");
+        var result = new MinimalModel
+        {
+            Model = "<http>",
+            StatusCode = StatusCodes.Status201Created,
+            ContentType = "text/html",
+            HtmlEncoder = HtmlEncoder.Default
+        };
         Assert.Equal(201, ((IStatusCodeHttpResult)result).StatusCode);
         Assert.Equal("text/html", ((IContentTypeHttpResult)result).ContentType);
-        await result.ExecuteAsync(context);
+        await ((IResult)result).ExecuteAsync(context);
         Assert.Equal(201, context.Response.StatusCode);
         Assert.Equal("<p>&lt;http&gt;</p>", Encoding.UTF8.GetString(output.ToArray()));
     }
 
-    [Fact]
-    public async Task HttpStartFailureDisposesWithoutExecutingTheTemplate()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HttpStartFailureDisposesWithoutExecutingTheTemplate(bool asynchronous)
     {
         var failure = new InvalidOperationException("start");
         var context = new DefaultHttpContext();
-        context.Response.Body = new FailedStartStream(failure);
-        var slice = new Minimal(() => throw new Exception("Must not execute"));
-        Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() => slice.AsResult().ExecuteAsync(context)));
+        context.Response.Body = new FailedStartStream(failure, asynchronous);
+        var slice = new Minimal(() => throw new Exception("Must not execute")) { HtmlEncoder = HtmlEncoder.Default };
+        Assert.Same(failure, await Assert.ThrowsAsync<InvalidOperationException>(() => ((IResult)slice).ExecuteAsync(context)));
         Assert.Equal(1, slice.Disposals);
     }
 
     [Fact]
-    public async Task ExplicitAdapterAlsoPreservesFullSliceInjectionAndCustomEncoder()
+    public async Task DirectHttpResultPreservesFullSliceInjectionAndCustomEncoder()
     {
         using var services = new ServiceCollection().AddSingleton("injected <\u00e9>").BuildServiceProvider();
         var context = new DefaultHttpContext { RequestServices = services };
@@ -126,7 +134,7 @@ public class RazorSliceBaseTests
         context.Response.Body = output;
         var slice = RazorSliceFactory.Create(static () => new Injected());
         slice.HtmlEncoder = HtmlEncoder.Create(UnicodeRanges.All);
-        await slice.AsResult().ExecuteAsync(context);
+        await ((IResult)slice).ExecuteAsync(context);
         Assert.Equal("injected &lt;\u00e9&gt;", Encoding.UTF8.GetString(output.ToArray()));
     }
 
@@ -216,10 +224,14 @@ public class RazorSliceBaseTests
             throw new Exception("Request scope must not be resolved");
         }
     }
-    private sealed class FailedStartStream(Exception failure) : MemoryStream
+    private sealed class FailedStartStream(Exception failure, bool asynchronous) : MemoryStream
     {
         public override Task FlushAsync(CancellationToken cancellationToken)
         {
+            if (!asynchronous)
+            {
+                throw failure;
+            }
             return Task.FromException(failure);
         }
     }

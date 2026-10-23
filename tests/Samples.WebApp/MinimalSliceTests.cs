@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+
 namespace RazorSlices.Samples.WebApp.Tests;
 
 public class MinimalSliceTests
@@ -10,6 +12,24 @@ public class MinimalSliceTests
         Assert.Equal("""<p class="minimal &lt;model&gt;">&lt;model&gt;</p>""", (await slice.RenderAsync()).Trim());
     }
 
+#if NET10_0_OR_GREATER
+    [Fact]
+    public void ResultExtensionsAcceptMinimalInstancesWithoutWrappingThem()
+    {
+        using var slice = Minimal.Greeting.Create("result");
+        var encoder = System.Text.Encodings.Web.HtmlEncoder.Create(System.Text.Unicode.UnicodeRanges.All);
+        slice.HtmlEncoder = encoder;
+        Assert.Same(slice, Microsoft.AspNetCore.Http.TypedResults.RazorSlice(slice, 201));
+        Assert.Equal(201, slice.StatusCode);
+        Assert.Same(encoder, slice.HtmlEncoder);
+        Assert.Same(slice, Microsoft.AspNetCore.Http.Results.RazorSlice(slice, 202));
+        Assert.Equal(202, slice.StatusCode);
+        slice.HtmlEncoder = null;
+        Assert.Same(slice, Microsoft.AspNetCore.Http.TypedResults.RazorSlice(slice));
+        Assert.Same(System.Text.Encodings.Web.HtmlEncoder.Default, slice.HtmlEncoder);
+    }
+#endif
+
 #if DEBUG
     [Fact(Skip = "Debug tracing allocates; measure SDK slices in Release.")]
 #else
@@ -20,7 +40,7 @@ public class MinimalSliceTests
         if (IntPtr.Size != 8) { return; }
         var minimal = Allocation(static () => Minimal.Empty.Create());
         var full = Allocation(static () => Minimal.FullEmpty.Create());
-        Assert.Equal(128, minimal);
+        Assert.Equal(144, minimal);
         Assert.Equal(208, full);
     }
 

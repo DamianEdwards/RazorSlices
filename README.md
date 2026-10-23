@@ -241,7 +241,7 @@ The library is still new and features are being actively added.
 - Asynchronous rendering, i.e. the template can contain `await` statements, e.g. `@await WriteTheThing()`
 - Writing UTF8 `byte[]` values directly to the output
 - Rendering directly to `PipeWriter`, `Stream`, `TextWriter`, `StringBuilder`, and `string` outputs, including optimizations for not boxing struct values, zero-allocation rendering of primitives like numbers, etc. (rather than just calling `ToString()` on everything)
-- `RazorSlice` implements `IResult` so you can return a slice instance from a minimal APIs route handler directly, or via `Results.Extensions.RazorSlice<Hello>()` and in .NET 10+ `Results.RazorSlice<Hello>()`. When using slices with models use `Results.Extensions.RazorSlice<Hello, MyModel>(model)` and in .NET 10+ `Results.RazorSlice<Hello, MyModel>(model)`.
+- `RazorSliceBase` implements `IResult`, so both minimal and normal slices can be returned directly from a minimal API route handler. Normal slices also support `Results.Extensions.RazorSlice<Hello>()` and in .NET 10+ `Results.RazorSlice<Hello>()`. When using normal slices with models use `Results.Extensions.RazorSlice<Hello, MyModel>(model)` and in .NET 10+ `Results.RazorSlice<Hello, MyModel>(model)`.
 - Full support for trimming and native AOT when used in conjunction with ASP.NET Core Minimal APIs
 - Generated Razor Slice proxy types are `public sealed partial class` by default. To use record classes instead, making them `public sealed partial record`, set the `RazorSliceProxiesAsRecords` property to `true` in your project file, e.g.:
     ``` xml
@@ -252,8 +252,9 @@ The library is still new and features are being actively added.
   
 ### Minimal slices
 
-`RazorSlice` remains the normal base, including helpers, layouts, partials, property injection, and `IResult`.
-For templates that do not need those features, inherit `RazorSliceBase` or `RazorSliceBase<TModel>`:
+`RazorSlice` remains the normal base, including helpers, layouts, partials, and property injection.
+For templates that do not need those features, inherit `RazorSliceBase` or `RazorSliceBase<TModel>`.
+Both tiers implement `IResult`:
 
 ```cshtml
 @using RazorSlices
@@ -269,13 +270,16 @@ proxies have the same `Create()` / `Create(model)` syntax, implementing `IRazorS
 
 ```csharp
 var html = await MyApp.Minimal.Greeting.Create("Hello").RenderAsync();
-app.MapGet("/minimal", RazorSliceBaseResult () => MyApp.Minimal.Greeting.Create("Hello").AsResult());
+app.MapGet("/minimal", RazorSliceBase () => MyApp.Minimal.Greeting.Create("Hello"));
 ```
 
-`AsResult` explicitly allocates an HTTP adapter; the minimal slice itself has no HTTP result fields. The adapter
-uses `HtmlEncoder.Default` unless an encoder is passed and does not resolve request services. For a wrapper-free
-HTTP path, render directly to the response writer. A normal slice can render a minimal child with
+Minimal slices are HTTP results themselves: no adapter allocation is needed. Set `StatusCode`, `ContentType`,
+and `HtmlEncoder` on the slice to customize the response. HTTP execution resolves an encoder from request services
+when `HtmlEncoder` is unset; set it to `HtmlEncoder.Default` to avoid that lookup and request-scope cost.
+Only normal slices retain `HttpContext` for injection. A normal slice can render a minimal child with
 `@await RenderPartialAsync(MyApp.Minimal.Greeting.Create("Hello"))`.
+On .NET 10+, `Results.RazorSlice(slice)` and `TypedResults.RazorSlice(slice)` also accept minimal instances,
+setting the status code and default encoder without allocating a wrapper.
 An explicit lambda return type, as above, lets the ASP.NET Core request-delegate generator identify the result
 without needing to inspect the proxy emitted by the Razor Slices generator in the same compilation.
 

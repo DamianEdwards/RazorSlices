@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Html;
 namespace RazorSlices;
 
 /// <summary>
-/// Minimal streaming Razor template without dependency injection, helpers, layouts, partials, or HTTP-result state.
+/// Minimal streaming Razor template with HTTP-result support, but without dependency injection, helpers, layouts, or partials.
 /// Use <see cref="RazorSlice"/> for the normal, feature-rich template base.
 /// </summary>
 public abstract partial class RazorSliceBase : IDisposable
