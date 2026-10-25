@@ -9,6 +9,12 @@ namespace RazorSlices;
 /// </summary>
 public static class RazorSliceStreamExtensions
 {
+    /// <summary>Renders a full-featured slice to the specified stream.</summary>
+    public static ValueTask RenderAsync(this RazorSlice razorSlice, Stream stream, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
+    {
+        return RenderAsync((RazorSliceBase)razorSlice, stream, htmlEncoder, cancellationToken);
+    }
+
     /// <summary>
     /// Renders the template to the specified <see cref="Stream"/>.
     /// </summary>
@@ -17,7 +23,7 @@ public static class RazorSliceStreamExtensions
     /// <param name="htmlEncoder">An optional <see cref="HtmlEncoder"/> instance to use when rendering the template. If none is specified, <see cref="HtmlEncoder.Default"/> will be used.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A <see cref="ValueTask" /> that represents the template rendering.</returns>
-    public static async ValueTask RenderAsync(this RazorSlice razorSlice, Stream stream, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
+    public static async ValueTask RenderAsync(this RazorSliceBase razorSlice, Stream stream, HtmlEncoder? htmlEncoder = null, CancellationToken cancellationToken = default)
     {
         var pipe = PipeWriter.Create(stream, new(MemoryPool<byte>.Shared));
         await razorSlice.RenderAsync(pipe, htmlEncoder, cancellationToken);

@@ -1,0 +1,5 @@
+@using RazorSlices
+@using OptimizerSample
+@inherits RazorSlice
+@Helpers.Markup.Text("<helper>")
+@await RenderPartialAsync(global::OptimizerSample.MinimalModel.Create("<child>"))

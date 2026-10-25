@@ -1,13 +1,17 @@
 using System.Diagnostics;
-using System.Runtime.Loader;
 using Mono.Cecil;
 
 namespace RazorSlices.BuildTasks.Tests;
 
 public class BuildIntegrationTests
 {
-    [Fact]
-    public async Task OptimizationDefaultsAndOptOutWorkWithoutCleaning()
+    private static readonly string[] Templates =
+        ["Hello", "Minimal", "MinimalModel", "FullModel", "CustomMinimal", "CustomFull", "Markup", "Composed"];
+
+    [Theory]
+    [InlineData("net8.0")]
+    [InlineData("net10.0")]
+    public async Task OptimizationDefaultsAndOptOutWorkWithoutCleaning(string framework)
     {
         var root = FindRoot();
         var artifacts = Path.Combine(root, "artifacts", "OptimizerTests", Guid.NewGuid().ToString("N"));
@@ -33,19 +37,8 @@ public class BuildIntegrationTests
             await Build("Release", "-p:OptimizerTestDebugType=embedded");
             Assert.Equal(0, CountProperties("release"));
 
-            var context = new AssemblyLoadContext("OptimizedSdkTemplate", isCollectible: true);
-            try
-            {
-                using var stream = new MemoryStream(File.ReadAllBytes(AssemblyPath("release")));
-                var assembly = context.LoadFromStream(stream);
-                using var instance = (RazorSlice)Activator.CreateInstance(
-                    assembly.GetType("AspNetCoreGeneratedDocument.Hello")!, nonPublic: true)!;
-                Assert.Equal("Hello 42", (await instance.RenderAsync()).Trim());
-            }
-            finally
-            {
-                context.Unload();
-            }
+            Assert.Contains("Optimized full, minimal, model, custom-base, and helper templates rendered successfully.",
+                await Run(AssemblyPath("release")));
         }
         finally
         {
@@ -57,12 +50,26 @@ public class BuildIntegrationTests
         int CountProperties(string configuration)
         {
             using var module = ModuleDefinition.ReadModule(AssemblyPath(configuration));
-            var template = module.Types.Single(t => t.FullName == "AspNetCoreGeneratedDocument.Hello");
-            Assert.Equal(template.Properties.Count, template.Fields.Count);
-            return template.Properties.Count;
+            var counts = Templates.Select(name =>
+            {
+                var template = module.Types.Single(t => t.FullName == "AspNetCoreGeneratedDocument." + name);
+                Assert.Equal(template.Properties.Count, template.Fields.Count);
+                return template.Properties.Count;
+            }).ToArray();
+            Assert.All(counts, count => Assert.Equal(counts[0], count));
+            return counts[0];
         }
 
         async Task Build(string configuration, params string[] extra)
+        {
+            await Run(new[]
+            {
+                "build", project, "-c", configuration, "--disable-build-servers", "--nologo", "-v:q",
+                "-p:ArtifactsPath=" + artifacts, "-p:OptimizerTestTargetFramework=" + framework
+            }.Concat(extra).ToArray());
+        }
+
+        async Task<string> Run(params string[] arguments)
         {
             using var process = new Process
             {
@@ -74,11 +81,7 @@ public class BuildIntegrationTests
                     UseShellExecute = false
                 }
             };
-            foreach (var argument in new[]
-            {
-                "build", project, "-c", configuration, "--disable-build-servers", "--nologo", "-v:q",
-                "-p:ArtifactsPath=" + artifacts
-            }.Concat(extra))
+            foreach (var argument in arguments)
             {
                 process.StartInfo.ArgumentList.Add(argument);
             }
@@ -95,7 +98,9 @@ public class BuildIntegrationTests
                 process.Kill(entireProcessTree: true);
                 throw;
             }
-            Assert.True(process.ExitCode == 0, await stdout + Environment.NewLine + await stderr);
+            var output = await stdout + Environment.NewLine + await stderr;
+            Assert.True(process.ExitCode == 0, output);
+            return output;
         }
     }
 

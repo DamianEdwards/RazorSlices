@@ -8,6 +8,7 @@
     <AssemblyName>RazorSlices.Samples.RazorClassLibrary</AssemblyName>
     <RootNamespace>RazorSlices.Samples.RazorClassLibrary</RootNamespace>
     <Nullable>enable</Nullable>
+    <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>

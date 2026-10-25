@@ -305,9 +305,10 @@ internal static class PipeWriterHtmlExtensions
     public static void Write(this PipeWriter pipeWriter, bool value)
     {
         var buffer = pipeWriter.GetSpan(value ? TrueStringLength : FalseStringLength);
-        if (!Utf8Formatter.TryFormat(value, buffer, out var _))
+        if (!Utf8Formatter.TryFormat(value, buffer, out var bytesWritten))
         {
             throw new FormatException("Unexpectedly insufficient space in buffer to format bool value.");
         }
+        pipeWriter.Advance(bytesWritten);
     }
 }

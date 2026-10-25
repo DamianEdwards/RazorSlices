@@ -12,6 +12,10 @@ namespace RazorSlices.SourceGenerator;
 [Generator]
 internal class RazorSliceProxyGenerator : IIncrementalGenerator
 {
+    internal static readonly DiagnosticDescriptor UnsupportedMinimalFeature = new(
+        "RSG0004", "Unsupported minimal-slice feature",
+        "Minimal slices do not support {0}; inherit RazorSlice instead", "RazorSlices", DiagnosticSeverity.Error, true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var assemblyName = context.CompilationProvider.Select(static (compilation, _) => compilation.AssemblyName);
@@ -93,7 +97,9 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             return;
         }
 
-        var distinctTexts = sliceTexts.Distinct();
+        var distinctTexts = allCshtmlFiles.Where(static file =>
+            !string.Equals(Path.GetFileName(file.Path), "_ViewImports.cshtml", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(Path.GetFileName(file.Path), "_ViewStart.cshtml", StringComparison.OrdinalIgnoreCase)).Distinct();
 
         if (!distinctTexts.Any())
         {
@@ -105,6 +111,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
         var viewImportsMap = ViewImportsResolver.BuildViewImportsMap(allCshtmlFiles);
 
         HashSet<string> generatedClasses = [];
+        var generatedProxy = false;
 
         var codeBuilder = new StringBuilder();
 
@@ -142,6 +149,30 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 ? rootNamespace
                 : $"{rootNamespace}.{subNamespace}";
 
+            var helperSource = file.GetText(context.CancellationToken);
+            if (helperSource is not null)
+            {
+                var helperDirectives = ViewImportsResolver.ResolveDirectives(file.Path, projectDirectory!, viewImportsMap, helperSource);
+                if (RazorSliceHelperGenerator.IsHelper(helperDirectives, compilation, rootNamespace!))
+                {
+                    if (!generatedClasses.Add($"{fullNamespace}.{className}"))
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(RazorSliceHelperGenerator.InvalidContract,
+                            Location.Create(file.Path, default, default), $"Duplicate helper/proxy name '{fullNamespace}.{className}'"));
+                        continue;
+                    }
+                    var helperType = string.IsNullOrEmpty(subNamespaceAsClassName) ? className : $"{subNamespaceAsClassName}_{className}";
+                    RazorSliceHelperGenerator.Generate(context, file, helperDirectives, compilation,
+                        fullNamespace!, className, $"global::{helperDirectives.NamespaceDirective ?? "AspNetCoreGeneratedDocument"}.{helperType}",
+                        rootNamespace!);
+                    continue;
+                }
+            }
+            if (!sliceTexts.Contains(file))
+            {
+                continue;
+            }
+
             // Duplicate class name check
             if (generatedClasses.Contains($"{fullNamespace}.{className}"))
             {
@@ -159,6 +190,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             else
             {
                 generatedClasses.Add($"{fullNamespace}.{className}");
+                generatedProxy = true;
 
                 // Resolve directives (including _ViewImports hierarchy)
                 var sourceText = file.GetText();
@@ -166,10 +198,12 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 bool hasModel = false;
 
                 var templateNameSpace = "AspNetCoreGeneratedDocument";
+                ResolvedDirectives? resolvedDirectives = null;
 
                 if (sourceText is not null)
                 {
                     var directives = ViewImportsResolver.ResolveDirectives(file.Path, projectDirectory!, viewImportsMap, sourceText);
+                    resolvedDirectives = directives;
 
                     if (directives.InheritsDirective is not null)
                     {
@@ -218,11 +252,6 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                     }
                 }
 
-                codeBuilder.AppendLine($$"""
-                    namespace {{fullNamespace}}
-                    {
-                    """);
-
                 var generatedTypeName = string.IsNullOrEmpty(subNamespaceAsClassName)
                     ? className
                     : $"{subNamespaceAsClassName}_{className}";
@@ -231,12 +260,38 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                 var genericParameter = hasModel && resolvedModelType is not null ? $"<{resolvedModelType}>" : "";
 
                 var fullyQualifiedGeneratedTypeName = $"global::{templateNameSpace}.{generatedTypeName}";
+                var minimal = resolvedDirectives is { } effective && IsMinimalSlice(effective, compilation, rootNamespace!);
+                if (minimal && resolvedDirectives is { } minimalDirectives &&
+                    GetUnsupportedMinimalFeature(minimalDirectives, compilation, rootNamespace!) is { } unsupported)
+                {
+                    context.ReportDiagnostic(Diagnostic.Create(UnsupportedMinimalFeature, Location.Create(file.Path, default, default), unsupported));
+                    continue;
+                }
+                var sliceBase = minimal ? "RazorSliceBase" : "RazorSlice";
+                var proxy = minimal ? "IRazorSliceBaseProxy" : "IRazorSliceProxy";
+                string? activation = null;
+                if (!minimal && resolvedDirectives is { } resolved)
+                {
+                    activation = RazorSliceActivationGenerator.Generate(compilation, resolved, rootNamespace!,
+                        fullyQualifiedGeneratedTypeName, out var reason);
+                    if (activation is null)
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(RazorSliceActivationGenerator.RuntimeFallback,
+                            Location.Create(file.Path, default, default), reason));
+                    }
+                }
+                var activationArgument = activation is null ? "" : ", __Activation";
+
+                codeBuilder.AppendLine($$"""
+                    namespace {{fullNamespace}}
+                    {
+                    """);
 
                 codeBuilder.AppendLine($$"""
                         /// <summary>
                         /// Static proxy for the Razor Slice defined in <c>{{relativeFilePath}}</c>.
                         /// </summary>
-                        public sealed partial {{sliceTypeDeclaration}}{{className}} : global::RazorSlices.IRazorSliceProxy{{genericParameter}}
+                        public sealed partial {{sliceTypeDeclaration}}{{className}} : global::RazorSlices.{{proxy}}{{genericParameter}}
                         {
                     """);
 
@@ -246,11 +301,11 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                             /// <summary>
                             /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c> with the given model.
                             /// </summary>
-                            public static global::RazorSlices.RazorSlice<{{resolvedModelType}}> Create({{resolvedModelType}} model) =>
-                                global::RazorSlices.RazorSliceFactory.Create(model, static model => new {{fullyQualifiedGeneratedTypeName}} { Model = model });
+                            public static global::RazorSlices.{{sliceBase}}<{{resolvedModelType}}> Create({{resolvedModelType}} model) =>
+                                global::RazorSlices.{{sliceBase}}Factory.Create(model, static model => new {{fullyQualifiedGeneratedTypeName}} { Model = model }{{activationArgument}});
 
                             // Explicit interface implementation, workaround for https://github.com/dotnet/runtime/issues/102796
-                            static global::RazorSlices.RazorSlice<{{resolvedModelType}}> global::RazorSlices.IRazorSliceProxy<{{resolvedModelType}}>.CreateSlice({{resolvedModelType}} model) => Create(model);
+                            static global::RazorSlices.{{sliceBase}}<{{resolvedModelType}}> global::RazorSlices.{{proxy}}<{{resolvedModelType}}>.CreateSlice({{resolvedModelType}} model) => Create(model);
                     """);
                 }
                 else
@@ -259,12 +314,17 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                             /// <summary>
                             /// Creates a new instance of the Razor Slice defined in <c>{{relativeFilePath}}</c>.
                             /// </summary>
-                            public static global::RazorSlices.RazorSlice Create() =>
-                                global::RazorSlices.RazorSliceFactory.Create(static () => new {{fullyQualifiedGeneratedTypeName}}());
+                            public static global::RazorSlices.{{sliceBase}} Create() =>
+                                global::RazorSlices.{{sliceBase}}Factory.Create(static () => new {{fullyQualifiedGeneratedTypeName}}(){{activationArgument}});
 
                             // Explicit interface implementation, workaround for https://github.com/dotnet/runtime/issues/102796
-                            static global::RazorSlices.RazorSlice global::RazorSlices.IRazorSliceProxy.CreateSlice() => Create();
+                            static global::RazorSlices.{{sliceBase}} global::RazorSlices.{{proxy}}.CreateSlice() => Create();
                     """);
+                }
+
+                if (activation is not null)
+                {
+                    codeBuilder.AppendLine(activation);
                 }
 
                 // Close class & namespace
@@ -277,11 +337,61 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             }
         }
 
-        context.AddSource($"{rootNamespace}.RazorSliceProxies.g.cs", SourceText.From(codeBuilder.ToString(), Encoding.UTF8));
+        if (generatedProxy)
+        {
+            context.AddSource($"{rootNamespace}.RazorSliceProxies.g.cs", SourceText.From(codeBuilder.ToString(), Encoding.UTF8));
+        }
     }
 
-    private static bool IsDirectRazorSliceBaseType(string baseTypeName) =>
-        string.Equals(baseTypeName, "RazorSlice", StringComparison.Ordinal) ||
+    private static bool IsDirectRazorSliceBaseType(string baseTypeName)
+    {
+        return string.Equals(baseTypeName, "RazorSlice", StringComparison.Ordinal) ||
         string.Equals(baseTypeName, "RazorSlices.RazorSlice", StringComparison.Ordinal) ||
-        string.Equals(baseTypeName, "global::RazorSlices.RazorSlice", StringComparison.Ordinal);
+        string.Equals(baseTypeName, "global::RazorSlices.RazorSlice", StringComparison.Ordinal) ||
+        string.Equals(baseTypeName, "RazorSliceBase", StringComparison.Ordinal) ||
+        string.Equals(baseTypeName, "RazorSlices.RazorSliceBase", StringComparison.Ordinal) ||
+        string.Equals(baseTypeName, "global::RazorSlices.RazorSliceBase", StringComparison.Ordinal);
+    }
+
+    private static bool IsMinimalSlice(ResolvedDirectives directives, Compilation compilation, string rootNamespace)
+    {
+        if (directives.InheritsDirective is not { } inherits) { return false; }
+        var name = RazorDirectiveParser.ExtractBaseTypeName(inherits);
+        if (name is "RazorSliceBase" or "RazorSlices.RazorSliceBase" or "global::RazorSlices.RazorSliceBase") { return true; }
+        var type = ModelTypeResolver.ResolveTypeSymbolExpression(inherits, directives.UsingDirectives, compilation, rootNamespace) as INamedTypeSymbol;
+        for (; type is not null; type = type.BaseType)
+        {
+            if (type.ContainingNamespace.ToDisplayString() != "RazorSlices") { continue; }
+            if (type.Name == "RazorSlice") { return false; }
+            if (type.Name == "RazorSliceBase") { return true; }
+        }
+        return false;
+    }
+
+    private static string? GetUnsupportedMinimalFeature(ResolvedDirectives directives, Compilation compilation, string rootNamespace)
+    {
+        if (directives.Injections.Count > 0) { return "@inject"; }
+        var type = ModelTypeResolver.ResolveTypeSymbolExpression(directives.InheritsDirective!,
+            directives.UsingDirectives, compilation, rootNamespace) as INamedTypeSymbol;
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            if (current.GetMembers().OfType<IPropertySymbol>().Any(static property => property.GetAttributes().Any(static attribute =>
+                attribute.AttributeClass?.ToDisplayString() == "Microsoft.AspNetCore.Mvc.Razor.Internal.RazorInjectAttribute")))
+            {
+                return "injected base properties";
+            }
+        }
+        if (type?.AllInterfaces.Any(IsLayout) == true ||
+            directives.Interfaces.Any(name => ModelTypeResolver.ResolveTypeSymbolExpression(name, directives.UsingDirectives,
+                compilation, rootNamespace) is INamedTypeSymbol contract && (IsLayout(contract) || contract.AllInterfaces.Any(IsLayout))))
+        {
+            return "layouts";
+        }
+        return null;
+
+        static bool IsLayout(INamedTypeSymbol contract)
+        {
+            return contract.Name == "IUsesLayout" && contract.ContainingNamespace.ToDisplayString() == "RazorSlices";
+        }
+    }
 }

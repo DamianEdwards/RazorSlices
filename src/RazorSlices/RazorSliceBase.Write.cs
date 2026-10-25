@@ -7,7 +7,7 @@ using System.Globalization;
 
 namespace RazorSlices;
 
-public partial class RazorSlice
+public partial class RazorSliceBase
 {
     /// <summary>
     /// Writes a string value to the output without HTML encoding it.
@@ -17,7 +17,7 @@ public partial class RazorSlice
     /// all blocks of HTML in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
-    protected void WriteLiteral(string? value)
+    protected internal void WriteLiteral(string? value)
     {
         if (string.IsNullOrEmpty(value))
         {
@@ -36,7 +36,7 @@ public partial class RazorSlice
     /// all blocks of HTML in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
-    protected void WriteLiteral<T>(T? value)
+    protected internal void WriteLiteral<T>(T? value)
     {
         if (value is IUtf8SpanFormattable)
         {
@@ -68,7 +68,7 @@ public partial class RazorSlice
     /// </para>
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
-    protected void WriteLiteral(ReadOnlySpan<byte> value)
+    protected internal void WriteLiteral(ReadOnlySpan<byte> value)
     {
         if (value.Length == 0)
         {
@@ -93,7 +93,10 @@ public partial class RazorSlice
     /// </para>
     /// </remarks>
     /// <param name="value"></param>
-    protected void Write(bool? value) => WriteBool(value);
+    protected internal void Write(bool? value)
+    {
+        WriteBool(value);
+    }
 
     /// <summary>
     /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.
@@ -103,7 +106,10 @@ public partial class RazorSlice
     /// all matching Razor expressions in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
-    protected void Write(byte[] value) => Write(value.AsSpan());
+    protected void Write(byte[] value)
+    {
+        Write(value.AsSpan());
+    }
 
     /// <summary>
     /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.
@@ -113,7 +119,10 @@ public partial class RazorSlice
     /// all matching Razor expressions in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
-    protected void Write(ReadOnlyMemory<byte> value) => Write(value.Span);
+    protected void Write(ReadOnlyMemory<byte> value)
+    {
+        Write(value.Span);
+    }
 
     /// <summary>
     /// Writes a buffer of UTF8 bytes to the output after HTML encoding it.
@@ -123,7 +132,7 @@ public partial class RazorSlice
     /// all matching Razor expressions in your .cshtml file.
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
-    protected void Write(ReadOnlySpan<byte> value)
+    protected internal void Write(ReadOnlySpan<byte> value)
     {
         if (value.Length == 0)
         {
@@ -148,7 +157,7 @@ public partial class RazorSlice
     /// </para>
     /// </remarks>
     /// <param name="htmlString">The <see cref="HtmlString"/> value to write to the output.</param>
-    protected void Write(HtmlString htmlString)
+    protected internal void Write(HtmlString htmlString)
     {
         if (htmlString is not null && htmlString != HtmlString.Empty)
         {
@@ -160,7 +169,7 @@ public partial class RazorSlice
     /// Writes the specified <see cref="IHtmlContent"/> value to the output without HTML encoding it again.
     /// </summary>
     /// <param name="htmlContent">The <see cref="IHtmlContent"/> value to write to the output.</param>
-    protected void Write(IHtmlContent? htmlContent)
+    protected internal void Write(IHtmlContent? htmlContent)
     {
         if (htmlContent is not null)
         {
@@ -172,7 +181,7 @@ public partial class RazorSlice
     /// Writes the specified value to the output after HTML encoding it.
     /// </summary>
     /// <param name="value">The value to write to the output.</param>
-    protected void Write(string? value)
+    protected internal void Write(string? value)
     {
         if (!string.IsNullOrEmpty(value))
         {
@@ -188,7 +197,7 @@ public partial class RazorSlice
     /// Writes the specified value to the output after HTML encoding it.
     /// </summary>
     /// <param name="value">The value to write to the output.</param>
-    protected void Write(ReadOnlySpan<char> value)
+    protected internal void Write(ReadOnlySpan<char> value)
     {
         if (value.Length > 0)
         {
@@ -205,7 +214,7 @@ public partial class RazorSlice
     /// the <c>Write</c> method for all Razor expressions in your .cshtml file, e.g. <c>@someVariable</c>.
     /// </remarks>
     /// <param name="value">The <typeparamref name="T"/> to write to the output.</param>
-    protected void Write<T>(T? value)
+    protected internal void Write<T>(T? value)
     {
         WriteValue(value);
     }
@@ -215,7 +224,7 @@ public partial class RazorSlice
     /// </summary>
     /// <param name="value">The value to write to the output.</param>
     /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteBool(todo.Completed)</c></returns>
-    protected HtmlString WriteBool(bool? value)
+    protected internal HtmlString WriteBool(bool? value)
     {
         if (value.HasValue)
         {
@@ -233,7 +242,7 @@ public partial class RazorSlice
     /// <param name="formatProvider">The <see cref="IFormatProvider" /> to use when writing the value to the output. Defaults to <see cref="CultureInfo.CurrentCulture"/> if <c>null</c>.</param>
     /// <param name="htmlEncode">Whether to HTML encode the value or not. Defaults to <c>true</c>.</param>
     /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteSpanFormattable(item.DueBy, "d")</c></returns>
-    protected HtmlString WriteSpanFormattable<T>(T? formattable, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null, bool htmlEncode = true)
+    protected internal HtmlString WriteSpanFormattable<T>(T? formattable, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null, bool htmlEncode = true)
         where T : ISpanFormattable
     {
         if (formattable is not null)
@@ -254,7 +263,7 @@ public partial class RazorSlice
     /// <param name="formatProvider">The <see cref="IFormatProvider" /> to use when writing the value to the output. Defaults to <see cref="CultureInfo.CurrentCulture"/> if <c>null</c>.</param>
     /// <param name="htmlEncode">Whether to HTML encode the value or not. Defaults to <c>true</c>.</param>
     /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteUtf8SpanFormattable(item.DueBy, "d")</c></returns>
-    protected HtmlString WriteUtf8SpanFormattable<T>(T? formattable, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null, bool htmlEncode = true)
+    protected internal HtmlString WriteUtf8SpanFormattable<T>(T? formattable, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null, bool htmlEncode = true)
         where T : IUtf8SpanFormattable
     {
         if (formattable is not null)
@@ -277,7 +286,7 @@ public partial class RazorSlice
     /// </summary>
     /// <param name="htmlContent">The <see cref="IHtmlContent"/> value to write to the output.</param>
     /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtmlContent(myCustomHtmlContent)</c></returns>
-    protected HtmlString WriteHtml<T>(T htmlContent)
+    protected internal HtmlString WriteHtml<T>(T htmlContent)
         where T : IHtmlContent
     {
 #pragma warning disable CA2000 // Dispose objects before losing scope: Utf8PipeTextWriter is returned to the pool in the finally block
@@ -390,7 +399,7 @@ public partial class RazorSlice
     /// </summary>
     /// <param name="htmlString">The <see cref="HtmlString"/> value to write to the output.</param>
     /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtml(myCustomHtmlContent)</c></returns>
-    protected HtmlString WriteHtml(HtmlString htmlString)
+    protected internal HtmlString WriteHtml(HtmlString htmlString)
     {
         if (htmlString is not null && htmlString != HtmlString.Empty)
         {
@@ -410,7 +419,7 @@ public partial class RazorSlice
     /// </remarks>
     /// <param name="htmlString">The HTML value to write to the output.</param>
     /// <returns><see cref="HtmlString.Empty"/> to allow for easy calling via a Razor expression, e.g. <c>@WriteHtml(Model.SomeHtml)</c></returns>
-    protected HtmlString WriteHtml(string? htmlString)
+    protected internal HtmlString WriteHtml(string? htmlString)
     {
         if (!string.IsNullOrEmpty(htmlString))
         {

@@ -16,7 +16,7 @@ public class MvcPropertyOptimizerTests
         using var resolver = CreateResolver();
         using var module = ReadFixture(resolver);
         var messages = new List<string>();
-        Assert.Equal(6, MvcPropertyOptimizer.Remove(module, new HashSet<string>(), messages.Add));
+        Assert.Equal(16, MvcPropertyOptimizer.Remove(module, new HashSet<string>(), messages.Add));
         var slice = GetType(module, nameof(UnusedSlice));
         Assert.Equal(["CustomService"], slice.Properties.Select(p => p.Name));
         Assert.Equal(["<CustomService>k__BackingField"], slice.Fields.Select(f => f.Name));
@@ -40,6 +40,84 @@ public class MvcPropertyOptimizerTests
         {
             context.Unload();
         }
+    }
+
+    [Theory]
+    [InlineData(nameof(MinimalSlice))]
+    [InlineData(nameof(MinimalModelSlice))]
+    [InlineData(nameof(CustomMinimalSlice))]
+    [InlineData(nameof(CustomFullSlice))]
+    [InlineData(nameof(HelperImplementation))]
+    [InlineData(nameof(CustomHelperImplementation))]
+    public void RemovesUnusedPropertiesAcrossSliceAndHelperHierarchies(string name)
+    {
+        using var resolver = CreateResolver();
+        using var module = ReadFixture(resolver);
+        MvcPropertyOptimizer.Remove(module, new HashSet<string>(), _ => { });
+        var type = GetType(module, name);
+        Assert.Empty(type.Properties);
+        Assert.Empty(type.Fields);
+    }
+
+    [Theory]
+    [InlineData(nameof(MinimalSlice))]
+    [InlineData(nameof(MinimalModelSlice))]
+    [InlineData(nameof(HelperImplementation))]
+    public void NewHierarchiesPreserveExternallyAccessibleProperties(string name)
+    {
+        using var resolver = CreateResolver();
+        using var module = ReadFixture(resolver);
+        var type = GetType(module, name);
+        type.IsPublic = true;
+        MvcPropertyOptimizer.Remove(module, new HashSet<string>(), _ => { });
+        Assert.NotEmpty(type.Properties);
+    }
+
+    [Theory]
+    [InlineData(nameof(MinimalSlice), "Json")]
+    [InlineData(nameof(MinimalModelSlice), "Json")]
+    [InlineData(nameof(HelperImplementation), "Url")]
+    public void NewHierarchiesPreserveExplicitInjectionNames(string name, string property)
+    {
+        using var resolver = CreateResolver();
+        using var module = ReadFixture(resolver);
+        MvcPropertyOptimizer.Remove(module, new HashSet<string> { property }, _ => { });
+        Assert.Contains(GetType(module, name).Properties, p => p.Name == property);
+    }
+
+    [Theory]
+    [InlineData(nameof(MinimalSlice))]
+    [InlineData(nameof(HelperImplementation))]
+    public void NewHierarchiesPreserveReferencedProperties(string name)
+    {
+        using var resolver = CreateResolver();
+        using var module = ReadFixture(resolver);
+        var type = GetType(module, name);
+        var getter = type.Properties.Single(p => p.Name == "Url").GetMethod;
+        var execute = type.Methods.Single(m => m.Name == "ExecuteAsync");
+        var il = execute.Body.GetILProcessor();
+        var first = execute.Body.Instructions[0];
+        il.InsertBefore(first, Instruction.Create(OpCodes.Ldarg_0));
+        il.InsertBefore(first, Instruction.Create(OpCodes.Call, getter));
+        il.InsertBefore(first, Instruction.Create(OpCodes.Pop));
+        MvcPropertyOptimizer.Remove(module, new HashSet<string>(), _ => { });
+        Assert.Contains(type.Properties, p => p.Name == "Url");
+    }
+
+    [Theory]
+    [InlineData(nameof(MinimalSlice), "RazorSliceBase")]
+    [InlineData(nameof(HelperImplementation), "RazorSliceHelpers")]
+    public void DoesNotOptimizeUnrelatedTypesWithTheSameBaseTypeName(string name, string baseName)
+    {
+        using var resolver = CreateResolver();
+        using var module = ReadFixture(resolver);
+        var unrelatedBase = new TypeDefinition("RazorSlices", baseName, TypeAttributes.Public | TypeAttributes.Abstract,
+            module.TypeSystem.Object);
+        module.Types.Add(unrelatedBase);
+        var type = GetType(module, name);
+        type.BaseType = unrelatedBase;
+        MvcPropertyOptimizer.Remove(module, new HashSet<string>(), _ => { });
+        Assert.NotEmpty(type.Properties);
     }
 
     [Theory]

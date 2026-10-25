@@ -179,7 +179,8 @@ internal static class MvcPropertyOptimizer
             {
                 throw new InvalidOperationException($"Cyclic base type hierarchy on '{type.FullName}'.");
             }
-            if (baseType.GetElementType().FullName == "RazorSlices.RazorSlice"
+            if (baseType.GetElementType().FullName is "RazorSlices.RazorSlice" or "RazorSlices.RazorSlice`1"
+                    or "RazorSlices.RazorSliceBase" or "RazorSlices.RazorSliceBase`1" or "RazorSlices.RazorSliceHelpers"
                 && baseType.Scope.Name is "RazorSlices" or "RazorSlices.dll" or "RazorSlices.ForBenchmarks" or "RazorSlices.ForBenchmarks.dll")
             {
                 return true;

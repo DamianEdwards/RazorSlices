@@ -53,13 +53,9 @@
     - Slices **with** a model get `Create(ModelType model)` (e.g., `MyApp.Slices.Hello.Create(DateTime.Now)`)
     - Slices **without** a model get `Create()` (e.g., `MyApp.Slices.Home.Create()`)
 
-    This provides compile-time validation that you're passing the correct model type.
+    This provides compile-time validation that you're passing the correct model type. Proxies construct the compiled Razor template directly with `new` and initialize its model if applicable. Property injection via `@inject` is initialized lazily before rendering.
 
-    Proxies construct the compiled Razor template directly with `new`, including setting its model in an object initializer. This requires a Razor compiler that emits template types accessible to application code. Property injection is initialized lazily before rendering; reflective construction is only used for replacement types supplied by Hot Reload.
-
-    The generator-facing `SliceDefinition` and `SliceDefinition<TModel>` APIs have been removed. Rebuild applications and Razor Class Libraries with the matching source generator and runtime when upgrading. The generated proxy `Create` methods and `IRazorSliceProxy` interfaces are unchanged.
-
-1. Add a minimal API to return the slice in your *Program.cs*:
+1. Add a minimal API to return the slice in your *Program.cs*. Razor Slices implement `IResult` so can be returned directly from minimal APIs:
 
     ``` csharp
     app.MapGet("/hello", () => MyApp.Slices.Hello.Create(DateTime.Now));
@@ -78,23 +74,6 @@
     ```
 
     This will configure the Razor Slices source generator to only generate proxy types for *.cshtml* files in the *Slices* directory in your project.
-
-### Streaming sample
-
-Run `dotnet run --project samples/WebApp --framework net10.0` and open `/streaming`
-(also linked as **Streaming** in the sample's footer). The page immediately flushes
-"Counting down... 10", then flushes a plain JavaScript `<script>` block every second
-to update the number through zero. After showing zero for one second, it replaces
-the message with "Countdown complete!".
-
-The sample uses `FlushAsync()` in the Razor slice and cancellation-aware server-side
-delays, with no JavaScript libraries or additional requests. The endpoint opts out
-of the sample's development response buffering with `.DisableResponseBuffering()`,
-so updates also stream when using the default launch profiles. This helper works
-on individual endpoints and route groups. It adds `DisableResponseBufferingAttribute`
-metadata implementing `IDisableResponseBufferingMetadata`; the attribute can also
-be applied directly to a handler method. The buffering middleware runs after routing
-and checks the selected endpoint's metadata, leaving all other endpoints buffered.
 
 ## Installation
 
@@ -127,10 +106,6 @@ If you wish to use builds from this repo's `main` branch you can install them fr
 1. See [these instructions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry) for further details about working with GitHub package feeds.
 
 ## Features
-
-The library is still new and features are being actively added.
-
-### Currently supported
 
 - ASP.NET Core 8.0 and above
 - Strongly-typed models (via `@inherits RazorSlice<MyModel>`) with **compile-time model validation** — the source generator detects the model type from the `@inherits` directive (including `_ViewImports.cshtml` hierarchy) and generates strongly-typed `Create(MyModel model)` methods on the proxy class
@@ -184,6 +159,7 @@ The library is still new and features are being actively added.
 
 - DI-activated properties via `@inject`
 - Rendering slices from slices (aka partials) via `@(await RenderPartialAsync<MyPartial>())`
+- [Shareable templated helpers](#shareable-templated-helpers), with `void`/asynchronous implementations and strongly typed `@Helpers.MyHelperSlice.HelperMethod(...)` calls
 - Using slices as layouts for other slices, including layouts with strongly-typed models:
   - For the layout slice, inherit from `RazorLayoutSlice` or `RazorLayoutSlice<TModel>` and use `@await RenderBodyAsync()` in the layout to render the body
 
@@ -240,7 +216,7 @@ The library is still new and features are being actively added.
 - Asynchronous rendering, i.e. the template can contain `await` statements, e.g. `@await WriteTheThing()`
 - Writing UTF8 `byte[]` values directly to the output
 - Rendering directly to `PipeWriter`, `Stream`, `TextWriter`, `StringBuilder`, and `string` outputs, including optimizations for not boxing struct values, zero-allocation rendering of primitives like numbers, etc. (rather than just calling `ToString()` on everything)
-- `RazorSlice` implements `IResult` so you can return a slice instance from a minimal APIs route handler directly, or via `Results.Extensions.RazorSlice<Hello>()` and in .NET 10+ `Results.RazorSlice<Hello>()`. When using slices with models use `Results.Extensions.RazorSlice<Hello, MyModel>(model)` and in .NET 10+ `Results.RazorSlice<Hello, MyModel>(model)`.
+- `RazorSliceBase` implements `IResult`, so both minimal and normal slices can be returned directly from a minimal API route handler. Normal slices also support `Results.Extensions.RazorSlice<Hello>()` and in .NET 10+ `Results.RazorSlice<Hello>()`. When using normal slices with models use `Results.Extensions.RazorSlice<Hello, MyModel>(model)` and in .NET 10+ `Results.RazorSlice<Hello, MyModel>(model)`.
 - Full support for trimming and native AOT when used in conjunction with ASP.NET Core Minimal APIs
 - Generated Razor Slice proxy types are `public sealed partial class` by default. To use record classes instead, making them `public sealed partial record`, set the `RazorSliceProxiesAsRecords` property to `true` in your project file, e.g.:
     ``` xml
@@ -249,11 +225,130 @@ The library is still new and features are being actively added.
     </PropertyGroup>
     ```
   
+### Minimal slices
+
+`RazorSlice` is the normal base class, including support for helpers, layouts, partials, and property injection.
+For templates that do not need those features and for which performance is a top concern, inherit `RazorSliceBase` or `RazorSliceBase<TModel>`.
+Both tiers implement `IResult`:
+
+```cshtml
+@using RazorSlices
+@inherits RazorSliceBase<string>
+<p class="message @Model">@Model</p>
+```
+
+Minimal slices retain HTML encoding, conditional HTML attributes, formatting, cancellation, flushing, asynchronous
+execution, and direct rendering to `PipeWriter`, `TextWriter`, `Stream`, `StringBuilder`, or a string. Their generated
+proxies have the same `Create()` / `Create(model)` syntax, implementing `IRazorSliceBaseProxy` /
+`IRazorSliceBaseProxy<TModel>` instead of the full-slice proxy contracts. `RazorSlice<TModel>` still inherits
+`RazorSlice`, while `RazorSliceBase<TModel>` inherits the minimal base.
+
+```csharp
+var html = await MyApp.Minimal.Greeting.Create("Hello").RenderAsync();
+app.MapGet("/minimal", RazorSliceBase () => MyApp.Minimal.Greeting.Create("Hello"));
+```
+
+Minimal slices are HTTP results themselves: no adapter allocation is needed. Set `StatusCode`, `ContentType`,
+and `HtmlEncoder` on the slice to customize the response. HTTP execution resolves an encoder from request services
+when `HtmlEncoder` is unset; set it to `HtmlEncoder.Default` to avoid that lookup and request-scope cost.
+Only normal slices retain `HttpContext` for injection. A normal slice can render a minimal child with
+`@await RenderPartialAsync(MyApp.Minimal.Greeting.Create("Hello"))`.
+On .NET 10+, `Results.RazorSlice(slice)` and `TypedResults.RazorSlice(slice)` also accept minimal instances,
+setting the status code and default encoder without allocating a wrapper.
+
+An explicit lambda return type, as above, lets the ASP.NET Core request-delegate generator identify the result
+without needing to inspect the proxy emitted by the Razor Slices generator in the same compilation.
+
+Minimal slices do not support `@inject`, helpers, layouts, sections, partial calls of their own, or templated Razor
+delegates requiring a writer stack. The generator reports `RSG0004` for effective injections and layouts, including
+inherited declarations; keep minimal templates outside import hierarchies that inject services. Choose `RazorSlice`
+when those features are needed. The protected virtual rendering pipeline permits custom bases to add lifecycle
+behavior without adding application state to every minimal slice.
+
+See `/minimal` and `/minimal-partial` in the sample app.
+
+### Shareable templated helpers
+
+Use helpers to share reusable pieces of Razor markup across slices and projects. Define their methods in a public C# interface and implement them in a `.cshtml` file.
+
+Declare the helper methods:
+
+```csharp
+namespace MyLibrary.Helpers;
+
+public interface IUiHelpers
+{
+    void StatusBadge(string text, bool success = false);
+    ValueTask NoticeAsync(string heading, Func<CancellationToken, ValueTask<string>> loadMessage);
+}
+```
+
+Implement it in `Helpers/UiHelpers.cshtml`:
+
+```cshtml
+@using RazorSlices
+@using MyLibrary.Helpers
+@inherits RazorSliceHelpers
+@implements IUiHelpers
+
+@functions {
+    public void StatusBadge(string text, bool success = false)
+    {
+        <span class="badge @(success ? "text-bg-success" : "text-bg-secondary")">@text</span>
+    }
+
+    public async ValueTask NoticeAsync(string heading, Func<CancellationToken, ValueTask<string>> loadMessage)
+    {
+        var message = await loadMessage(CancellationToken);
+        <aside><strong>@heading</strong><p>@message</p></aside>
+    }
+}
+```
+
+The normal `RazorSlice` base provides `Helpers`; no service registration or injection is required.
+Import the helper's namespace (the owning project's root namespace plus the helper's directory).
+The helper property name matches the `.cshtml` filename:
+
+```cshtml
+@using MyLibrary.Helpers
+@inherits RazorSlice
+
+@Helpers.UiHelpers.StatusBadge("Completed", success: true)
+@await Helpers.UiHelpers.NoticeAsync("Summary", LoadMessageAsync)
+```
+
+**Helpers require C# 14 or newer**, both in the project defining them and in projects using them. Set `<LangVersion>14.0</LangVersion>` and use a compatible SDK. .NET 8+ runtime targets remain supported; regular slices do not require C# 14.
+
+Each helper file must inherit from `RazorSliceHelpers` (or a derived base) and declare exactly one public interface with `@implements`. Directives can be shared through `_ViewImports.cshtml`.
+
+Put helper markup inside methods in `@functions`, not in a top-level slice body. Helpers do not support models, layouts, sections, or `@inject`. Pass dependencies as method arguments. Do not use `this` or declare instance fields, properties, events, or constructors in helpers; static utilities and constants are allowed.
+
+Helpers write directly into the active slice's output, using its HTML encoder. One instance of each helper
+implementation is created lazily per root render and shared throughout its nested/sibling partials, layouts,
+sections, and helper composition. Captured facades follow the active slice, including minimal children.
+Independent root renders have independent helper instances, even within the same HTTP request.
+
+Helper implementations inherit their own `Helpers` property for composition and must not declare or inherit `@inject`.
+Keep them outside import hierarchies that inject services, for example `Helpers/` next to `Slices/`.
+Injecting at the project root also affects helper files in child folders.
+
+Helper methods must return `void`, `Task`, or non-generic `ValueTask`. Call asynchronous methods with `@await`; do not use `async void`. There is no need to return `HtmlString.Empty` from a helper. Interfaces can inherit other interfaces, and methods can use overloads, generics/constraints, nullable parameters, optional/default arguments, `params`, and by-reference parameters. Do not declare `ExecuteAsync()`, which is reserved.
+
+Await asynchronous helpers before continuing to write. Only sequential, nested use of a render graph is supported;
+concurrent use or other misuse has undefined behavior and is not explicitly detected. Do not retain helpers beyond
+their root render or invoke them outside an active render. Within a helper, use its built-in `Helpers` property to
+call other helpers, `CancellationToken` for cancellable operations, and `FlushAsync()` to explicitly flush the output.
+
+To share helpers with another project, reference their Razor class library or NuGet package and import the helper namespace. Consumers use the same `Helpers.UiHelpers.Method(...)` syntax and do not need the helper source. Method bodies support Hot Reload; changing public method signatures may require rebuilding/restarting.
+
+The sample app's `/helpers` page demonstrates local and class-library helpers, custom signatures/delegates, conditional attributes, generic methods, and async callbacks. `TodoHelpers.TaskStatus` calls the shared `UiHelpers.StatusBadge`, and `TodoHelpers.TaskSummaryAsync` awaits `UiHelpers.AsyncNoticeAsync`, demonstrating synchronous and asynchronous helper composition. The existing todo table also uses the composed task-status helper.
+
 ### Optimized builds
 
 When `Optimize` is `true` (normally in Release builds), Razor Slices removes unused MVC default
 injected properties (`Html`, `Json`, `Component`, `Url`, and `ModelExpressionProvider`) from internal,
-SDK-generated slice template types after compilation. Their accessors and backing fields are also
+SDK-generated template types inheriting `RazorSliceBase`, `RazorSlice`, or `RazorSliceHelpers`, including
+their generic and custom-derived forms, after compilation. Their accessors and backing fields are also
 removed. This reduces per-instance storage without replacing Razor compilation or adding a runtime
 dependency. MVC views and Razor Pages are not modified.
 
@@ -277,14 +372,12 @@ in the project's Razor files or imports is retained throughout that project. Oth
 properties are unchanged.
 
 Generated source and editor IntelliSense still show the original properties. Hot Reload of rewritten
-assemblies is not supported; disable this optimization for optimized builds used with Hot Reload.
+assemblies is not supported; disable this optimization if using optimized builds with Hot Reload (uncommon).
 Code accessing the removed defaults solely through reflection must also disable this optimization.
-Portable and embedded PDBs are preserved. Strong-name signed assemblies require a private signing
-key file; public signing requires disabling the optimization.
 
 ### Interested in supporting but not sure yet
 
-- Extensions to help support using HTMX with Razor Slices 
+- Extensions to help support using HTMX with Razor Slices
 - Getting small updates to the Razor compiler itself to get some usability and performance improvements, e.g.:
   - Don't mark the template's `ExecuteAsync` method as an `async` method unless the template contains `await` statements to save on the async state machine overhead
   - Support disabling the default registered `@addtaghelper` and `@model` directives which rely on MVC

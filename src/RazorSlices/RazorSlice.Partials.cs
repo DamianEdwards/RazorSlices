@@ -25,6 +25,37 @@ public partial class RazorSlice
         return RenderChildSliceAsync(partial);
     }
 
+    /// <summary>Renders a minimal slice inline using this slice's output, encoder, and cancellation token.</summary>
+    protected internal ValueTask<HtmlString> RenderPartialAsync(RazorSliceBase partial)
+    {
+        ArgumentNullException.ThrowIfNull(partial);
+        if (partial is RazorSlice slice) { return RenderChildSliceAsync(slice); }
+        var root = GetHelperRoot();
+        var previous = root._activeHelperSlice;
+        root._activeHelperSlice = partial;
+        try
+        {
+#pragma warning disable CA2012 // Consumed by HandleSynchronousCompletion or AwaitMinimalPartial.
+            var pending = _pipeWriter is not null
+                ? partial.RenderToPipeWriterAsync(_pipeWriter, _htmlEncoder, CancellationToken, renderLayout: false)
+                : partial.RenderToTextWriterAsync(_textWriter ?? throw new UnreachableException(), _htmlEncoder, CancellationToken, renderLayout: false);
+#pragma warning restore CA2012
+            if (!pending.HandleSynchronousCompletion())
+            {
+                return AwaitMinimalPartial(pending, root, previous);
+            }
+        }
+        catch { root._activeHelperSlice = previous; throw; }
+        root._activeHelperSlice = previous;
+        return ValueTask.FromResult(HtmlString.Empty);
+    }
+
+    private static async ValueTask<HtmlString> AwaitMinimalPartial(ValueTask pending, RazorSlice root, RazorSliceBase? previous)
+    {
+        try { await pending; return HtmlString.Empty; }
+        finally { root._activeHelperSlice = previous; }
+    }
+
     /// <summary>
     /// Renders a Razor Slice template inline.
     /// </summary>
@@ -70,22 +101,23 @@ public partial class RazorSlice
         return RenderChildSliceAsync(slice);
     }
 
-    internal ValueTask<HtmlString> RenderChildSliceAsync(RazorSlice child)
+    internal ValueTask<HtmlString> RenderChildSliceAsync(RazorSlice child, bool disposeSlice = true)
     {
         Debug.WriteLine($"Rendering child slice of type '{child.GetType().Name}' from parent slice of type '{GetType().Name}'");
 
         CopySliceState(this, child);
+        child._helperParent = GetHelperRoot();
 
         ValueTask renderPartialTask;
 
 #pragma warning disable CA2012 // Use ValueTasks correctly: Completion handled by HandleSynchronousCompletion
         if (_pipeWriter is not null)
         {
-            renderPartialTask = child.RenderToPipeWriterAsync(_pipeWriter, _htmlEncoder, CancellationToken, renderLayout: false);
+            renderPartialTask = child.RenderToPipeWriterAsync(_pipeWriter, _htmlEncoder, CancellationToken, renderLayout: false, disposeSlice: disposeSlice);
         }
         else if (_textWriter is not null)
         {
-            renderPartialTask = child.RenderToTextWriterAsync(_textWriter, _htmlEncoder, CancellationToken, renderLayout: false);
+            renderPartialTask = child.RenderToTextWriterAsync(_textWriter, _htmlEncoder, CancellationToken, renderLayout: false, disposeSlice: disposeSlice);
         }
 #pragma warning restore CA2012
         else

@@ -1,7 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
   <Import Project="..\..\..\src\RazorSlices\build\RazorSlices.props" />
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework Condition="'$(OptimizerTestTargetFramework)' == ''">net8.0</TargetFramework>
+    <TargetFramework Condition="'$(OptimizerTestTargetFramework)' != ''">$(OptimizerTestTargetFramework)</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <OutputType>Exe</OutputType>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

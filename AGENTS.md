@@ -29,7 +29,10 @@ tests/
 - `src/RazorSlices/IResultExtensions.cs` — `Results.Extensions.RazorSlice<T>()` extension methods
 - `src/RazorSlices/IUsesLayout.cs` — Layout support interfaces
 - `src/RazorSlices/RazorSliceFactory.cs` — Invokes generated constructor callbacks, caches property injection, and handles Hot Reload replacement types
-- `src/RazorSlices/RazorSlice.cs` — Base class for all slices
+- `src/RazorSlices/RazorSlice.cs` — Feature-rich base with helpers, layouts, partials, DI, and HTTP results
+- `src/RazorSlices/RazorSliceBase.cs` — Minimal streaming core with HTTP results; no DI, helpers, layouts, or partials
+- `src/RazorSlices/RazorSliceHelperCache.cs` — Render-graph helper cache with inline/small-array/dictionary storage
+- `src/BuildTasks/RemoveMvcDefaultInjectedProperties.cs` — Optimized-build removal of unused MVC default properties from SDK slices and helper implementations
 - `src/RazorSlices/RazorSlice.Partials.cs` — Partial rendering support
 - `src/SourceGenerator/RazorSliceProxyGenerator.cs` — The incremental source generator
 - `src/SourceGenerator/RazorDirectiveParser.cs` — Parses @inherits/@using from .cshtml
@@ -78,7 +81,15 @@ The `RazorSliceProxyGenerator` is an `IIncrementalGenerator` that:
 6. Emits static callbacks that directly construct the compiled Razor types and initialize their models; the Razor compiler must expose these types to application code
 
 ### Slice Activation
-Generated proxies use `RazorSliceFactory.Create` with a static constructor callback. There is no runtime constructor or model-property discovery on this path. Injectable properties are discovered once per template type and initialized before rendering (compiled assignments on JIT, reflection on AOT). Only Hot Reload replacement types use reflective construction, with construction and injection cached together.
+Generated full-slice proxies use `RazorSliceFactory.Create` with a static constructor callback and a generated per-type initialization plan. There is no runtime constructor, model-property, or injection discovery on the normal generated path. Unsupported injection shapes retain cached runtime discovery (compiled assignments on JIT, reflection on AOT). Hot Reload replacement types use reflective construction and replacement-specific injection metadata published together.
+
+Minimal slices use `RazorSliceBaseFactory` and `IRazorSliceBaseProxy` contracts, with constructor replacement for Hot Reload but no injection plan. `RazorSlice<T>` still derives from `RazorSlice`; `RazorSliceBase<T>` derives directly from the minimal base. Both generic branches declare `Model`. `RSG0004` rejects effective or inherited injection/layout declarations on minimal slices.
+
+`RazorSliceBase` implements `IResult` and owns status code, content type, and optional encoder state. Only full slices retain `HttpContext`; direct minimal results do not allocate an adapter. Setting `HtmlEncoder` explicitly avoids resolving request services during HTTP execution.
+
+Optimized builds remove unused default MVC injected properties from internal SDK templates across the full/minimal/helper hierarchies. Explicit injections, referenced members, public templates, and friend-assembly exposure are retained. `RazorSlicesRemoveMvcDefaultInjectedProperties=false` disables rewriting; Hot Reload uses unoptimized builds. Release SDK allocation expectations exclude the removed five reference fields.
+
+Helpers are built into `RazorSlice`: no DI registration or injection is needed. Instances are lazy and shared throughout one root render graph, including partials, layouts, sections, and helper composition. Independent roots do not share a helper cache. Rendering is sequential/nested; concurrent graph use is undefined.
 
 ### Model Type Resolution
 The generator resolves type names from Razor directives against the compilation:
