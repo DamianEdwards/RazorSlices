@@ -26,12 +26,14 @@
   </Folder>
   <Folder Name="/src/">
     <File Path="src/Directory.Build.props" />
+    <Project Path="src/BuildTasks/BuildTasks.csproj" />
     <Project Path="src/SourceGenerator/SourceGenerator.csproj">
       <BuildType Solution="Benchmarks|*" Project="Release" />
     </Project>
     <Project Path="src/RazorSlices/RazorSlices.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/BuildTasks/BuildTasks.Tests.csproj" />
     <Project Path="tests/Benchmarks/Benchmarks.csproj">
       <Build Solution="Debug|*" Project="false" />
       <Build Solution="Release|*" Project="false" />

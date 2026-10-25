@@ -35,6 +35,9 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
         // Build props and targets must be present
         Assert.Contains(entries, e => e.Equals("build/RazorSlices.props", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(entries, e => e.Equals("build/RazorSlices.targets", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(entries, e => e.Equals("tasks/netstandard2.0/RazorSlices.BuildTasks.dll", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(entries, e => e.Equals("tasks/netstandard2.0/Mono.Cecil.dll", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(entries, e => e.Equals("tasks/netstandard2.0/Mono.Cecil.LICENSE.txt", StringComparison.OrdinalIgnoreCase));
 
         // Library assemblies for each targeted framework must be present
         Assert.Contains(entries, e => e.Equals("lib/net8.0/RazorSlices.dll", StringComparison.OrdinalIgnoreCase));
