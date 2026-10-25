@@ -249,12 +249,44 @@ The library is still new and features are being actively added.
     </PropertyGroup>
     ```
   
+### Optimized builds
+
+When `Optimize` is `true` (normally in Release builds), Razor Slices removes unused MVC default
+injected properties (`Html`, `Json`, `Component`, `Url`, and `ModelExpressionProvider`) from internal,
+SDK-generated slice template types after compilation. Their accessors and backing fields are also
+removed. This reduces per-instance storage without replacing Razor compilation or adding a runtime
+dependency. MVC views and Razor Pages are not modified.
+
+To disable this optimization, set:
+
+```xml
+<PropertyGroup>
+  <RazorSlicesRemoveMvcDefaultInjectedProperties>false</RazorSlicesRemoveMvcDefaultInjectedProperties>
+</PropertyGroup>
+```
+
+The optimization only runs when `Optimize` is `true`, even when explicitly enabled. Changing the
+option triggers recompilation, so a clean build is not required. Each project compiling slices,
+including Razor class libraries, applies the optimization to its own assembly before publishing,
+trimming, ReadyToRun, or Native AOT compilation.
+
+Properties referenced by compiled code, properties on public template types or in assemblies with
+friend assemblies, and unrecognized property implementations are retained. Explicit `@inject`
+declarations are preserved conservatively: a default property name explicitly injected anywhere
+in the project's Razor files or imports is retained throughout that project. Other injected
+properties are unchanged.
+
+Generated source and editor IntelliSense still show the original properties. Hot Reload of rewritten
+assemblies is not supported; disable this optimization for optimized builds used with Hot Reload.
+Code accessing the removed defaults solely through reflection must also disable this optimization.
+Portable and embedded PDBs are preserved. Strong-name signed assemblies require a private signing
+key file; public signing requires disabling the optimization.
+
 ### Interested in supporting but not sure yet
 
 - Extensions to help support using HTMX with Razor Slices 
 - Getting small updates to the Razor compiler itself to get some usability and performance improvements, e.g.:
   - Don't mark the template's `ExecuteAsync` method as an `async` method unless the template contains `await` statements to save on the async state machine overhead
-  - Support compiling static template elements to UTF8 string literals (`ReadOnlySpan<byte>`) instead of string literals to save on the UTF16 to UTF8 conversion during rendering
   - Support disabling the default registered `@addtaghelper` and `@model` directives which rely on MVC
 
 ### No intention to support

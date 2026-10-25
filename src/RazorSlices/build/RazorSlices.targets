@@ -1,4 +1,46 @@
 <Project>
+  <PropertyGroup>
+    <RazorSlicesRemoveMvcDefaultInjectedProperties Condition=" '$(RazorSlicesRemoveMvcDefaultInjectedProperties)' == '' AND '$(Optimize)' == 'true' ">true</RazorSlicesRemoveMvcDefaultInjectedProperties>
+    <TargetsTriggeredByCompilation>$(TargetsTriggeredByCompilation);_RazorSlicesRemoveMvcDefaultInjectedProperties</TargetsTriggeredByCompilation>
+    <_RazorSlicesBuildTaskAssembly>$(MSBuildThisFileDirectory)..\tasks\netstandard2.0\RazorSlices.BuildTasks.dll</_RazorSlicesBuildTaskAssembly>
+    <_RazorSlicesBuildTaskAssembly Condition="Exists('$(MSBuildThisFileDirectory)..\..\BuildTasks\BuildTasks.csproj')">$(ArtifactsPath)\bin\BuildTasks\$(Configuration.ToLowerInvariant())\RazorSlices.BuildTasks.dll</_RazorSlicesBuildTaskAssembly>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)..\..\BuildTasks\BuildTasks.csproj')">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\BuildTasks\BuildTasks.csproj"
+                      ReferenceOutputAssembly="false" Private="false" />
+  </ItemGroup>
+
+  <UsingTask TaskName="RazorSlices.BuildTasks.RemoveMvcDefaultInjectedProperties" AssemblyFile="$(_RazorSlicesBuildTaskAssembly)" />
+
+  <Target Name="_RazorSlicesPrepareMvcPropertyRemoval" BeforeTargets="CoreCompile"
+          DependsOnTargets="ResolveProjectReferences" Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <RazorSlicesRemoveMvcDefaultInjectedProperties Condition=" '$(RazorSlicesRemoveMvcDefaultInjectedProperties)' == '' AND '$(Optimize)' == 'true' ">true</RazorSlicesRemoveMvcDefaultInjectedProperties>
+      <_RazorSlicesMvcPropertyRemovalOptions>$(IntermediateOutputPath)RazorSlices.MvcPropertyRemoval.options</_RazorSlicesMvcPropertyRemovalOptions>
+    </PropertyGroup>
+    <!-- Changing the option must recompile: already removed members cannot be restored by the rewriter. -->
+    <WriteLinesToFile File="$(_RazorSlicesMvcPropertyRemovalOptions)"
+                      Lines="$(Optimize);$(RazorSlicesRemoveMvcDefaultInjectedProperties)"
+                      Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <CustomAdditionalCompileInputs Include="$(_RazorSlicesMvcPropertyRemovalOptions)" />
+      <CustomAdditionalCompileInputs Include="$(_RazorSlicesBuildTaskAssembly)" Condition="Exists('$(_RazorSlicesBuildTaskAssembly)')" />
+      <FileWrites Include="$(_RazorSlicesMvcPropertyRemovalOptions)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_RazorSlicesRemoveMvcDefaultInjectedProperties"
+          Condition="'$(DesignTimeBuild)' != 'true' AND '$(Optimize)' == 'true' AND '$(RazorSlicesRemoveMvcDefaultInjectedProperties)' == 'true' AND '@(RazorGenerate)' != ''">
+    <RazorSlices.BuildTasks.RemoveMvcDefaultInjectedProperties
+        AssemblyFile="@(IntermediateAssembly)"
+        References="@(ReferencePath)"
+        RazorFiles="@(RazorGenerate)"
+        AssemblyOriginatorKeyFile="$(AssemblyOriginatorKeyFile)"
+        DebugType="$(DebugType)"
+        PublicSign="$(PublicSign)" />
+  </Target>
+
   <Target Name="_CheckRazorSlicesDeps" AfterTargets="CollectPackageReferences">
     <Error Text="Razor Slices requires Razor support for MVC to be enabled. Ensure the project is using the Microsoft.NET.Sdk.Web or Microsoft.NET.Sdk.Razor SDK and that the AddRazorSupportForMvc property is set to 'true'."
            Condition=" '$(AddRazorSupportForMvc)' != 'true' " />
