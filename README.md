@@ -282,15 +282,11 @@ Code accessing the removed defaults solely through reflection must also disable 
 Portable and embedded PDBs are preserved. Strong-name signed assemblies require a private signing
 key file; public signing requires disabling the optimization.
 
-The shared `RazorSlices.dll` is not rewritten. Unsupported base-class members remain as compile-time
-diagnostics for unsupported Razor features; trimming and Native AOT can remove them when unused.
-
 ### Interested in supporting but not sure yet
 
 - Extensions to help support using HTMX with Razor Slices 
 - Getting small updates to the Razor compiler itself to get some usability and performance improvements, e.g.:
   - Don't mark the template's `ExecuteAsync` method as an `async` method unless the template contains `await` statements to save on the async state machine overhead
-  - Support compiling static template elements to UTF8 string literals (`ReadOnlySpan<byte>`) instead of string literals to save on the UTF16 to UTF8 conversion during rendering
   - Support disabling the default registered `@addtaghelper` and `@model` directives which rely on MVC
 
 ### No intention to support

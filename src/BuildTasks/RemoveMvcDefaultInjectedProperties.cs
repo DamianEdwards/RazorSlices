@@ -88,6 +88,8 @@ public sealed class RemoveMvcDefaultInjectedProperties : Task
 
 internal static class MvcPropertyOptimizer
 {
+    // Default MVC @inject names and types are defined in Razor's synthetic imports:
+    // https://github.com/dotnet/roslyn/blob/a53af1f55e32c16029d2fe942f34b18343814c0f/src/Razor/src/Compiler/Microsoft.CodeAnalysis.Razor.Compiler/src/Mvc/MvcImportProjectFeature.cs#L22-L26
     private static readonly Dictionary<string, string> DefaultProperties = new(StringComparer.Ordinal)
     {
         ["Html"] = "Microsoft.AspNetCore.Mvc.Rendering.IHtmlHelper`1",
