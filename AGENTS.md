@@ -32,6 +32,7 @@ tests/
 - `src/RazorSlices/RazorSlice.cs` — Feature-rich base with helpers, layouts, partials, DI, and HTTP results
 - `src/RazorSlices/RazorSliceBase.cs` — Minimal streaming core with HTTP results; no DI, helpers, layouts, or partials
 - `src/RazorSlices/RazorSliceHelperCache.cs` — Render-graph helper cache with inline/small-array/dictionary storage
+- `src/BuildTasks/RemoveMvcDefaultInjectedProperties.cs` — Optimized-build removal of unused MVC default properties from SDK slices and helper implementations
 - `src/RazorSlices/RazorSlice.Partials.cs` — Partial rendering support
 - `src/SourceGenerator/RazorSliceProxyGenerator.cs` — The incremental source generator
 - `src/SourceGenerator/RazorDirectiveParser.cs` — Parses @inherits/@using from .cshtml
@@ -85,6 +86,8 @@ Generated full-slice proxies use `RazorSliceFactory.Create` with a static constr
 Minimal slices use `RazorSliceBaseFactory` and `IRazorSliceBaseProxy` contracts, with constructor replacement for Hot Reload but no injection plan. `RazorSlice<T>` still derives from `RazorSlice`; `RazorSliceBase<T>` derives directly from the minimal base. Both generic branches declare `Model`. `RSG0004` rejects effective or inherited injection/layout declarations on minimal slices.
 
 `RazorSliceBase` implements `IResult` and owns status code, content type, and optional encoder state. Only full slices retain `HttpContext`; direct minimal results do not allocate an adapter. Setting `HtmlEncoder` explicitly avoids resolving request services during HTTP execution.
+
+Optimized builds remove unused default MVC injected properties from internal SDK templates across the full/minimal/helper hierarchies. Explicit injections, referenced members, public templates, and friend-assembly exposure are retained. `RazorSlicesRemoveMvcDefaultInjectedProperties=false` disables rewriting; Hot Reload uses unoptimized builds. Release SDK allocation expectations exclude the removed five reference fields.
 
 Helpers are built into `RazorSlice`: no DI registration or injection is needed. Instances are lazy and shared throughout one root render graph, including partials, layouts, sections, and helper composition. Independent roots do not share a helper cache. Rendering is sequential/nested; concurrent graph use is undefined.
 

@@ -35,13 +35,13 @@ public class MinimalSliceTests
 #else
     [Fact]
 #endif
-    public void ActualSdkSlicesHaveExpectedAllocationFootprint()
+    public void ActualSdkSlicesHaveExpectedOptimizedAllocationFootprint()
     {
         if (IntPtr.Size != 8) { return; }
         var minimal = Allocation(static () => Minimal.Empty.Create());
         var full = Allocation(static () => Minimal.FullEmpty.Create());
-        Assert.Equal(144, minimal);
-        Assert.Equal(208, full);
+        Assert.Equal(104, minimal);
+        Assert.Equal(168, full);
     }
 
     private static RazorSliceBase<TModel> Create<TProxy, TModel>(TModel model)

@@ -13,6 +13,8 @@
     <AnalysisModeSecurity>All</AnalysisModeSecurity>
     <IsAotCompatible>true</IsAotCompatible>
     <Configurations>Debug;Release;Benchmarks</Configurations>
+    <!-- Build task assemblies deliberately aren't application references under lib. -->
+    <NoWarn>$(NoWarn);NU5100</NoWarn>
     <AssemblyName Condition=" '$(Configuration)' == 'Benchmarks' ">RazorSlices.ForBenchmarks</AssemblyName>
   </PropertyGroup>
 
@@ -28,6 +30,7 @@
   <ItemGroup>
     <None Include="..\..\assets\razorslices-icon.png" Pack="true" PackagePath="\" />
     <None Include=".\build\**\*.*" Pack="true" PackagePath="build" />
+    <None Include="..\BuildTasks\Mono.Cecil.LICENSE.txt" Pack="true" PackagePath="tasks/netstandard2.0" />
     <None Include="..\..\.editorconfig" Link=".editorconfig" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
@@ -52,6 +55,7 @@
   <ItemGroup>
     <!-- Reference the source generator just to ensure it's built but don't reference its output -->
     <ProjectReference Include="..\SourceGenerator\SourceGenerator.csproj" OutputItemType="SourceGeneratorAssemblyPath" ReferenceOutputAssembly="false" Private="true" />
+    <ProjectReference Include="..\BuildTasks\BuildTasks.csproj" OutputItemType="BuildTaskAssemblyPath" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
@@ -62,6 +66,8 @@
   <Target Name="IncludeSourceGeneratorInPackage">
     <ItemGroup>
       <TfmSpecificPackageFile Include="@(SourceGeneratorAssemblyPath)" PackagePath="analyzers/dotnet/cs" />
+      <TfmSpecificPackageFile Include="@(BuildTaskAssemblyPath)" PackagePath="tasks/netstandard2.0" />
+      <TfmSpecificPackageFile Include="@(BuildTaskAssemblyPath->'%(RootDir)%(Directory)Mono.Cecil.dll')" PackagePath="tasks/netstandard2.0" />
     </ItemGroup>
   </Target>
 

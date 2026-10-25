@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <Import Project="..\..\..\src\RazorSlices\build\RazorSlices.props" />
+  <PropertyGroup>
+    <TargetFramework Condition="'$(OptimizerTestTargetFramework)' == ''">net8.0</TargetFramework>
+    <TargetFramework Condition="'$(OptimizerTestTargetFramework)' != ''">$(OptimizerTestTargetFramework)</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <OutputType>Exe</OutputType>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DebugType Condition="'$(OptimizerTestDebugType)' != ''">$(OptimizerTestDebugType)</DebugType>
+    <SignAssembly Condition="'$(OptimizerTestKey)' != ''">true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(OptimizerTestKey)</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\..\..\src\RazorSlices\RazorSlices.csproj" />
+    <ProjectReference Include="..\..\..\src\SourceGenerator\SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <Import Project="..\..\..\src\RazorSlices\build\RazorSlices.targets" />
+</Project>

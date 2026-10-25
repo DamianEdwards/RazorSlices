@@ -36,6 +36,9 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
         // Build props and targets must be present
         Assert.Contains(entries, e => e.Equals("build/RazorSlices.props", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(entries, e => e.Equals("build/RazorSlices.targets", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(entries, e => e.Equals("tasks/netstandard2.0/RazorSlices.BuildTasks.dll", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(entries, e => e.Equals("tasks/netstandard2.0/Mono.Cecil.dll", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(entries, e => e.Equals("tasks/netstandard2.0/Mono.Cecil.LICENSE.txt", StringComparison.OrdinalIgnoreCase));
 
         // Library assemblies for each targeted framework must be present
         Assert.Contains(entries, e => e.Equals("lib/net8.0/RazorSlices.dll", StringComparison.OrdinalIgnoreCase));
@@ -164,6 +167,20 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
                 !html.Contains("<em>&lt;lean&gt;</em>"))
             {
                 throw new InvalidOperationException(html);
+            }
+
+            string[] defaults = ["Html", "Json", "Component", "Url", "ModelExpressionProvider"];
+            foreach (var type in new[]
+            {
+                typeof(IUi).Assembly.GetType("AspNetCoreGeneratedDocument.Ui", throwOnError: true)!,
+                typeof(IUi).Assembly.GetType("AspNetCoreGeneratedDocument.Lean", throwOnError: true)!,
+                typeof(Consumer.Host).Assembly.GetType("AspNetCoreGeneratedDocument.Host", throwOnError: true)!
+            })
+            {
+                if (type.GetProperties().Any(property => defaults.Contains(property.Name)))
+                {
+                    throw new InvalidOperationException($"Unused MVC properties remain on {type}");
+                }
             }
 
             var allocationSlice = (AllocationSlice)RazorSliceFactory.Create(static () => new AllocationSlice());
