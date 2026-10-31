@@ -1,6 +1,7 @@
 using BenchmarkDotNet.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using System.Numerics;
 using Microsoft.Extensions.DependencyInjection;
 using RazorSlices;
 
@@ -11,7 +12,10 @@ public class TempDataSerialization
 {
     private ServiceProvider _services = null!;
     private TempData _data = null!;
+    private TempData _referenceData = null!;
     private TempDataDictionary _mvc = null!;
+    private readonly string _text = new('x', 1_000);
+    private readonly BigInteger _number = BigInteger.Pow(10, 500);
 
     [GlobalSetup]
     public void Setup()
@@ -23,6 +27,10 @@ public class TempDataSerialization
         _data = TempData.GetOrCreate(new DefaultHttpContext { RequestServices = _services });
         _data.Activate();
         _data.Set("count", 42);
+        _referenceData = TempData.GetOrCreate(new DefaultHttpContext { RequestServices = _services });
+        _referenceData.Activate();
+        _referenceData.Set("text", _text);
+        _referenceData.Set("number", _number);
         _mvc = new TempDataDictionary(new DefaultHttpContext(), new MvcProvider());
         _mvc["count"] = 42;
     }
@@ -46,6 +54,20 @@ public class TempDataSerialization
 
     [Benchmark]
     public int RazorSlicesRead() => _data.Peek<int>("count");
+
+    [Benchmark]
+    public string? RazorSlicesStringSetAndRead()
+    {
+        _referenceData.Set("text", _text);
+        return _referenceData.Peek("text");
+    }
+
+    [Benchmark]
+    public BigInteger RazorSlicesBigIntegerSetAndRead()
+    {
+        _referenceData.Set("number", _number);
+        return _referenceData.Peek<BigInteger>("number");
+    }
 
     private sealed class MemoryProvider : IRazorSliceTempDataProvider
     {

@@ -43,7 +43,7 @@ internal sealed class RazorSliceCookieTempDataProvider(
     private static readonly Action<ILogger, Exception?> LogLoadFailure = LoggerMessage.Define(
         LogLevel.Warning, new EventId(1, "TempDataCookieLoadFailure"),
         "The RazorSlices TempData cookie could not be decoded or unprotected.");
-    private readonly IDataProtector _protector = protection.CreateProtector("RazorSlices.TempData.v1");
+    private readonly IDataProtector _protector = protection.CreateProtector("RazorSlices.TempData.v2");
     private readonly ChunkingCookieManager _cookies = new();
 
     public byte[] Load(HttpContext context)
@@ -81,7 +81,7 @@ internal sealed class RazorSliceCookieTempDataProvider(
 [Experimental("RSLICE0200")]
 public sealed class RazorSliceSessionTempDataProvider : IRazorSliceTempDataProvider
 {
-    private const string Key = "__RazorSlicesTempData";
+    private const string Key = "__RazorSlicesTempData.v2";
 
     /// <inheritdoc />
     public byte[] Load(HttpContext context)

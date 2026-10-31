@@ -418,12 +418,13 @@ public class TempDataTests
             SavedValues = new Dictionary<string, object?>();
             if (payload.Length == 0) { return; }
             using var reader = new BinaryReader(new MemoryStream(payload), Encoding.UTF8);
-            Assert.Equal(1, reader.ReadByte());
+            Assert.Equal(2, reader.ReadByte());
             var count = reader.ReadInt32();
             for (var i = 0; i < count; i++)
             {
                 var key = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
                 _ = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
+                _ = reader.ReadByte();
                 var length = reader.ReadInt32();
                 SavedValues[key] = length < 0 ? null : Encoding.UTF8.GetString(reader.ReadBytes(length));
             }

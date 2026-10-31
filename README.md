@@ -125,6 +125,8 @@ if (tempData.TryGet<Guid>("id", out var id))
 
 Missing keys return the type's default value (`null` for strings). `TryGet` distinguishes missing keys from a stored default. Reading the wrong type throws without consuming the value. Strings remain strings, even when they look like dates or GUIDs.
 
+Built-in values are stored without formatting or boxing; strings and `BigInteger` retain their existing data. Only values retained for the next request are encoded when saving. Custom UTF-8 types use the eager formatting path below.
+
 For custom types implementing both `IUtf8SpanFormattable` and `IUtf8SpanParsable<T>`, use the UTF-8 APIs:
 
 ```csharp

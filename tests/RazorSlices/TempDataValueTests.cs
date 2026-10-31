@@ -131,11 +131,11 @@ public class TempDataValueTests
     [Fact]
     public void PayloadLimitsAndMalformedInputThrow()
     {
-        var entries = new Dictionary<string, TempData.Entry> { ["x"] = new("string", new byte[300]) };
+        var entries = new Dictionary<string, TempData.Entry> { ["x"] = TempData.Entry.FromString(new string('x', 300)) };
         Assert.Throws<InvalidOperationException>(() => TempDataPayload.Serialize(entries, 256));
-        Assert.Throws<FormatException>(() => TempDataPayload.Deserialize([2, 0, 0, 0, 0], 256));
+        Assert.Throws<FormatException>(() => TempDataPayload.Deserialize([1, 0, 0, 0, 0], 256));
         Assert.Throws<FormatException>(() => TempDataPayload.Deserialize([1, 1, 0, 0, 0], 256));
-        var payload = TempDataPayload.Serialize(new() { ["x"] = new("string", "hello"u8.ToArray()) }, 256);
+        var payload = TempDataPayload.Serialize(new() { ["x"] = TempData.Entry.FromString("hello") }, 256);
         Assert.Throws<FormatException>(() => TempDataPayload.Deserialize(payload[..^1], 256));
         Assert.Throws<FormatException>(() => TempDataPayload.Deserialize([.. payload, 0], 256));
     }
@@ -161,11 +161,129 @@ public class TempDataValueTests
     {
         using var services = Services(new MemoryProvider());
         var data = Open(services);
+        var nan = BitConverter.Int64BitsToDouble(unchecked((long)0x7FF8000000001234));
         data.Set("negativeZero", -0.0);
         data.Set("decimal", 1.2300m);
+        data.Set("nan", nan);
+        data.Close();
+        data.Save();
+        data = Open(services);
         Assert.Equal(BitConverter.DoubleToInt64Bits(-0.0),
             BitConverter.DoubleToInt64Bits(data.Peek<double>("negativeZero")));
+        Assert.Equal(BitConverter.DoubleToInt64Bits(nan),
+            BitConverter.DoubleToInt64Bits(data.Peek<double>("nan")));
         Assert.Equal(decimal.GetBits(1.2300m), decimal.GetBits(data.Peek<decimal>("decimal")));
+    }
+
+    [Fact]
+    public void StringsAndBigIntegersAreRetainedNativelyWithoutAllocatingOnAccess()
+    {
+        using var services = Services(new MemoryProvider());
+        var data = Open(services);
+        var text = new string('x', 1_000);
+        var number = BigInteger.Pow(10, 500);
+        for (var i = 0; i < 100; i++)
+        {
+            data.Set("text", text);
+            data.Set("number", number);
+            _ = data.Peek("text");
+            _ = data.Peek<BigInteger>("number");
+        }
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 1_000; i++)
+        {
+            data.Set("text", text);
+            data.Set("number", number);
+            _ = data.Peek("text");
+            _ = data.Peek<BigInteger>("number");
+        }
+        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+        Assert.Same(text, data.GetString("text"));
+        Assert.Equal(number, data.Get<BigInteger>("number"));
+    }
+
+    [Fact]
+    public void ConsumedStringsAreNeverEncodedAndOnlyRetainedValuesAreWritten()
+    {
+        var provider = new MemoryProvider();
+        using var services = Services(provider);
+        var data = Open(services);
+        // An unpaired surrogate cannot be UTF-8 encoded. Consuming it must avoid encoding entirely.
+        var text = "\uD800";
+        data.Set("consumed", text);
+        data.Set("retained", 0x01020304);
+        Assert.Same(text, data.GetString("consumed"));
+        data.Close();
+        data.Save();
+        Assert.DoesNotContain("consumed", System.Text.Encoding.UTF8.GetString(provider.Payload));
+        var next = Open(services);
+        Assert.False(next.ContainsKey("consumed"));
+        Assert.Equal(0x01020304, next.Peek<int>("retained"));
+        next.Set("invalid", text);
+        next.Close();
+        Assert.Throws<System.Text.EncoderFallbackException>(() => next.Save());
+    }
+
+    [Fact]
+    public void NativeWireValuesUseExplicitWidthsAndLittleEndianEncoding()
+    {
+        var entries = new Dictionary<string, TempData.Entry>
+        {
+            ["x"] = TempData.Entry.FromNative(typeof(int).FullName!, TempDataValueKind.Int32, 0x01020304)
+        };
+        var payload = TempDataPayload.Serialize(entries, 256);
+        Assert.Equal(new byte[] { 4, 3, 2, 1 }, payload[^4..]);
+        var decoded = TempDataPayload.Deserialize(payload, 256);
+        Assert.Equal(TempDataValueKind.Int32, decoded["x"].Kind);
+        Assert.Equal(0x01020304, decoded["x"].ReadNative<int>());
+        var invalidKind = (byte[])payload.Clone();
+        invalidKind[^9] = 255;
+        Assert.Throws<FormatException>(() => TempDataPayload.Deserialize(invalidKind, 256));
+        var invalidLength = (byte[])payload.Clone();
+        invalidLength[^8] = 3;
+        Assert.Throws<FormatException>(() => TempDataPayload.Deserialize(invalidLength, 256));
+    }
+
+    [Fact]
+    public void DateTimeKindsAndOffsetsRoundTrip()
+    {
+        var provider = new MemoryProvider();
+        using var services = Services(provider);
+        var data = Open(services);
+        foreach (var kind in new[] { DateTimeKind.Utc, DateTimeKind.Local, DateTimeKind.Unspecified })
+        {
+            data.Set(kind.ToString(), new DateTime(2026, 10, 31, 12, 0, 0, kind).AddTicks(1));
+        }
+        var offset = new DateTimeOffset(2026, 10, 31, 12, 0, 0, TimeSpan.FromMinutes(345));
+        data.Set("offset", offset);
+        data.Close();
+        data.Save();
+        var next = Open(services);
+        foreach (var kind in new[] { DateTimeKind.Utc, DateTimeKind.Local, DateTimeKind.Unspecified })
+        {
+            var date = next.Get<DateTime>(kind.ToString());
+            Assert.Equal(kind, date.Kind);
+            Assert.Equal(new DateTime(2026, 10, 31, 12, 0, 0, kind).AddTicks(1).Ticks, date.Ticks);
+        }
+        var actualOffset = next.Get<DateTimeOffset>("offset");
+        Assert.Equal(offset.Offset, actualOffset.Offset);
+        Assert.Equal(offset.Ticks, actualOffset.Ticks);
+    }
+
+    [Fact]
+    public void CustomValuesAreFormattedEagerlyButNotReformattedWhenSaving()
+    {
+        TrackingValue.Formats = 0;
+        using var services = Services(new MemoryProvider());
+        var data = Open(services);
+        data.SetUtf8("custom", new TrackingValue(42));
+        Assert.Equal(1, TrackingValue.Formats);
+        Assert.Equal(new TrackingValue(42), data.GetUtf8<TrackingValue>("custom", consume: false));
+        data.Close();
+        data.Save();
+        Assert.Equal(1, TrackingValue.Formats);
+        Assert.Equal(new TrackingValue(42), Open(services).GetUtf8<TrackingValue>("custom"));
+        Assert.Equal(1, TrackingValue.Formats);
     }
 
     [Fact]
@@ -227,6 +345,7 @@ public class TempDataValueTests
     private sealed class MemoryProvider : IRazorSliceTempDataProvider
     {
         private byte[] _payload = [];
+        internal byte[] Payload => _payload;
         public byte[] Load(HttpContext context) => _payload;
         public void Save(HttpContext context, byte[] payload) => _payload = payload;
     }
@@ -256,6 +375,23 @@ public class TempDataValueTests
         {
             result = default;
             return false;
+        }
+    }
+
+    private readonly record struct TrackingValue(int Value) : IUtf8SpanFormattable, IUtf8SpanParsable<TrackingValue>
+    {
+        internal static int Formats;
+        public bool TryFormat(Span<byte> utf8Destination, out int bytesWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+        {
+            Formats++;
+            return Value.TryFormat(utf8Destination, out bytesWritten, format, provider);
+        }
+        public static TrackingValue Parse(ReadOnlySpan<byte> utf8Text, IFormatProvider? provider) => new(int.Parse(utf8Text, provider));
+        public static bool TryParse(ReadOnlySpan<byte> utf8Text, IFormatProvider? provider, out TrackingValue result)
+        {
+            var success = int.TryParse(utf8Text, provider, out var value);
+            result = new(value);
+            return success;
         }
     }
 }

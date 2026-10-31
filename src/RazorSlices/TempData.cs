@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -50,19 +51,19 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
     public void Set(string key, string? value)
     {
         EnsureAccess();
-        Store(key, value is null ? new("string", null) : new("string", Utf8.GetBytes(value)));
+        Store(key, Entry.FromString(value));
     }
 
     /// <summary>Stores a Boolean without boxing.</summary>
     public void Set(string key, bool value)
     {
         EnsureAccess();
-        Store(key, new(TypeName<bool>(), value ? "true"u8 : "false"u8));
+        Store(key, Entry.FromNative(TypeName<bool>(), NativeType<bool>.Kind, value));
     }
 
     /// <summary>
-    /// Stores a built-in numeric, date/time, or GUID value without boxing. Uses invariant culture and round-trip
-    /// formats. Custom types should use SetUtf8 instead.
+    /// Stores a built-in numeric, date/time, or GUID value natively without boxing or formatting.
+    /// Custom types should use SetUtf8 instead.
     /// </summary>
     public void Set<T>(string key, T value)
         where T : IUtf8SpanFormattable, ISpanParsable<T>
@@ -72,13 +73,22 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
             EnsureAccess();
             throw new InvalidOperationException("Custom TempData types must support UTF-8 parsing and use SetUtf8.");
         }
-        SetCore(key, value);
+        EnsureAccess();
+        Store(key, Entry.FromNative(TypeName<T>(), NativeType<T>.Kind, value));
     }
 
     /// <summary>Stores a custom value supporting both UTF-8 formatting and UTF-8 parsing without boxing.</summary>
     public void SetUtf8<T>(string key, T value)
         where T : IUtf8SpanFormattable, IUtf8SpanParsable<T>
-        => SetCore(key, value);
+    {
+        if (TypeInfo<T>.IsBuiltIn)
+        {
+            EnsureAccess();
+            Store(key, Entry.FromNative(TypeName<T>(), NativeType<T>.Kind, value));
+            return;
+        }
+        SetCore(key, value);
+    }
 
     private void SetCore<T>(string key, T value) where T : IUtf8SpanFormattable
     {
@@ -86,11 +96,7 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
         ArgumentNullException.ThrowIfNull(key);
         if (!typeof(T).IsValueType && value is null) { throw new ArgumentNullException(nameof(value)); }
         Span<byte> scratch = stackalloc byte[128];
-        var format = typeof(T) == typeof(DateTime) || typeof(T) == typeof(DateTimeOffset) ||
-            typeof(T) == typeof(DateOnly) || typeof(T) == typeof(TimeOnly) ? "O"
-            : typeof(T) == typeof(TimeSpan) ? "c"
-            : typeof(T) == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(Half) ? "R" : null;
-        if (value.TryFormat(scratch, out var written, format, CultureInfo.InvariantCulture))
+        if (value.TryFormat(scratch, out var written, default, CultureInfo.InvariantCulture))
         {
             Store(key, new(TypeName<T>(), scratch[..written]));
             return;
@@ -102,7 +108,7 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
             var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(length);
             try
             {
-                if (value.TryFormat(buffer.AsSpan(0, length), out written, format, CultureInfo.InvariantCulture))
+                if (value.TryFormat(buffer.AsSpan(0, length), out written, default, CultureInfo.InvariantCulture))
                 {
                     Store(key, new(TypeName<T>(), buffer.AsSpan(0, written)));
                     return;
@@ -143,14 +149,9 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
         if (!Entries.TryGetValue(key, out var entry)) { return default; }
         CheckType(key, entry, TypeName<T>());
         T value;
-        if (typeof(T) == typeof(DateTime))
+        if (entry.Kind != TempDataValueKind.Utf8)
         {
-            if (!System.Buffers.Text.Utf8Parser.TryParse(entry.Bytes, out DateTime date, out var consumed, 'O')
-                || consumed != entry.Length)
-            {
-                throw new FormatException($"TempData key '{key}' contains an invalid DateTime.");
-            }
-            value = Unsafe.As<DateTime, T>(ref date);
+            value = entry.ReadNative<T>();
         }
         else
         {
@@ -194,7 +195,7 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
     {
         if (!Entries.TryGetValue(key, out var entry)) { return null; }
         CheckType(key, entry, "string");
-        var value = entry.IsNull ? null : Utf8.GetString(entry.Bytes);
+        var value = entry.Text;
         MarkConsumed(key, entry, consume);
         return value;
     }
@@ -208,6 +209,12 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
             return false;
         }
         CheckType(key, entry, TypeName<T>());
+        if (entry.Kind != TempDataValueKind.Utf8)
+        {
+            value = entry.ReadNative<T>();
+            MarkConsumed(key, entry, consume);
+            return true;
+        }
         var length = Utf8.GetCharCount(entry.Bytes);
         char[]? rented = null;
         Span<char> text = length <= 256 ? stackalloc char[length]
@@ -215,15 +222,7 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
         try
         {
             Utf8.GetChars(entry.Bytes, text);
-            if (typeof(T) == typeof(DateTime))
-            {
-                var date = DateTime.ParseExact(text, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-                value = System.Runtime.CompilerServices.Unsafe.As<DateTime, T>(ref date);
-            }
-            else
-            {
-                value = T.Parse(text, CultureInfo.InvariantCulture);
-            }
+            value = T.Parse(text, CultureInfo.InvariantCulture);
         }
         finally
         {
@@ -238,12 +237,7 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
     private static class TypeInfo<T>
     {
         private static readonly Type Type = typeof(T);
-        internal static readonly bool IsBuiltIn =
-            (Type.IsPrimitive && Type != typeof(char)) || Type == typeof(decimal) ||
-            Type == typeof(Int128) || Type == typeof(UInt128) || Type == typeof(Half) ||
-            Type == typeof(System.Numerics.BigInteger) || Type == typeof(System.Numerics.Complex) || Type == typeof(DateTime) ||
-            Type == typeof(DateTimeOffset) || Type == typeof(DateOnly) || Type == typeof(TimeOnly) ||
-            Type == typeof(TimeSpan) || Type == typeof(Guid);
+        internal static readonly bool IsBuiltIn = NativeType<T>.Kind != TempDataValueKind.Utf8;
         internal static readonly string Name = (Type.FullName
             ?? throw new InvalidOperationException("TempData values must have a stable type name."))
             + (IsBuiltIn ? "" : "," + Type.Assembly.GetName().Name);
@@ -334,31 +328,89 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
     {
         private InlineBytes _inline;
         private readonly byte[]? _overflow;
+        private readonly BigInteger _bigInteger;
+        internal readonly string? Text;
+        internal readonly TempDataValueKind Kind;
         internal readonly string Type;
         internal readonly int Length;
         internal bool Consumed;
-
-        internal Entry(string type, byte[]? value) : this(type, value.AsSpan())
-        {
-            if (value is null) { Length = -1; }
-        }
 
         internal Entry(string type, ReadOnlySpan<byte> value)
         {
             this = default;
             Type = type;
             Length = value.Length;
-            if (value.Length <= 64) { value.CopyTo(_inline); }
+            if (value.Length <= 16) { value.CopyTo(_inline); }
             else { _overflow = value.ToArray(); }
         }
 
-        internal readonly bool IsNull => Length < 0;
+        private Entry(string? text)
+        {
+            this = default;
+            Type = "string";
+            Kind = TempDataValueKind.String;
+            Text = text;
+        }
+
+        private Entry(string type, BigInteger value)
+        {
+            this = default;
+            Type = type;
+            Kind = TempDataValueKind.BigInteger;
+            _bigInteger = value;
+        }
+
+        private Entry(string type, TempDataValueKind kind)
+        {
+            this = default;
+            Type = type;
+            Kind = kind;
+        }
+
+        internal static Entry FromString(string? value) => new(value);
+
+        internal static Entry FromNative<T>(string type, TempDataValueKind kind, T value)
+        {
+            if (kind == TempDataValueKind.BigInteger && typeof(T) == typeof(BigInteger))
+            {
+                return new(type, Unsafe.As<T, BigInteger>(ref value));
+            }
+            if (kind is TempDataValueKind.Utf8 or TempDataValueKind.String ||
+                kind != NativeType<T>.Kind || RuntimeHelpers.IsReferenceOrContainsReferences<T>() ||
+                Unsafe.SizeOf<T>() > 16)
+            {
+                throw new InvalidOperationException("Unsupported native TempData type.");
+            }
+            var entry = new Entry(type, kind);
+            Unsafe.WriteUnaligned(ref entry._inline[0], value);
+            return entry;
+        }
+
+        internal T ReadNative<T>()
+        {
+            if (Kind != NativeType<T>.Kind) { throw new InvalidOperationException("TempData storage type mismatch."); }
+            if (Kind == TempDataValueKind.BigInteger && typeof(T) == typeof(BigInteger))
+            {
+                var number = _bigInteger;
+                return Unsafe.As<BigInteger, T>(ref number);
+            }
+            if (Kind is TempDataValueKind.Utf8 or TempDataValueKind.String ||
+                RuntimeHelpers.IsReferenceOrContainsReferences<T>() || Unsafe.SizeOf<T>() > 16)
+            {
+                throw new InvalidOperationException("Unsupported native TempData type.");
+            }
+            return Unsafe.ReadUnaligned<T>(ref _inline[0]);
+        }
+
+        internal readonly bool IsNull => Kind == TempDataValueKind.String && Text is null;
+
+        internal readonly BigInteger BigInteger => _bigInteger;
 
         [UnscopedRef]
         internal readonly ReadOnlySpan<byte> Bytes => _overflow is not null
             ? _overflow : _inline[..Math.Max(Length, 0)];
 
-        [InlineArray(64)]
+        [InlineArray(16)]
         private struct InlineBytes
         {
             private byte _first;
