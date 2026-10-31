@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 namespace RazorSlices;
 
 /// <summary>Stores the opaque RazorSlices TempData payload. This contract is independent of MVC TempData.</summary>
-[Experimental("RSLICE001")]
+[Experimental("RSLICE0200")]
 public interface IRazorSliceTempDataProvider
 {
     /// <summary>Loads the request payload, returning an empty array when none exists.</summary>
@@ -20,7 +20,7 @@ public interface IRazorSliceTempDataProvider
 }
 
 /// <summary>Configures experimental RazorSlices TempData. Payloads are not MVC-compatible.</summary>
-[Experimental("RSLICE001")]
+[Experimental("RSLICE0200")]
 public sealed class RazorSliceTempDataOptions
 {
     /// <summary>Cookie settings. Consent is required when cookie policy requires it.</summary>
@@ -78,7 +78,7 @@ internal sealed class RazorSliceCookieTempDataProvider(
 }
 
 /// <summary>Stores experimental RazorSlices TempData in ASP.NET Core session. Requires session middleware.</summary>
-[Experimental("RSLICE001")]
+[Experimental("RSLICE0200")]
 public sealed class RazorSliceSessionTempDataProvider : IRazorSliceTempDataProvider
 {
     private const string Key = "__RazorSlicesTempData";

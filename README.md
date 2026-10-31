@@ -77,11 +77,11 @@
 
 ## Route-handler TempData
 
-Use `TempData` to carry typed values across requests, such as a flash message after a redirect. **This API is experimental:** its design and payload format may change between releases. Opt in by suppressing diagnostic `RSLICE001` in your application project:
+Use `TempData` to carry typed values across requests, such as a flash message after a redirect. **This API is experimental:** its design and payload format may change between releases. Opt in by suppressing diagnostic `RSLICE0200` in your application project:
 
 ```xml
 <PropertyGroup>
-  <NoWarn>$(NoWarn);RSLICE001</NoWarn>
+  <NoWarn>$(NoWarn);RSLICE0200</NoWarn>
 </PropertyGroup>
 ```
 
@@ -410,7 +410,7 @@ An explicit lambda return type, as above, lets the ASP.NET Core request-delegate
 without needing to inspect the proxy emitted by the Razor Slices generator in the same compilation.
 
 Minimal slices do not support `@inject`, helpers, layouts, sections, partial calls of their own, or templated Razor
-delegates requiring a writer stack. The generator reports `RSG0004` for effective injections and layouts, including
+delegates requiring a writer stack. The generator reports `RSLICE0004` for effective injections and layouts, including
 inherited declarations; keep minimal templates outside import hierarchies that inject services. Choose `RazorSlice`
 when those features are needed. The protected virtual rendering pipeline permits custom bases to add lifecycle
 behavior without adding application state to every minimal slice.

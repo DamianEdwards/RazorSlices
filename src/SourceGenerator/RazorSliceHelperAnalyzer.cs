@@ -11,9 +11,9 @@ namespace RazorSlices.SourceGenerator;
 internal sealed class RazorSliceHelperAnalyzer : DiagnosticAnalyzer
 {
     private static readonly DiagnosticDescriptor Unsupported = new(
-        "RSG0101", "Helpers must be stateless", "{0}", "RazorSlices", DiagnosticSeverity.Error, true);
+        "RSLICE0101", "Helpers must be stateless", "{0}", "RazorSlices", DiagnosticSeverity.Error, true);
     private static readonly DiagnosticDescriptor Injection = new(
-        "RSG0102", "Helpers cannot inject services",
+        "RSLICE0102", "Helpers cannot inject services",
         "Helpers do not support @inject, including inherited injections. Move helpers outside the injecting _ViewImports.cshtml hierarchy (for example, ~/Helpers and ~/Slices/_ViewImports.cshtml).",
         "RazorSlices", DiagnosticSeverity.Error, true);
 

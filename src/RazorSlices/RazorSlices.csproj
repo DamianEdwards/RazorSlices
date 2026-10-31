@@ -16,7 +16,7 @@
     <!-- Build task assemblies deliberately aren't application references under lib. -->
     <NoWarn>$(NoWarn);NU5100</NoWarn>
     <!-- Internal implementation uses its own experimental TempData APIs. Consumers opt in separately. -->
-    <NoWarn>$(NoWarn);RSLICE001</NoWarn>
+    <NoWarn>$(NoWarn);RSLICE0200</NoWarn>
     <AssemblyName Condition=" '$(Configuration)' == 'Benchmarks' ">RazorSlices.ForBenchmarks</AssemblyName>
   </PropertyGroup>
 

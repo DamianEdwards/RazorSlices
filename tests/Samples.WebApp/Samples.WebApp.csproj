@@ -6,7 +6,7 @@
     <RootNamespace>RazorSlices.Samples.WebApp.Tests</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <NoWarn>$(NoWarn);RSLICE001</NoWarn>
+    <NoWarn>$(NoWarn);RSLICE0200</NoWarn>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 

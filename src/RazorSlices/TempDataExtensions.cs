@@ -7,13 +7,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace RazorSlices;
 
 /// <summary>Registers and enables route-handler TempData without changing slice rendering.</summary>
-[Experimental("RSLICE001")]
+[Experimental("RSLICE0200")]
 public static class TempDataExtensions
 {
     /// <summary>
     /// Registers experimental typed cookie TempData without MVC. Preserves an existing custom provider.
     /// </summary>
-    [Experimental("RSLICE001")]
+    [Experimental("RSLICE0200")]
     public static IServiceCollection AddRazorSliceTempData(
         this IServiceCollection services, Action<RazorSliceTempDataOptions>? configure = null)
     {
@@ -33,7 +33,7 @@ public static class TempDataExtensions
     /// Enables TempData parameters and saves accessed TempData after the handler returns, before result execution.
     /// Can be applied to an endpoint or route group. Handlers must not start the response when using TempData.
     /// </summary>
-    [Experimental("RSLICE001")]
+    [Experimental("RSLICE0200")]
     public static TBuilder WithTempData<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder
     {

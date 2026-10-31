@@ -12,7 +12,7 @@ namespace RazorSlices;
 /// Experimental typed, request-local TempData. Access is limited to the WithTempData handler invocation.
 /// Pass retrieved values, not this object, to templates.
 /// </summary>
-[Experimental("RSLICE001")]
+[Experimental("RSLICE0200")]
 public sealed class TempData : IBindableFromHttpContext<TempData>
 {
     private static readonly object RequestKey = new();
