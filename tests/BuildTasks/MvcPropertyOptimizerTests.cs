@@ -157,6 +157,40 @@ public class MvcPropertyOptimizerTests
     }
 
     [Theory]
+    [InlineData("Link", "Tags/_ViewImports.cshtml", "/Tags/Page.cshtml", true, false)]
+    [InlineData("Link", "Tags/Page.cshtml", "/Tags/Page.cshtml", true, false)]
+    [InlineData("Link", "Tags/Page.cshtml", "/Tags/Other.cshtml", false, false)]
+    [InlineData("Link", "Tags/_ViewImports.cshtml", "/TagsOther/Page.cshtml", false, false)]
+    [InlineData("Link", "_ViewImports.cshtml", "/Tags/Page.cshtml", true, true)]
+    [InlineData("TargetPath", "Tags/_ViewImports.cshtml", "/Tags/Nested/Page.cshtml", true, false)]
+    [InlineData("Link", null, "/Tags/Page.cshtml", true, true)]
+    [InlineData("Link", "../External/_ViewImports.cshtml", "/Tags/Page.cshtml", true, true)]
+    public void ExplicitInjectionsFollowLogicalTemplateAndImportScopes(
+        string metadataName, string? sourcePath, string identifier, bool retained, bool genericRetained)
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "RazorSlices.BuildTasks.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "injections.cshtml");
+            File.WriteAllText(path, "@inject Microsoft.AspNetCore.Mvc.Rendering.IJsonHelper Json");
+            var item = new TaskItem(path);
+            if (sourcePath is not null) { item.SetMetadata(metadataName, sourcePath); }
+            var scopes = new RazorInjectionScopes([item]);
+            using var resolver = CreateResolver();
+            using var module = ReadFixture(resolver);
+            var template = GetType(module, nameof(UnusedSlice));
+            var metadata = template.CustomAttributes.Single(attribute =>
+                attribute.AttributeType.FullName == "Microsoft.AspNetCore.Razor.Hosting.RazorCompiledItemMetadataAttribute");
+            metadata.ConstructorArguments[1] = new CustomAttributeArgument(module.TypeSystem.String, identifier);
+            MvcPropertyOptimizer.Remove(module, scopes.ForTemplate, _ => { });
+            Assert.Equal(retained, template.Properties.Any(property => property.Name == "Json"));
+            Assert.Equal(genericRetained, GetType(module, nameof(GenericSlice)).Properties.Any(property => property.Name == "Json"));
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void SignedAssembliesRequireAndPreserveSigningKey(bool supplyKey)

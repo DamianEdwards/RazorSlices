@@ -11,6 +11,8 @@ internal static class MapSlicesExtensions
         endpoints.MapGet("/lorem", () => Results.Redirect("/lorem-static"));
         endpoints.MapGet("/minimal", RazorSliceBase () => Minimal.Greeting.Create("<minimal>"));
         endpoints.MapGet("/minimal-partial", RazorSlice () => Slices.MinimalHost.Create());
+        endpoints.MapGet("/tag-helpers", RazorSlice () => Slices.TagHelpers.Demo.Create())
+            .DisableResponseBuffering();
 
 #if NET10_0_OR_GREATER
         endpoints.MapGet("/lorem-static", () =>

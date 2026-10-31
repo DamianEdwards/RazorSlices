@@ -32,6 +32,7 @@ tests/
 - `src/RazorSlices/RazorSlice.cs` — Feature-rich base with helpers, layouts, partials, DI, and HTTP results
 - `src/RazorSlices/RazorSliceBase.cs` — Minimal streaming core with HTTP results; no DI, helpers, layouts, or partials
 - `src/RazorSlices/RazorSliceHelperCache.cs` — Render-graph helper cache with inline/small-array/dictionary storage
+- `src/RazorSlices/RazorSliceTagHelper.cs` — Experimental streaming Tag Helper contract and typed `.cshtml` adapter
 - `src/BuildTasks/RemoveMvcDefaultInjectedProperties.cs` — Optimized-build removal of unused MVC default properties from SDK slices and helper implementations
 - `src/RazorSlices/RazorSlice.Partials.cs` — Partial rendering support
 - `src/SourceGenerator/RazorSliceProxyGenerator.cs` — The incremental source generator
@@ -90,6 +91,8 @@ Minimal slices use `RazorSliceBaseFactory` and `IRazorSliceBaseProxy` contracts,
 Optimized builds remove unused default MVC injected properties from internal SDK templates across the full/minimal/helper hierarchies. Explicit injections, referenced members, public templates, and friend-assembly exposure are retained. `RazorSlicesRemoveMvcDefaultInjectedProperties=false` disables rewriting; Hot Reload uses unoptimized builds. Release SDK allocation expectations exclude the removed five reference fields.
 
 Helpers are built into `RazorSlice`: no DI registration or injection is needed. Instances are lazy and shared throughout one root render graph, including partials, layouts, sections, and helper composition. Independent roots do not share a helper cache. Rendering is sequential/nested; concurrent graph use is undefined.
+
+Experimental Tag Helpers also use `RazorSlice`, without new base fields; `RazorSliceBase` and `RazorSliceHelpers` do not consume tag syntax. Implementations derive from `RazorSliceTagHelper` and are constructed per invocation. Only one renderer may match an element, and its body streams once or is omitted; MVC capture/edit/replay semantics are unavailable. Public C# adapters expose model-based `.cshtml` slices to SDK discovery without inspecting generated methods. Dynamic unbound `data-*` attributes need scoped `@inject RazorSliceTagHelperHtml Html` and service registration. Explicit MVC-default injection preservation follows logical template/import scopes, with project-wide preservation for unresolved paths.
 
 ### Model Type Resolution
 The generator resolves type names from Razor directives against the compilation:

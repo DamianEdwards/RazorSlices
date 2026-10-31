@@ -1,0 +1,21 @@
+@using RazorSlices.Samples.WebApp.Helpers
+@implements IUsesLayout<_Layout, LayoutModel>
+@{ var text = "<unsafe&>"; }
+<h1>Streaming tag helpers</h1>
+<p>Code helpers render directly. The card is an ordinary .cshtml slice reached through a typed C# adapter.</p>
+<rs:notice label="Code-based @text" class="alert alert-info" data-note="tag @text" hidden="@false">
+    <rs:count-badge count="42" success />
+    <rs:card title="Template-based @text">
+        <rs:notice label="Nested">
+            @Helpers.TodoHelpers.ActionButton("tag-helper", 42, "A shared Razor helper")
+            @{ await Task.Delay(1, CancellationToken); }
+            <p>Asynchronous body rendered once.</p>
+        </rs:notice>
+    </rs:card>
+</rs:notice>
+<rs:notice show="@false">
+    @{ throw new InvalidOperationException("A suppressed body must not execute."); }
+</rs:notice>
+@functions {
+    public LayoutModel LayoutModel => new() { Title = "Streaming tag helpers" };
+}

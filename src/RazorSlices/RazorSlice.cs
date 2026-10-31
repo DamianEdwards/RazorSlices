@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 namespace RazorSlices;
 
 /// <summary>
-/// The normal Razor template base, supporting dependency injection, helpers, layouts, partials, and HTTP results.
+/// The normal Razor template base, supporting dependency injection, helpers, streaming Tag Helpers, layouts, partials, and HTTP results.
 /// </summary>
 public abstract partial class RazorSlice : RazorSliceBase, IHelperContext
 {
@@ -246,6 +246,7 @@ public abstract partial class RazorSlice : RazorSliceBase, IHelperContext
         {
             _helpers?.Clear();
             _helpers = null;
+            UnwindTagHelperAttributeScopes();
         }
     }
 }

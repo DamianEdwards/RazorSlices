@@ -27,16 +27,7 @@ public sealed class RemoveMvcDefaultInjectedProperties : Task
 
     public override bool Execute()
     {
-        var explicitInjections = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var file in RazorFiles)
-        {
-            // Conservatively preserve explicitly injected names project-wide, including imports.
-            foreach (Match match in Regex.Matches(File.ReadAllText(file.ItemSpec),
-                @"@inject\b[^\r\n]*\b(Html|Json|Component|Url|ModelExpressionProvider)\b"))
-            {
-                explicitInjections.Add(match.Groups[1].Value);
-            }
-        }
+        var explicitInjections = new RazorInjectionScopes(RazorFiles);
 
         using var resolver = new DefaultAssemblyResolver();
         foreach (var directory in References.Select(r => Path.GetDirectoryName(r.GetMetadata("FullPath"))).Distinct())
@@ -56,7 +47,7 @@ public sealed class RemoveMvcDefaultInjectedProperties : Task
                 : new DefaultSymbolReaderProvider(throwIfNoSymbol: false)
         });
 
-        var removed = MvcPropertyOptimizer.Remove(module, explicitInjections,
+        var removed = MvcPropertyOptimizer.Remove(module, explicitInjections.ForTemplate,
             message => Log.LogMessage(MessageImportance.Normal, message));
         if (removed == 0)
         {
@@ -86,6 +77,62 @@ public sealed class RemoveMvcDefaultInjectedProperties : Task
     }
 }
 
+internal sealed class RazorInjectionScopes
+{
+    private readonly List<(string Path, bool Import, ISet<string> Names)> _scopes = [];
+    private readonly HashSet<string> _global = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _all = new(StringComparer.Ordinal);
+
+    internal RazorInjectionScopes(IEnumerable<ITaskItem> files)
+    {
+        foreach (var file in files)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match match in Regex.Matches(File.ReadAllText(file.ItemSpec),
+                @"@inject\b[^\r\n]*\b(Html|Json|Component|Url|ModelExpressionProvider)\b"))
+            {
+                names.Add(match.Groups[1].Value);
+            }
+            if (names.Count == 0) { continue; }
+            _all.UnionWith(names);
+            var path = file.GetMetadata("Link");
+            if (string.IsNullOrEmpty(path)) { path = file.GetMetadata("TargetPath"); }
+            if (string.IsNullOrEmpty(path))
+            {
+                path = file.ItemSpec;
+            }
+            if (Path.IsPathRooted(path) || path.Replace('\\', '/').Split('/').Contains(".."))
+            {
+                // Unknown logical paths must not strip an explicitly authored injection.
+                _global.UnionWith(names);
+                continue;
+            }
+            path = "/" + path.Replace('\\', '/').TrimStart('/');
+            var import = path.EndsWith("/_ViewImports.cshtml", StringComparison.OrdinalIgnoreCase);
+            _scopes.Add((import ? path.Substring(0, path.LastIndexOf('/') + 1) : path, import, names));
+        }
+    }
+
+    internal ISet<string> ForTemplate(TypeDefinition type)
+    {
+        var metadata = type.CustomAttributes.FirstOrDefault(attribute =>
+            attribute.AttributeType.FullName == "Microsoft.AspNetCore.Razor.Hosting.RazorCompiledItemMetadataAttribute" &&
+            attribute.ConstructorArguments.Count == 2 && (string)attribute.ConstructorArguments[0].Value == "Identifier");
+        if (metadata?.ConstructorArguments[1].Value is not string identifier) { return _all; }
+        identifier = "/" + identifier.Replace('\\', '/').TrimStart('/');
+        var names = new HashSet<string>(_global, StringComparer.Ordinal);
+        foreach (var scope in _scopes)
+        {
+            if (scope.Import ? identifier.StartsWith(scope.Path, StringComparison.OrdinalIgnoreCase)
+                : string.Equals(identifier, scope.Path, StringComparison.OrdinalIgnoreCase))
+            {
+                names.UnionWith(scope.Names);
+            }
+        }
+        return names;
+    }
+}
+
 internal static class MvcPropertyOptimizer
 {
     // Default MVC @inject names and types are defined in Razor's synthetic imports:
@@ -100,6 +147,9 @@ internal static class MvcPropertyOptimizer
     };
 
     internal static int Remove(ModuleDefinition module, ISet<string> explicitInjections, Action<string> log)
+        => Remove(module, _ => explicitInjections, log);
+
+    internal static int Remove(ModuleDefinition module, Func<TypeDefinition, ISet<string>> getExplicitInjections, Action<string> log)
     {
         var types = GetTypes(module.Types).ToArray();
         var removed = 0;
@@ -120,6 +170,7 @@ internal static class MvcPropertyOptimizer
                 continue;
             }
 
+            var explicitInjections = getExplicitInjections(type);
             foreach (var property in type.Properties.ToArray())
             {
                 if (!DefaultProperties.TryGetValue(property.Name, out var expectedType)
@@ -132,7 +183,7 @@ internal static class MvcPropertyOptimizer
 
                 if (explicitInjections.Contains(property.Name))
                 {
-                    log($"Razor Slices retained '{property.FullName}' because its name is explicitly injected in this project.");
+                    log($"Razor Slices retained '{property.FullName}' because its name is explicitly injected for this template.");
                     continue;
                 }
 

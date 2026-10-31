@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using RazorSlices;
 using RazorSlices.Samples.WebApp;
 using RazorSlices.Samples.WebApp.Services;
 
@@ -12,6 +13,7 @@ builder.WebHost.UseKestrelHttpsConfiguration();
 #endif
 
 builder.Services.AddWebEncoders();
+builder.Services.AddSingleton<RazorSliceTagHelperHtml>();
 builder.Services.AddSingleton<LoremService>();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
