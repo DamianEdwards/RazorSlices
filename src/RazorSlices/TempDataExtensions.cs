@@ -1,16 +1,18 @@
-using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Mvc.ViewFeatures.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace RazorSlices.Samples.WebApp;
+namespace RazorSlices;
 
-/// <summary>Sample-local spike for preparing TempData before returning an HTTP result.</summary>
+/// <summary>Registers and enables route-handler TempData without changing slice rendering.</summary>
 public static class TempDataExtensions
 {
     /// <summary>
-    /// Registers cookie TempData without MVC. The spike's default serializer supports strings and null only.
+    /// Registers cookie TempData without MVC, using a reflection-free MVC-compatible JSON serializer.
     /// Existing provider, factory, and serializer registrations are preserved.
     /// </summary>
     public static IServiceCollection AddRazorSliceTempData(
@@ -21,7 +23,7 @@ public static class TempDataExtensions
         services.AddLogging();
         services.AddOptions();
         if (configure is not null) { services.Configure(configure); }
-        services.TryAddSingleton<TempDataSerializer>(new StringTempDataSerializer());
+        services.TryAddSingleton<TempDataSerializer, RazorSliceTempDataSerializer>();
         services.TryAddSingleton<ITempDataProvider, CookieTempDataProvider>();
         services.TryAddSingleton<ITempDataDictionaryFactory, TempDataDictionaryFactory>();
         return services;
@@ -65,41 +67,5 @@ public static class TempDataExtensions
     internal sealed class TempDataMetadata
     {
         public static readonly TempDataMetadata Instance = new();
-    }
-
-    private sealed class StringTempDataSerializer : TempDataSerializer
-    {
-        public override bool CanSerializeType(Type type) => type == typeof(string);
-
-        public override byte[] Serialize(IDictionary<string, object?> values)
-        {
-            using var stream = new MemoryStream();
-            using (var writer = new Utf8JsonWriter(stream))
-            {
-                writer.WriteStartObject();
-                foreach (var (key, value) in values)
-                {
-                    if (value is not null and not string)
-                    {
-                        throw new InvalidOperationException(
-                            $"The TempData spike supports strings and null only, not '{value.GetType()}'.");
-                    }
-                    writer.WriteString(key, (string?)value);
-                }
-                writer.WriteEndObject();
-            }
-            return stream.ToArray();
-        }
-
-        public override IDictionary<string, object?> Deserialize(byte[] unprotectedData)
-        {
-            using var document = JsonDocument.Parse(unprotectedData);
-            var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-            foreach (var entry in document.RootElement.EnumerateObject())
-            {
-                values.Add(entry.Name, entry.Value.GetString());
-            }
-            return values;
-        }
     }
 }

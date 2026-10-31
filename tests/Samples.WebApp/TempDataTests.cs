@@ -368,7 +368,7 @@ public class TempDataTests
     }
 
     [Fact]
-    public void DefaultSerializerRoundTripsStringsAndNullAndRejectsOtherTypes()
+    public void DefaultSerializerRoundTripsStringsAndNullAndRejectsUnsupportedTypes()
     {
         using var services = new ServiceCollection().AddRazorSliceTempData().BuildServiceProvider();
         var serializer = services.GetRequiredService<TempDataSerializer>();
@@ -377,7 +377,7 @@ public class TempDataTests
         Assert.Equal("<hello>", roundTrip["message"]);
         Assert.Null(roundTrip["nothing"]);
         Assert.Throws<InvalidOperationException>(() => serializer.Serialize(
-            new Dictionary<string, object?> { ["unsupported"] = 42 }));
+            new Dictionary<string, object?> { ["unsupported"] = 42L }));
         Assert.Null(typeof(TempData).GetMethod("Save", BindingFlags.Public | BindingFlags.Instance));
         Assert.Null(typeof(TempData).GetMethod("Load", BindingFlags.Public | BindingFlags.Instance));
     }

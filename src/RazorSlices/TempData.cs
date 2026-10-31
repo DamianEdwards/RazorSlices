@@ -1,13 +1,17 @@
 using System.Collections;
 using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
-namespace RazorSlices.Samples.WebApp;
+namespace RazorSlices;
 
 /// <summary>
 /// A bindable, request-local TempData dictionary accessible only while a WithTempData endpoint filter is active.
 /// Pass retrieved values, not this dictionary, to templates. The filter owns loading and saving.
 /// </summary>
+[SuppressMessage("Naming", "CA1710", Justification = "TempData is the established API name for this route-handler parameter.")]
 public sealed class TempData : IDictionary<string, object?>, IBindableFromHttpContext<TempData>
 {
     private static readonly object RequestKey = new();
@@ -56,7 +60,9 @@ public sealed class TempData : IDictionary<string, object?>, IBindableFromHttpCo
         }
     }
 
+    /// <inheritdoc />
     public int Count => Dictionary.Count;
+    /// <inheritdoc />
     public bool IsReadOnly => Dictionary.IsReadOnly;
 
     /// <summary>Gets a value without marking it as consumed.</summary>
@@ -68,15 +74,25 @@ public sealed class TempData : IDictionary<string, object?>, IBindableFromHttpCo
     /// <summary>Retains a value for the next request.</summary>
     public void Keep(string key) => Dictionary.Keep(key);
 
+    /// <inheritdoc />
     public void Add(string key, object? value) => Dictionary.Add(key, value);
+    /// <inheritdoc />
     public bool ContainsKey(string key) => Dictionary.ContainsKey(key);
+    /// <inheritdoc />
     public bool Remove(string key) => Dictionary.Remove(key);
+    /// <summary>Gets a value and marks it consumed, matching MVC TempData.</summary>
     public bool TryGetValue(string key, out object? value) => Dictionary.TryGetValue(key, out value);
+    /// <inheritdoc />
     public void Add(KeyValuePair<string, object?> item) => Dictionary.Add(item);
+    /// <inheritdoc />
     public void Clear() => Dictionary.Clear();
+    /// <inheritdoc />
     public bool Contains(KeyValuePair<string, object?> item) => Dictionary.Contains(item);
+    /// <inheritdoc />
     public void CopyTo(KeyValuePair<string, object?>[] array, int arrayIndex) => Dictionary.CopyTo(array, arrayIndex);
+    /// <inheritdoc />
     public bool Remove(KeyValuePair<string, object?> item) => Dictionary.Remove(item);
+    /// <summary>Enumerates entries, marking each consumed when its Current value is accessed.</summary>
     public IEnumerator<KeyValuePair<string, object?>> GetEnumerator()
         => new GuardedEnumerator<KeyValuePair<string, object?>>(this, Dictionary.GetEnumerator());
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

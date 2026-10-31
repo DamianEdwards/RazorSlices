@@ -75,9 +75,9 @@
 
     This will configure the Razor Slices source generator to only generate proxy types for *.cshtml* files in the *Slices* directory in your project.
 
-## Route-handler TempData spike
+## Route-handler TempData
 
-The WebApp sample contains an experimental, sample-local bindable `TempData` parameter and `.WithTempData()` endpoint filter, not a shipped library API. Visit `/tempdata` to try a cookie-backed flash message:
+RazorSlices provides a bindable `TempData` parameter and `.WithTempData()` endpoint filter. Visit `/tempdata` in the WebApp sample to try a cookie-backed flash message:
 
 ```csharp
 builder.Services.AddRazorSliceTempData();
@@ -97,16 +97,24 @@ app.MapGet("/", RazorSlice (TempData tempData) =>
 
 Use the indexer, `TryGetValue`, `Peek`, and `Keep` as with MVC TempData. Redirects do not implicitly retain already-read values. There is no public `Load` or `Save`: the filter owns persistence. Binding without `.WithTempData()` throws. Access before the filter activates, after the handler returns, or once the response starts also throws, including through captured dictionary references, collection views, and enumerators. Pass retrieved values into slice models, not live TempData. Do not execute results or render into the response inside these handlers; accessed TempData cannot be saved after response headers start. Other endpoint filters inside the TempData filter's invocation are part of the same access window.
 
-The spike reuses MVC's dictionary, factory, and cookie provider without registering MVC. Its reflection-free serializer intentionally supports only strings and null; register a different `TempDataSerializer` for other types or MVC-compatible payloads. Existing provider/factory/serializer registrations are preserved, including those supplied by MVC. A session provider can be registered instead, with `AddSession`, an `IDistributedCache`, and `UseSession` before endpoints. Call `Session.LoadAsync` before using session TempData to avoid synchronous cache I/O. Cookie options can be configured through `AddRazorSliceTempData(options => ...)`; normal Data Protection key management, cookie consent, cookie size limits, and session concurrency constraints still apply.
+The integration reuses MVC's dictionary, factory, and cookie provider without registering MVC. The default `RazorSliceTempDataSerializer` is reflection-free and uses MVC's JSON format: null, strings, integers, booleans, `DateTime`, `Guid`, enums representable as `Int32`, integer/string collections, and string-to-string dictionaries. As in MVC, JSON strings that look like GUIDs or dates deserialize to those types, enums deserialize to integers, and empty arrays deserialize as null. Unsupported types throw. Serialization pools the JSON writer and byte buffer, clears plaintext before pooling, and discards buffers larger than 64 KiB; deserialization uses `Utf8JsonReader` without a JSON DOM or intermediate collection lists.
 
-Handler exceptions close access and skip saving; this is not a transaction (the session provider removes stored TempData when loading it). These guards cover the spike's `TempData` API, not deliberate access to MVC's raw factory or providers. No middleware, result wrapper, page lifecycle, or slice rendering changes are introduced.
+Existing provider/factory/serializer registrations are preserved, including those supplied by MVC. Register a different `TempDataSerializer` to customize serialization. A session provider can be registered instead, with `AddSession`, an `IDistributedCache`, and `UseSession` before endpoints. Call `Session.LoadAsync` before using session TempData to avoid synchronous cache I/O. Cookie options can be configured through `AddRazorSliceTempData(options => ...)`; normal Data Protection key management, cookie consent, cookie size limits, and session concurrency constraints still apply.
+
+The `TempDataSerialization` BenchmarkDotNet suite compares serialization/deserialization with MVC's default serializer and the original string-only sample serializer:
+
+```shell
+dotnet run --project tests/Benchmarks -c Benchmarks -- --filter "*TempDataSerialization*"
+```
+
+Handler exceptions close access and skip saving; this is not a transaction (the session provider removes stored TempData when loading it). These guards cover RazorSlices' `TempData` API, not deliberate access to MVC's raw factory or providers. No middleware, result wrapper, page lifecycle, or slice rendering changes are introduced.
 
 ### Antiforgery form helper
 
-The `/tempdata` sample also incorporates the form-helper experiment: keep the literal form and add one line for the encoded hidden token:
+The built-in form helper keeps the literal form and adds one line for the encoded hidden token:
 
 ```cshtml
-@using RazorSlices.Samples.WebApp.Helpers
+@using RazorSlices
 
 <form method="post" action="/tempdata">
     @Helpers.FormHelpers.AntiforgeryToken(HttpContext)
@@ -114,7 +122,7 @@ The `/tempdata` sample also incorporates the form-helper experiment: keep the li
 </form>
 ```
 
-Register `builder.Services.AddAntiforgery()` and apply the sample-local `.WithAntiforgery()` filter before `.WithTempData()`:
+Register `builder.Services.AddAntiforgery()` and apply `.WithAntiforgery()` before `.WithTempData()`:
 
 ```csharp
 var forms = app.MapGroup("/tempdata").WithAntiforgery().WithTempData();

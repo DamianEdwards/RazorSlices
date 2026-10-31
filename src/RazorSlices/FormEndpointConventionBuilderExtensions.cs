@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace RazorSlices.Samples.WebApp;
+namespace RazorSlices;
 
-/// <summary>Sample-local antiforgery preparation and validation for result-returning form endpoints.</summary>
+/// <summary>Antiforgery preparation and validation for result-returning form endpoints.</summary>
 public static class FormEndpointConventionBuilderExtensions
 {
     /// <summary>
