@@ -14,13 +14,13 @@ internal static class MapSlicesExtensions
         var tempDataEndpoints = endpoints.MapGroup("/tempdata").WithAntiforgery().WithTempData();
         tempDataEndpoints.MapGet("", RazorSlice (TempData tempData, bool keep = false) =>
         {
-            var message = (string?)tempData["message"];
+            var message = tempData.GetString("message");
             if (keep) { tempData.Keep("message"); }
             return Slices.TempDataDemo.Create(message);
         });
         tempDataEndpoints.MapPost("", (TempData tempData) =>
         {
-            tempData["message"] = "Changes saved. <This message is HTML encoded.>";
+            tempData.Set("message", "Changes saved. <This message is HTML encoded.>");
             return TypedResults.Redirect("/tempdata");
         });
 

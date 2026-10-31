@@ -1,13 +1,11 @@
-using System.Collections;
 using System.Net;
 using System.Reflection;
+using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.AspNetCore.Mvc.ViewFeatures.Infrastructure;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -28,7 +26,7 @@ public class TempDataTests
         Assert.Equal(HttpStatusCode.Redirect, redirect.StatusCode);
         Assert.Equal("/tempdata", redirect.Headers.Location?.OriginalString);
         Assert.Contains(redirect.Headers.GetValues("Set-Cookie"),
-            cookie => cookie.StartsWith(CookieTempDataProvider.CookieName, StringComparison.Ordinal));
+            cookie => cookie.StartsWith(".RazorSlices.TempData", StringComparison.Ordinal));
 
         using var page = await client.GetAsync("/tempdata");
         page.EnsureSuccessStatusCode();
@@ -188,7 +186,7 @@ public class TempDataTests
         {
             services.AddDistributedMemoryCache();
             services.AddSession();
-            services.AddSingleton<ITempDataProvider, SessionStateTempDataProvider>();
+            services.AddSingleton<IRazorSliceTempDataProvider, RazorSliceSessionTempDataProvider>();
         });
         using var client = app.GetTestClient();
         using var response = await client.GetAsync("/session/set");
@@ -218,36 +216,18 @@ public class TempDataTests
     }
 
     [Fact]
-    public async Task CapturedDictionaryViewsAndEnumeratorsAreClosedBeforeResultExecution()
+    public async Task CapturedTempDataIsClosedBeforeResultExecution()
     {
         var provider = new RecordingProvider();
         await using var app = await CreateApp(provider, app =>
             app.MapGet("/", (TempData data) =>
             {
                 data["message"] = "hello";
-                var keys = data.Keys;
-                var values = data.Values;
-                var entries = data.GetEnumerator();
-                var keyEnumerator = keys.GetEnumerator();
-                var valueEnumerator = values.GetEnumerator();
-                Assert.True(entries.MoveNext());
-                Assert.True(keyEnumerator.MoveNext());
-                Assert.True(valueEnumerator.MoveNext());
-                Assert.Equal("hello", entries.Current.Value);
                 data.Keep();
                 return new CheckingResult(() =>
                 {
                     Assert.Equal(1, provider.SaveCount);
                     AssertClosed(data);
-                    Assert.Throws<InvalidOperationException>(() => keys.Count);
-                    Assert.Throws<InvalidOperationException>(() => values.Count);
-                    Assert.Throws<InvalidOperationException>(() => keys.GetEnumerator());
-                    Assert.Throws<InvalidOperationException>(() => values.GetEnumerator());
-                    Assert.Throws<InvalidOperationException>(() => keys.Contains("message"));
-                    Assert.Throws<InvalidOperationException>(() => values.CopyTo(new object?[1], 0));
-                    AssertEnumeratorClosed(entries);
-                    AssertEnumeratorClosed(keyEnumerator);
-                    AssertEnumeratorClosed(valueEnumerator);
                 });
             }).WithTempData());
         using var client = app.GetTestClient();
@@ -257,14 +237,14 @@ public class TempDataTests
     }
 
     [Fact]
-    public async Task EnumerationPreservesMvcConsumptionSemantics()
+    public async Task TypedReadsConsumeValues()
     {
         var provider = new RecordingProvider();
         await using var app = await CreateApp(provider, app =>
             app.MapGet("/", (TempData data) =>
             {
-                data["message"] = "hello";
-                foreach (var entry in data) { Assert.Equal("hello", entry.Value); }
+                data.Set("count", 42);
+                Assert.Equal(42, data.Get<int>("count"));
                 return TypedResults.NoContent();
             }).WithTempData());
         using var client = app.GetTestClient();
@@ -341,45 +321,28 @@ public class TempDataTests
     }
 
     [Fact]
-    public async Task ExistingServicesArePreservedAndFactorySharesRequestDictionary()
+    public async Task CustomProviderIsPreserved()
     {
         var provider = new RecordingProvider();
-        var serializer = new TestSerializer();
-        var dictionaryFactory = new TempDataDictionaryFactory(provider);
         await using var app = await CreateApp(provider, app =>
-            app.MapGet("/", (TempData data, HttpContext context) =>
+            app.MapGet("/", (TempData data) =>
             {
-                var raw = dictionaryFactory.GetTempData(context);
-                raw["message"] = "shared with MVC";
-                Assert.Equal("shared with MVC", data.Peek("message"));
+                data.Set("message", "custom provider");
                 return TypedResults.NoContent();
-            }).WithTempData(), configureServices: services =>
-            {
-                services.AddSingleton<TempDataSerializer>(serializer);
-                services.AddSingleton<ITempDataDictionaryFactory>(dictionaryFactory);
-            });
-        Assert.Same(provider, app.Services.GetRequiredService<ITempDataProvider>());
-        Assert.Same(serializer, app.Services.GetRequiredService<TempDataSerializer>());
-        Assert.Same(dictionaryFactory, app.Services.GetRequiredService<ITempDataDictionaryFactory>());
+            }).WithTempData());
+        Assert.Same(provider, app.Services.GetRequiredService<IRazorSliceTempDataProvider>());
         using var client = app.GetTestClient();
         using var response = await client.GetAsync("/");
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.Equal("shared with MVC", provider.SavedValues["message"]);
+        Assert.Equal("custom provider", provider.SavedValues["message"]);
     }
 
     [Fact]
-    public void DefaultSerializerRoundTripsStringsAndNullAndRejectsUnsupportedTypes()
+    public void ApiDoesNotExposeManualPersistenceOrObjectDictionary()
     {
-        using var services = new ServiceCollection().AddRazorSliceTempData().BuildServiceProvider();
-        var serializer = services.GetRequiredService<TempDataSerializer>();
-        var values = new Dictionary<string, object?> { ["message"] = "<hello>", ["nothing"] = null };
-        var roundTrip = serializer.Deserialize(serializer.Serialize(values));
-        Assert.Equal("<hello>", roundTrip["message"]);
-        Assert.Null(roundTrip["nothing"]);
-        Assert.Throws<InvalidOperationException>(() => serializer.Serialize(
-            new Dictionary<string, object?> { ["unsupported"] = 42L }));
         Assert.Null(typeof(TempData).GetMethod("Save", BindingFlags.Public | BindingFlags.Instance));
         Assert.Null(typeof(TempData).GetMethod("Load", BindingFlags.Public | BindingFlags.Instance));
+        Assert.DoesNotContain(typeof(IDictionary<string, object?>), typeof(TempData).GetInterfaces());
     }
 
     private static void AssertClosed(TempData data)
@@ -390,29 +353,14 @@ public class TempDataTests
         Assert.Throws<InvalidOperationException>(() => data.Keep());
         Assert.Throws<InvalidOperationException>(() => data.Keep("message"));
         Assert.Throws<InvalidOperationException>(() => data.Count);
-        Assert.Throws<InvalidOperationException>(() => data.IsReadOnly);
-        Assert.Throws<InvalidOperationException>(() => data.Keys);
-        Assert.Throws<InvalidOperationException>(() => data.Values);
         Assert.Throws<InvalidOperationException>(() => data.ContainsKey("message"));
-        Assert.Throws<InvalidOperationException>(() => data.TryGetValue("message", out _));
-        Assert.Throws<InvalidOperationException>(() => data.Add("message", "invalid"));
+        Assert.Throws<InvalidOperationException>(() => data.TryGet<int>("message", out _));
+        Assert.Throws<InvalidOperationException>(() => data.Get<int>("message"));
+        Assert.Throws<InvalidOperationException>(() => data.Peek<int>("message"));
+        Assert.Throws<InvalidOperationException>(() => data.Get<bool>("message"));
+        Assert.Throws<InvalidOperationException>(() => data.Set("message", 42));
         Assert.Throws<InvalidOperationException>(() => data.Remove("message"));
         Assert.Throws<InvalidOperationException>(() => data.Clear());
-        Assert.Throws<InvalidOperationException>(() => data.Add(new("message", "invalid")));
-        Assert.Throws<InvalidOperationException>(() => data.Contains(new("message", "invalid")));
-        Assert.Throws<InvalidOperationException>(() => data.Remove(new KeyValuePair<string, object?>("message", "invalid")));
-        Assert.Throws<InvalidOperationException>(() => data.CopyTo(new KeyValuePair<string, object?>[1], 0));
-        Assert.Throws<InvalidOperationException>(() => data.GetEnumerator());
-        Assert.Throws<InvalidOperationException>(() => ((IEnumerable)data).GetEnumerator());
-    }
-
-    private static void AssertEnumeratorClosed<T>(IEnumerator<T> enumerator)
-    {
-        Assert.Throws<InvalidOperationException>(() => enumerator.MoveNext());
-        Assert.Throws<InvalidOperationException>(() => enumerator.Current);
-        Assert.Throws<InvalidOperationException>(() => ((IEnumerator)enumerator).Current);
-        Assert.Throws<InvalidOperationException>(() => enumerator.Reset());
-        enumerator.Dispose();
     }
 
     private static async Task<WebApplication> CreateApp(
@@ -424,7 +372,7 @@ public class TempDataTests
         builder.Logging.ClearProviders();
         if (registerServices)
         {
-            builder.Services.AddSingleton<ITempDataProvider>(provider);
+            builder.Services.AddSingleton<IRazorSliceTempDataProvider>(provider);
             builder.Services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
             configureServices?.Invoke(builder.Services);
             builder.Services.AddRazorSliceTempData();
@@ -450,30 +398,36 @@ public class TempDataTests
         public override bool HasStarted => true;
     }
 
-    private sealed class RecordingProvider : ITempDataProvider
+    private sealed class RecordingProvider : IRazorSliceTempDataProvider
     {
         public int LoadCount { get; private set; }
         public int SaveCount { get; private set; }
         public bool FailSave { get; init; }
         public IDictionary<string, object?> SavedValues { get; private set; } = new Dictionary<string, object?>();
 
-        public IDictionary<string, object?> LoadTempData(HttpContext context)
+        public byte[] Load(HttpContext context)
         {
             LoadCount++;
-            return new Dictionary<string, object?>();
+            return [];
         }
 
-        public void SaveTempData(HttpContext context, IDictionary<string, object?> values)
+        public void Save(HttpContext context, byte[] payload)
         {
             if (FailSave) { throw new InvalidOperationException("save failed"); }
             SaveCount++;
-            SavedValues = new Dictionary<string, object?>(values);
+            SavedValues = new Dictionary<string, object?>();
+            if (payload.Length == 0) { return; }
+            using var reader = new BinaryReader(new MemoryStream(payload), Encoding.UTF8);
+            Assert.Equal(1, reader.ReadByte());
+            var count = reader.ReadInt32();
+            for (var i = 0; i < count; i++)
+            {
+                var key = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
+                _ = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
+                var length = reader.ReadInt32();
+                SavedValues[key] = length < 0 ? null : Encoding.UTF8.GetString(reader.ReadBytes(length));
+            }
         }
     }
 
-    private sealed class TestSerializer : TempDataSerializer
-    {
-        public override IDictionary<string, object?> Deserialize(byte[] unprotectedData) => throw new NotSupportedException();
-        public override byte[] Serialize(IDictionary<string, object?> values) => throw new NotSupportedException();
-    }
 }

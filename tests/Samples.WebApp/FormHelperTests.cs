@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -46,7 +45,7 @@ public class FormHelperTests
         var provider = new RecordingProvider();
         using var factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
-                services.AddSingleton<ITempDataProvider>(provider)));
+                services.AddSingleton<IRazorSliceTempDataProvider>(provider)));
         using var client = factory.CreateClient(new() { AllowAutoRedirect = false });
         var token = ReadToken(await client.GetStringAsync("/tempdata"));
         var loadCount = provider.LoadCount;
@@ -95,15 +94,15 @@ public class FormHelperTests
         return new(WebUtility.HtmlDecode(match.Groups[1].Value), WebUtility.HtmlDecode(match.Groups[2].Value));
     }
 
-    private sealed class RecordingProvider : ITempDataProvider
+    private sealed class RecordingProvider : IRazorSliceTempDataProvider
     {
         public int LoadCount { get; private set; }
         public int SaveCount { get; private set; }
-        public IDictionary<string, object?> LoadTempData(HttpContext context)
+        public byte[] Load(HttpContext context)
         {
             LoadCount++;
-            return new Dictionary<string, object?>();
+            return [];
         }
-        public void SaveTempData(HttpContext context, IDictionary<string, object?> values) => SaveCount++;
+        public void Save(HttpContext context, byte[] payload) => SaveCount++;
     }
 }

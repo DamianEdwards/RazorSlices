@@ -77,7 +77,15 @@
 
 ## Route-handler TempData
 
-Use `TempData` to carry values across requests, such as a flash message after a redirect. Register the services, accept a `TempData` parameter in your handler, and add `.WithTempData()`:
+Use `TempData` to carry typed values across requests, such as a flash message after a redirect. **This API is experimental:** its design and payload format may change between releases. Opt in by suppressing diagnostic `RSLICE001` in your application project:
+
+```xml
+<PropertyGroup>
+  <NoWarn>$(NoWarn);RSLICE001</NoWarn>
+</PropertyGroup>
+```
+
+Register the services, accept a `TempData` parameter in your handler, and add `.WithTempData()`:
 
 ```csharp
 using RazorSlices;
@@ -86,25 +94,56 @@ builder.Services.AddRazorSliceTempData();
 
 app.MapPost("/save", (TempData tempData) =>
 {
-    tempData["message"] = "Changes saved.";
+    tempData.Set("message", "Changes saved.");
     return TypedResults.Redirect("/");
 }).WithTempData();
 
 app.MapGet("/", RazorSlice (TempData tempData) =>
-    Slices.Home.Create((string?)tempData["message"]))
+    Slices.Home.Create(tempData.GetString("message")))
     .WithTempData();
 ```
 
 Values are saved automatically. Reading a value consumes it, so the next request no longer sees it. Protect form POSTs with the [antiforgery helper](#antiforgery-form-helper) below.
+
+### Typed values
+
+```csharp
+tempData.Set("count", 42);
+tempData.Set("success", true);
+tempData.Set("savedAt", DateTimeOffset.UtcNow);
+tempData.Set("id", Guid.NewGuid());
+
+var count = tempData.Get<int>("count");
+var success = tempData.Get<bool>("success");
+var savedAt = tempData.Get<DateTimeOffset>("savedAt");
+
+if (tempData.TryGet<Guid>("id", out var id))
+{
+    // Use the identifier.
+}
+```
+
+Missing keys return the type's default value (`null` for strings). `TryGet` distinguishes missing keys from a stored default. Reading the wrong type throws without consuming the value. Strings remain strings, even when they look like dates or GUIDs.
+
+For custom types implementing both `IUtf8SpanFormattable` and `IUtf8SpanParsable<T>`, use the UTF-8 APIs:
+
+```csharp
+tempData.SetUtf8("reference", reference);
+var restored = tempData.GetUtf8<MyReference>("reference");
+var retained = tempData.GetUtf8<MyReference>("reference", consume: false);
+```
+
+Custom formatting and parsing must round-trip using invariant culture and the default format.
 
 ### Keeping values
 
 Use `Peek` to read without consuming, or `Keep` to retain a value you have already read:
 
 ```csharp
-var message = (string?)tempData.Peek("message");
+var message = tempData.Peek("message");
+var count = tempData.Peek<int>("count");
 
-var notice = (string?)tempData["notice"];
+var notice = tempData.GetString("notice");
 tempData.Keep("notice");
 
 tempData.Keep(); // Retain all values.
@@ -120,7 +159,7 @@ Apply `.WithTempData()` once to a group instead of each endpoint:
 var pages = app.MapGroup("/pages").WithTempData();
 
 pages.MapGet("/home", RazorSlice (TempData tempData) =>
-    Slices.Home.Create((string?)tempData["message"]));
+    Slices.Home.Create(tempData.GetString("message")));
 ```
 
 TempData uses cookies by default. Configure them during registration:
@@ -133,7 +172,21 @@ builder.Services.AddRazorSliceTempData(options =>
 });
 ```
 
-Keep cookie values small. Supported values include strings, integers, booleans, `DateTime`, `Guid`, null, enums that fit `Int32`, integer/string collections, and string-to-string dictionaries. As with MVC TempData, enums are read back as integers, date/GUID-shaped strings become those types, and empty arrays become null. Existing MVC providers and serializers are reused; register a custom `TempDataSerializer` to support other types.
+Keep cookie values small. Supported values are nullable strings, booleans, numeric types (including `Half`, `Int128`, and `BigInteger`), date/time types, GUIDs, and custom UTF-8-formattable/parsable types. Collections, arbitrary objects, and enums are not supported. Keys are case-insensitive strings.
+
+RazorSlices TempData is independent of MVC TempData and does not share its cookies, session keys, or payload format. To use ASP.NET Core session instead of cookies:
+
+```csharp
+builder.Services.AddDistributedMemoryCache(); // Or a distributed cache for production.
+builder.Services.AddSession();
+builder.Services.AddSingleton<IRazorSliceTempDataProvider, RazorSliceSessionTempDataProvider>();
+builder.Services.AddRazorSliceTempData();
+
+// After building the app, before endpoints:
+app.UseSession();
+```
+
+With a remote session cache, call `await context.Session.LoadAsync(context.RequestAborted)` before accessing TempData. Register a custom `IRazorSliceTempDataProvider` to use another storage mechanism.
 
 **Use TempData only in the handler, before returning a result.** Pass retrieved values into the slice model, not the `TempData` object. Missing `.WithTempData()`, template-time access, or access after the response starts throws. Async handlers are supported; handlers that write directly to the response are not supported when using TempData.
 
@@ -148,11 +201,11 @@ builder.Services.AddRazorSliceTempData();
 var forms = app.MapGroup("/tempdata").WithAntiforgery().WithTempData();
 
 forms.MapGet("", RazorSlice (TempData tempData) =>
-    Slices.TempDataDemo.Create((string?)tempData["message"]));
+    Slices.TempDataDemo.Create(tempData.GetString("message")));
 
 forms.MapPost("", (TempData tempData) =>
 {
-    tempData["message"] = "Changes saved.";
+    tempData.Set("message", "Changes saved.");
     return TypedResults.Redirect("/tempdata");
 });
 ```

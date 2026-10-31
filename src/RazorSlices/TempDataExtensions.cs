@@ -1,31 +1,31 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.AspNetCore.Mvc.ViewFeatures.Infrastructure;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace RazorSlices;
 
 /// <summary>Registers and enables route-handler TempData without changing slice rendering.</summary>
+[Experimental("RSLICE001")]
 public static class TempDataExtensions
 {
     /// <summary>
-    /// Registers cookie TempData without MVC, using a reflection-free MVC-compatible JSON serializer.
-    /// Existing provider, factory, and serializer registrations are preserved.
+    /// Registers experimental typed cookie TempData without MVC. Preserves an existing custom provider.
     /// </summary>
+    [Experimental("RSLICE001")]
     public static IServiceCollection AddRazorSliceTempData(
-        this IServiceCollection services, Action<CookieTempDataProviderOptions>? configure = null)
+        this IServiceCollection services, Action<RazorSliceTempDataOptions>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddDataProtection();
         services.AddLogging();
         services.AddOptions();
         if (configure is not null) { services.Configure(configure); }
-        services.TryAddSingleton<TempDataSerializer, RazorSliceTempDataSerializer>();
-        services.TryAddSingleton<ITempDataProvider, CookieTempDataProvider>();
-        services.TryAddSingleton<ITempDataDictionaryFactory, TempDataDictionaryFactory>();
+        services.AddOptions<RazorSliceTempDataOptions>()
+            .Validate(static options => options.MaxPayloadBytes >= 256 && !string.IsNullOrEmpty(options.Cookie?.Name),
+                "TempData requires a cookie name and MaxPayloadBytes of at least 256.");
+        services.TryAddSingleton<IRazorSliceTempDataProvider, RazorSliceCookieTempDataProvider>();
         return services;
     }
 
@@ -33,6 +33,7 @@ public static class TempDataExtensions
     /// Enables TempData parameters and saves accessed TempData after the handler returns, before result execution.
     /// Can be applied to an endpoint or route group. Handlers must not start the response when using TempData.
     /// </summary>
+    [Experimental("RSLICE001")]
     public static TBuilder WithTempData<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder
     {
