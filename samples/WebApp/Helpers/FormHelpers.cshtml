@@ -1,0 +1,20 @@
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Http
+@using RazorSlices
+@using RazorSlices.Samples.WebApp.Helpers
+@inherits RazorSliceHelpers
+@implements IFormHelpers
+
+@functions {
+    public void AntiforgeryToken(HttpContext? httpContext)
+    {
+        if (httpContext is null)
+        {
+            throw new InvalidOperationException("Rendering an antiforgery token requires an HttpContext.");
+        }
+        var tokens = httpContext.Features.Get<AntiforgeryTokenSet>()
+            ?? throw new InvalidOperationException(
+                "Prepare antiforgery tokens with .WithAntiforgery() before rendering the form.");
+        <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+    }
+}

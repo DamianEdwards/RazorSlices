@@ -1,0 +1,23 @@
+@inherits RazorSlice<string?>
+@using RazorSlices.Samples.WebApp.Helpers
+@implements IUsesLayout<_Layout, LayoutModel>
+
+<h1 class="mt-5">Route-handler TempData</h1>
+<p>The handler consumes TempData and the filter saves it before rendering. The form helper renders an antiforgery token prepared before the response starts.</p>
+@if (Model is not null)
+{
+    <p class="alert alert-success">@Model</p>
+}
+else
+{
+    <p>No flash message.</p>
+}
+<form method="post" action="/tempdata">
+    @Helpers.FormHelpers.AntiforgeryToken(HttpContext)
+    <button type="submit" class="btn btn-primary">Set a flash message and redirect</button>
+</form>
+<p>Refresh after seeing the message: it has already been consumed.</p>
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = "Route-handler TempData" };
+}

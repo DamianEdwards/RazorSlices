@@ -75,6 +75,53 @@
 
     This will configure the Razor Slices source generator to only generate proxy types for *.cshtml* files in the *Slices* directory in your project.
 
+## Route-handler TempData spike
+
+The WebApp sample contains an experimental, sample-local bindable `TempData` parameter and `.WithTempData()` endpoint filter, not a shipped library API. Visit `/tempdata` to try a cookie-backed flash message:
+
+```csharp
+builder.Services.AddRazorSliceTempData();
+
+app.MapPost("/save", (TempData tempData) =>
+{
+    tempData["message"] = "Changes saved.";
+    return TypedResults.Redirect("/");
+}).WithTempData();
+
+app.MapGet("/", RazorSlice (TempData tempData) =>
+    Slices.Home.Create((string?)tempData["message"]))
+    .WithTempData();
+```
+
+`TempData` uses Minimal APIs parameter binding without loading its contents. The filter enables access while invoking the handler, including asynchronous handlers, then closes access and saves before result execution. It returns the result unchanged. Apply `.WithTempData()` to individual endpoints or a route group; applying it at both levels does not save twice. Unused TempData does not resolve the factory, load data, or save.
+
+Use the indexer, `TryGetValue`, `Peek`, and `Keep` as with MVC TempData. Redirects do not implicitly retain already-read values. There is no public `Load` or `Save`: the filter owns persistence. Binding without `.WithTempData()` throws. Access before the filter activates, after the handler returns, or once the response starts also throws, including through captured dictionary references, collection views, and enumerators. Pass retrieved values into slice models, not live TempData. Do not execute results or render into the response inside these handlers; accessed TempData cannot be saved after response headers start. Other endpoint filters inside the TempData filter's invocation are part of the same access window.
+
+The spike reuses MVC's dictionary, factory, and cookie provider without registering MVC. Its reflection-free serializer intentionally supports only strings and null; register a different `TempDataSerializer` for other types or MVC-compatible payloads. Existing provider/factory/serializer registrations are preserved, including those supplied by MVC. A session provider can be registered instead, with `AddSession`, an `IDistributedCache`, and `UseSession` before endpoints. Call `Session.LoadAsync` before using session TempData to avoid synchronous cache I/O. Cookie options can be configured through `AddRazorSliceTempData(options => ...)`; normal Data Protection key management, cookie consent, cookie size limits, and session concurrency constraints still apply.
+
+Handler exceptions close access and skip saving; this is not a transaction (the session provider removes stored TempData when loading it). These guards cover the spike's `TempData` API, not deliberate access to MVC's raw factory or providers. No middleware, result wrapper, page lifecycle, or slice rendering changes are introduced.
+
+### Antiforgery form helper
+
+The `/tempdata` sample also incorporates the form-helper experiment: keep the literal form and add one line for the encoded hidden token:
+
+```cshtml
+@using RazorSlices.Samples.WebApp.Helpers
+
+<form method="post" action="/tempdata">
+    @Helpers.FormHelpers.AntiforgeryToken(HttpContext)
+    <button type="submit">Save</button>
+</form>
+```
+
+Register `builder.Services.AddAntiforgery()` and apply the sample-local `.WithAntiforgery()` filter before `.WithTempData()`:
+
+```csharp
+var forms = app.MapGroup("/tempdata").WithAntiforgery().WithTempData();
+```
+
+The antiforgery filter stores the tokens and cookie before result execution. The stateless Razor helper only reads the prepared token set and renders it; it never tries to set cookies during streaming. Missing preparation throws a descriptive error. The filter also explicitly validates unsafe HTTP methods, returning HTTP 400 for missing, invalid, or mismatched tokens before the TempData filter or handler runs. This protects the POST even though it has no form-bound handler parameters and therefore does not get automatic form-binding antiforgery validation. No antiforgery middleware is needed for this explicit-validation pattern. Apply it to result-returning handlers, not handlers that write the response themselves.
+
 ## Installation
 
 ### NuGet Releases
