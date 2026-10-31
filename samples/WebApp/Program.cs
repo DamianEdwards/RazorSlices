@@ -13,6 +13,7 @@ builder.WebHost.UseKestrelHttpsConfiguration();
 
 builder.Services.AddWebEncoders();
 builder.Services.AddSingleton<LoremService>();
+builder.Services.AddRazorSliceTempData();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default);

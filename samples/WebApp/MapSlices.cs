@@ -11,6 +11,17 @@ internal static class MapSlicesExtensions
         endpoints.MapGet("/lorem", () => Results.Redirect("/lorem-static"));
         endpoints.MapGet("/minimal", RazorSliceBase () => Minimal.Greeting.Create("<minimal>"));
         endpoints.MapGet("/minimal-partial", RazorSlice () => Slices.MinimalHost.Create());
+        endpoints.MapGet("/tempdata", RazorSlice (TempData tempData, bool keep = false) =>
+        {
+            var message = (string?)tempData["message"];
+            if (keep) { tempData.Keep("message"); }
+            return Slices.TempDataDemo.Create(message);
+        }).WithTempData();
+        endpoints.MapPost("/tempdata", (TempData tempData) =>
+        {
+            tempData["message"] = "Changes saved. <This message is HTML encoded.>";
+            return TypedResults.Redirect("/tempdata");
+        }).WithTempData();
 
 #if NET10_0_OR_GREATER
         endpoints.MapGet("/lorem-static", () =>
