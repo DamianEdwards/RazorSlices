@@ -77,9 +77,11 @@
 
 ## Route-handler TempData
 
-RazorSlices provides a bindable `TempData` parameter and `.WithTempData()` endpoint filter. Visit `/tempdata` in the WebApp sample to try a cookie-backed flash message:
+Use `TempData` to carry values across requests, such as a flash message after a redirect. Register the services, accept a `TempData` parameter in your handler, and add `.WithTempData()`:
 
 ```csharp
+using RazorSlices;
+
 builder.Services.AddRazorSliceTempData();
 
 app.MapPost("/save", (TempData tempData) =>
@@ -93,25 +95,69 @@ app.MapGet("/", RazorSlice (TempData tempData) =>
     .WithTempData();
 ```
 
-`TempData` uses Minimal APIs parameter binding without loading its contents. The filter enables access while invoking the handler, including asynchronous handlers, then closes access and saves before result execution. It returns the result unchanged. Apply `.WithTempData()` to individual endpoints or a route group; applying it at both levels does not save twice. Unused TempData does not resolve the factory, load data, or save.
+Values are saved automatically. Reading a value consumes it, so the next request no longer sees it. Protect form POSTs with the [antiforgery helper](#antiforgery-form-helper) below.
 
-Use the indexer, `TryGetValue`, `Peek`, and `Keep` as with MVC TempData. Redirects do not implicitly retain already-read values. There is no public `Load` or `Save`: the filter owns persistence. Binding without `.WithTempData()` throws. Access before the filter activates, after the handler returns, or once the response starts also throws, including through captured dictionary references, collection views, and enumerators. Pass retrieved values into slice models, not live TempData. Do not execute results or render into the response inside these handlers; accessed TempData cannot be saved after response headers start. Other endpoint filters inside the TempData filter's invocation are part of the same access window.
+### Keeping values
 
-The integration reuses MVC's dictionary, factory, and cookie provider without registering MVC. The default `RazorSliceTempDataSerializer` is reflection-free and uses MVC's JSON format: null, strings, integers, booleans, `DateTime`, `Guid`, enums representable as `Int32`, integer/string collections, and string-to-string dictionaries. As in MVC, JSON strings that look like GUIDs or dates deserialize to those types, enums deserialize to integers, and empty arrays deserialize as null. Unsupported types throw. Serialization pools the JSON writer and byte buffer, clears plaintext before pooling, and discards buffers larger than 64 KiB; deserialization uses `Utf8JsonReader` without a JSON DOM or intermediate collection lists.
+Use `Peek` to read without consuming, or `Keep` to retain a value you have already read:
 
-Existing provider/factory/serializer registrations are preserved, including those supplied by MVC. Register a different `TempDataSerializer` to customize serialization. A session provider can be registered instead, with `AddSession`, an `IDistributedCache`, and `UseSession` before endpoints. Call `Session.LoadAsync` before using session TempData to avoid synchronous cache I/O. Cookie options can be configured through `AddRazorSliceTempData(options => ...)`; normal Data Protection key management, cookie consent, cookie size limits, and session concurrency constraints still apply.
+```csharp
+var message = (string?)tempData.Peek("message");
 
-The `TempDataSerialization` BenchmarkDotNet suite compares serialization/deserialization with MVC's default serializer and the original string-only sample serializer:
+var notice = (string?)tempData["notice"];
+tempData.Keep("notice");
 
-```shell
-dotnet run --project tests/Benchmarks -c Benchmarks -- --filter "*TempDataSerialization*"
+tempData.Keep(); // Retain all values.
 ```
 
-Handler exceptions close access and skip saving; this is not a transaction (the session provider removes stored TempData when loading it). These guards cover RazorSlices' `TempData` API, not deliberate access to MVC's raw factory or providers. No middleware, result wrapper, page lifecycle, or slice rendering changes are introduced.
+Redirects do not automatically retain values that you have read.
+
+### Route groups and cookie options
+
+Apply `.WithTempData()` once to a group instead of each endpoint:
+
+```csharp
+var pages = app.MapGroup("/pages").WithTempData();
+
+pages.MapGet("/home", RazorSlice (TempData tempData) =>
+    Slices.Home.Create((string?)tempData["message"]));
+```
+
+TempData uses cookies by default. Configure them during registration:
+
+```csharp
+builder.Services.AddRazorSliceTempData(options =>
+{
+    options.Cookie.Name = "MyApp.TempData";
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+});
+```
+
+Keep cookie values small. Supported values include strings, integers, booleans, `DateTime`, `Guid`, null, enums that fit `Int32`, integer/string collections, and string-to-string dictionaries. As with MVC TempData, enums are read back as integers, date/GUID-shaped strings become those types, and empty arrays become null. Existing MVC providers and serializers are reused; register a custom `TempDataSerializer` to support other types.
+
+**Use TempData only in the handler, before returning a result.** Pass retrieved values into the slice model, not the `TempData` object. Missing `.WithTempData()`, template-time access, or access after the response starts throws. Async handlers are supported; handlers that write directly to the response are not supported when using TempData.
 
 ### Antiforgery form helper
 
-The built-in form helper keeps the literal form and adds one line for the encoded hidden token:
+Register ASP.NET Core antiforgery and apply `.WithAntiforgery()` to the form's GET and POST endpoints. If using TempData, apply it before `.WithTempData()`:
+
+```csharp
+builder.Services.AddAntiforgery();
+builder.Services.AddRazorSliceTempData();
+
+var forms = app.MapGroup("/tempdata").WithAntiforgery().WithTempData();
+
+forms.MapGet("", RazorSlice (TempData tempData) =>
+    Slices.TempDataDemo.Create((string?)tempData["message"]));
+
+forms.MapPost("", (TempData tempData) =>
+{
+    tempData["message"] = "Changes saved.";
+    return TypedResults.Redirect("/tempdata");
+});
+```
+
+In the slice, keep the ordinary HTML form and add the hidden token with one helper call:
 
 ```cshtml
 @using RazorSlices
@@ -122,13 +168,9 @@ The built-in form helper keeps the literal form and adds one line for the encode
 </form>
 ```
 
-Register `builder.Services.AddAntiforgery()` and apply `.WithAntiforgery()` before `.WithTempData()`:
+No `@inject` or token model is needed. Invalid POST tokens return HTTP 400, and missing `.WithAntiforgery()` causes the helper to throw. This pattern does not require `UseAntiforgery()` middleware. Return a result from the handler rather than writing the response directly.
 
-```csharp
-var forms = app.MapGroup("/tempdata").WithAntiforgery().WithTempData();
-```
-
-The antiforgery filter stores the tokens and cookie before result execution. The stateless Razor helper only reads the prepared token set and renders it; it never tries to set cookies during streaming. Missing preparation throws a descriptive error. The filter also explicitly validates unsafe HTTP methods, returning HTTP 400 for missing, invalid, or mismatched tokens before the TempData filter or handler runs. This protects the POST even though it has no form-bound handler parameters and therefore does not get automatic form-binding antiforgery validation. No antiforgery middleware is needed for this explicit-validation pattern. Apply it to result-returning handlers, not handlers that write the response themselves.
+Visit `/tempdata` in the WebApp sample for the complete form and flash-message example.
 
 ## Installation
 
