@@ -101,6 +101,27 @@ The spike reuses MVC's dictionary, factory, and cookie provider without register
 
 Handler exceptions close access and skip saving; this is not a transaction (the session provider removes stored TempData when loading it). These guards cover the spike's `TempData` API, not deliberate access to MVC's raw factory or providers. No middleware, result wrapper, page lifecycle, or slice rendering changes are introduced.
 
+### Antiforgery form helper
+
+The `/tempdata` sample also incorporates the form-helper experiment: keep the literal form and add one line for the encoded hidden token:
+
+```cshtml
+@using RazorSlices.Samples.WebApp.Helpers
+
+<form method="post" action="/tempdata">
+    @Helpers.FormHelpers.AntiforgeryToken(HttpContext)
+    <button type="submit">Save</button>
+</form>
+```
+
+Register `builder.Services.AddAntiforgery()` and apply the sample-local `.WithAntiforgery()` filter before `.WithTempData()`:
+
+```csharp
+var forms = app.MapGroup("/tempdata").WithAntiforgery().WithTempData();
+```
+
+The antiforgery filter stores the tokens and cookie before result execution. The stateless Razor helper only reads the prepared token set and renders it; it never tries to set cookies during streaming. Missing preparation throws a descriptive error. The filter also explicitly validates unsafe HTTP methods, returning HTTP 400 for missing, invalid, or mismatched tokens before the TempData filter or handler runs. This protects the POST even though it has no form-bound handler parameters and therefore does not get automatic form-binding antiforgery validation. No antiforgery middleware is needed for this explicit-validation pattern. Apply it to result-returning handlers, not handlers that write the response themselves.
+
 ## Installation
 
 ### NuGet Releases

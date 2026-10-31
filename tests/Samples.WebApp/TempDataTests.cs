@@ -22,7 +22,9 @@ public class TempDataTests
         using var factory = new WebApplicationFactory<Program>();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-        using var redirect = await client.PostAsync("/tempdata", null);
+        using var content = new FormUrlEncodedContent(
+            [FormHelperTests.ReadToken(await client.GetStringAsync("/tempdata"))]);
+        using var redirect = await client.PostAsync("/tempdata", content);
         Assert.Equal(HttpStatusCode.Redirect, redirect.StatusCode);
         Assert.Equal("/tempdata", redirect.Headers.Location?.OriginalString);
         Assert.Contains(redirect.Headers.GetValues("Set-Cookie"),
@@ -41,7 +43,9 @@ public class TempDataTests
     {
         using var factory = new WebApplicationFactory<Program>();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        using var redirect = await client.PostAsync("/tempdata", null);
+        using var content = new FormUrlEncodedContent(
+            [FormHelperTests.ReadToken(await client.GetStringAsync("/tempdata"))]);
+        using var redirect = await client.PostAsync("/tempdata", content);
         Assert.Equal(HttpStatusCode.Redirect, redirect.StatusCode);
         Assert.Contains("Changes saved.", await client.GetStringAsync("/tempdata?keep=true"));
         Assert.Contains("Changes saved.", await client.GetStringAsync("/tempdata"));
