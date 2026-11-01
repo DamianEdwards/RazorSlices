@@ -49,12 +49,7 @@ jobs:
       run: dotnet test --configuration Release --no-restore --no-build --filter "FullyQualifiedName!~RazorSlices.Samples.WebApp.PublishTests.PublishSample"
 
     - name: Publish samples
-      run: |
-        for projectPath in ./samples/**/*.csproj ; do
-          projectFileName=${projectPath##*/}
-          projectName=${projectFileName%.*}
-          dotnet publish "$projectPath" --output "./artifacts/$projectName" --framework net10.0 --configuration Release --verbosity normal
-        done;
+      run: dotnet build -c Release /t:PublishSamples --verbosity normal
 
     - name: Build benchmarks
       run: dotnet build --configuration Benchmarks
