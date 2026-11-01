@@ -1,31 +1,42 @@
 <Project>
-    <Target
-            Name="PublishSamples"
-            Condition="'$(IsSample)' == 'true'">
-        <PropertyGroup>
-            <ArtifactsRoot>$(MSBuildThisFileDirectory)/artifacts/</ArtifactsRoot>
-            <_IsMultiTargetTfm Condition="'$(TargetFrameworks)' != ''and '$(TargetFramework)' == ''">true</_IsMultiTargetTfm>
-            <_IsSingleTargetTfmNoRids Condition="'$(TargetFramework)' != '' and '$(RuntimeIdentifiers)' == ''">true</_IsSingleTargetTfmNoRids>
-            <_IsSingleTargetAndMultiRid Condition="'$(TargetFramework)' != '' and '$(RuntimeIdentifiers)' != ''">true</_IsSingleTargetAndMultiRid>
-        </PropertyGroup>
-        <!-- TFMs but no TF -> multitarget, making samples for each TFM -->
-        <ItemGroup Condition="'$(_IsMultiTargetTfm)' == 'true'">
-            <_TFMItems Include="$(TargetFrameworks)" />
-            <_SingleSamplePublish
-                    Include="$(MSBuildProjectFullPath)"
-                    AdditionalProperties="TargetFramework=%(_TFMItems.Identity);PublishDir=$(ArtifactsRoot)$(MSBuildProjectName)/%(_TFMItems.Identity)" />
-        </ItemGroup>
+  <Target Name="PublishSamples" Condition="'$(IsSample)' == 'true'">
+    <ItemGroup>
+      <_SampleFramework Include="$(TargetFrameworks)" Condition="'$(TargetFramework)' == ''" />
+      <_SampleFramework Include="$(TargetFramework)" Condition="'$(TargetFramework)' != ''" />
+      <_SamplePublish Include="$(MSBuildProjectFullPath)"
+                      AdditionalProperties="TargetFramework=%(_SampleFramework.Identity)" />
+    </ItemGroup>
 
-        <!-- TF but no TFMs -> single sample (aka the default pathway) up until now -->
-        <ItemGroup Condition="'$(_IsSingleTargetTfmNoRids)' == 'true'">
-            <_SingleSamplePublish
-                    Include="$(MSBuildProjectFullPath)"
-                    AdditionalProperties="PublishDir=$(ArtifactsRoot)$(MSBuildProjectName)/$(TargetFramework)" />
-        </ItemGroup>
+    <MSBuild Projects="@(_SamplePublish)"
+             Targets="_PublishSample"
+             BuildInParallel="true" />
+  </Target>
 
-        <MSBuild
-                Projects="@(_SingleSamplePublish)"
-                Targets="Publish"
-                BuildInParallel="true" />
-    </Target>
+  <Target Name="_PublishSample" Condition="'$(IsSample)' == 'true' and '$(TargetFramework)' != ''">
+    <PropertyGroup>
+      <_SampleRuntimeIdentifier>$(RuntimeIdentifier)</_SampleRuntimeIdentifier>
+      <_SampleRuntimeIdentifier Condition="'$(_SampleRuntimeIdentifier)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</_SampleRuntimeIdentifier>
+      <_SampleSelfContained>$(SelfContained)</_SampleSelfContained>
+      <_SampleSelfContained Condition="'$(PublishSelfContained)' != ''">$(PublishSelfContained)</_SampleSelfContained>
+    </PropertyGroup>
+
+    <!-- Restore the full framework graph, not a globally pinned framework that would flow into references. -->
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
+             Targets="Restore"
+             Properties="RuntimeIdentifier=$(_SampleRuntimeIdentifier);SelfContained=$(_SampleSelfContained)"
+             RemoveProperties="TargetFramework"
+             BuildInParallel="true" />
+
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
+             Targets="_SetSamplePublishDirectory;Publish"
+             Properties="RuntimeIdentifier=$(_SampleRuntimeIdentifier);SelfContained=$(_SampleSelfContained)"
+             BuildInParallel="true" />
+  </Target>
+
+  <!-- Keep PublishDir local so different sample outputs do not create competing builds of shared references. -->
+  <Target Name="_SetSamplePublishDirectory">
+    <PropertyGroup>
+      <PublishDir>$(ArtifactsPath)/$(MSBuildProjectName)/$(TargetFramework)/</PublishDir>
+    </PropertyGroup>
+  </Target>
 </Project>

@@ -8,6 +8,7 @@
 - [Getting Started](#getting-started)
 - [Installation](#installation)
 - [Features](#features)
+- [Publishing the samples](#publishing-the-samples)
 
 ## Getting Started
 
@@ -275,6 +276,18 @@ If you wish to use builds from this repo's `main` branch you can install them fr
 1. You should now be able to add a reference to the package specifying a version from the [repository packages feed](https://github.com/DamianEdwards/RazorSlices/pkgs/nuget/RazorSlices)
 
 1. See [these instructions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry) for further details about working with GitHub package feeds.
+
+## Publishing the samples
+
+From the repository root, publish every sample for all of its target frameworks with:
+
+```shell
+dotnet build -c Release -t:PublishSamples
+```
+
+The target restores, builds, and publishes each framework in parallel, using the SDK host's portable runtime identifier by default (for example, `win-x64` or `linux-x64`). Set `-p:RuntimeIdentifier=...` to select another runtime. Native AOT publishing requires the platform's native compiler and linker.
+
+Outputs are written to `artifacts/<project>/<framework>/`. The target applies the SDK's `PublishSelfContained` setting, so the AOT WebApp is self-contained while the other samples remain framework-dependent. Do not pass `NoBuild=true`: the earlier solution build does not produce the RID-specific outputs needed for publishing.
 
 ## Features
 

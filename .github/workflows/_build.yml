@@ -49,7 +49,7 @@ jobs:
       run: dotnet test --configuration Release --no-restore --no-build --filter "FullyQualifiedName!~RazorSlices.Samples.WebApp.PublishTests.PublishSample"
 
     - name: Publish samples
-      run: dotnet build -c Release /t:PublishSamples -p:NoBuild=true --verbosity normal
+      run: dotnet build -c Release /t:PublishSamples --verbosity normal
 
     - name: Build benchmarks
       run: dotnet build --configuration Benchmarks
