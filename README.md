@@ -6,6 +6,7 @@
 *Lightweight* Razor-based templates for ASP.NET Core without MVC, Razor Pages, or Blazor, optimized for high-performance, unbuffered rendering with low allocations. Compatible with trimming and native AOT. Great for returning dynamically rendered HTML from Minimal APIs, middleware, etc. Supports .NET 10+
 
 - [Getting Started](#getting-started)
+- [Samples](#samples)
 - [Installation](#installation)
 - [Features](#features)
 
@@ -245,6 +246,33 @@ forms.MapPost("/message", (TempData tempData, [FromForm] string message) =>
 Visit `/tempdata` in the WebApp sample for the complete form and flash-message example. Its form-bound POST uses tokens on .NET 10 and the default browser-header CSRF protection on .NET 11, without token generation or a hidden token field. This automatic protection is not applied to arbitrary minimal endpoints without antiforgery metadata; the token helpers remain supported on both versions.
 
 The sample includes a guard that returns HTTP 400 for the framework's failed validation result before RC3 SDK-generated form binding reads the form. This works around its rejection-status bug without implementing token or browser-origin validation.
+
+## Samples
+
+### HTMX sample
+
+Run `dotnet run --project samples/WebApp --framework net10.0` and open `/htmx-todo` on
+the app's listening URL. The sample uses [HTMX](https://htmx.org/) to add, complete,
+and delete todos without navigating away from the page:
+
+- The initial GET renders a full page using the shared layout and Razor Slice helpers.
+- POST returns one new row; PUT sets the completion state and returns its replacement.
+- DELETE returns an empty `200 OK` so HTMX removes the targeted row.
+- On .NET 10, `.WithAntiforgery()` prepares tokens before rendering and
+  `Helpers.FormHelpers.AntiforgeryToken(HttpContext)` renders the hidden field. HTMX includes
+  that field in every mutation, including DELETE. On .NET 11, all mutations use the framework's
+  default browser-header CSRF protection, without tokens. Failed requests preserve the form and
+  show an error.
+
+The endpoints are in `samples/WebApp/HtmxTodoRoutes.cs` and the slices are in
+`samples/WebApp/Slices/HtmxTodos`. `Helpers/HtmxTodoHelpers.cshtml` owns the form and row
+markup, shared by the initial page and mutation fragments. Its methods take explicit arguments
+and compose the built-in form helper; business logic remains in the routes and store.
+A singleton in-memory store uses a lock and immutable
+records so concurrent requests are safe. Its data is shared by visitors, resets on restart,
+and is separate from the other samples. This is not a per-user or persistent todo service.
+HTMX is loaded from a pinned CDN URL with subresource integrity; the other sample pages do
+not load it.
 
 ## Installation
 

@@ -1,0 +1,46 @@
+@using Microsoft.AspNetCore.Http
+@using RazorSlices
+@using RazorSlices.Samples.WebApp.Helpers
+@using RazorSlices.Samples.WebApp.Models
+@inherits RazorSliceHelpers
+@implements IHtmxTodoHelpers
+
+@functions {
+    public void CreateForm(HttpContext? httpContext, bool useAntiforgeryTokens)
+    {
+        <form id="todo-create-form" hx-post="/htmx-todo"
+              hx-target="#todo-table"
+              hx-swap="beforeend"
+              hx-disabled-elt="find button"
+              hx-on::after-request="if (event.detail.successful) this.reset()">
+            @if (useAntiforgeryTokens)
+            {
+                @Helpers.FormHelpers.AntiforgeryToken(httpContext)
+            }
+            <label for="todo-title" class="form-label">New todo</label>
+            <div class="input-group">
+                <input id="todo-title" class="form-control" type="text" name="title"
+                       required maxlength="@HtmxTodo.MaxTitleLength" autocomplete="off" />
+                <button class="btn btn-primary" type="submit">Add</button>
+            </div>
+        </form>
+    }
+
+    public void Row(HtmxTodo todo)
+    {
+        var action = todo.IsComplete ? "Mark incomplete" : "Mark complete";
+        <tr id="todo-@todo.Id" hx-target="this" hx-swap="outerHTML" hx-sync="this:drop">
+            <td class="@(todo.IsComplete ? "text-decoration-line-through" : null)">@todo.Title</td>
+            <td>@(todo.IsComplete ? "Complete" : "Incomplete")</td>
+            <td>
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                        hx-put="/htmx-todo/@todo.Id"
+                        hx-vals='{"isComplete": "@(todo.IsComplete ? "false" : "true")"}'
+                        hx-disabled-elt="this" aria-label="@action: @todo.Title">@action</button>
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        hx-delete="/htmx-todo/@todo.Id" hx-disabled-elt="this"
+                        aria-label="Delete: @todo.Title">Delete</button>
+            </td>
+        </tr>
+    }
+}
