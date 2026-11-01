@@ -29,7 +29,7 @@ public class DotNetCli
         return RunCommand("restore", args, testOutput);
     }
 
-    public static string Pack(string projectPath, string outputDir, ITestOutputHelper? testOutput = null)
+    public static string Pack(string projectPath, string outputDir, ITestOutputHelper? testOutput = null, params string[] additionalArguments)
     {
         var args = new List<string>
         {
@@ -39,6 +39,7 @@ public class DotNetCli
             "--no-restore",
             "--disable-build-servers"
         };
+        args.AddRange(additionalArguments);
         return RunCommand("pack", args, testOutput);
     }
 

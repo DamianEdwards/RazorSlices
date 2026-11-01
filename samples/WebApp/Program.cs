@@ -13,6 +13,7 @@ builder.WebHost.UseKestrelHttpsConfiguration();
 #endif
 
 builder.Services.AddWebEncoders();
+builder.Services.AddRazorSlicesTagHelpers();
 builder.Services.AddSingleton<LoremService>();
 builder.Services.AddRazorSliceTempData();
 builder.Services.AddAntiforgery();

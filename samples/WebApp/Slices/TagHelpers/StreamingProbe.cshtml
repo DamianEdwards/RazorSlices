@@ -1,0 +1,10 @@
+@using RazorSlices.Samples.RazorClassLibrary.Helpers
+@inherits RazorSlice<Func<Task>>
+<rs:card title="Streaming template">
+    <rs:notice label="Captured @Helpers.UiHelpers.StatusBadge("nested")">
+        <span>prefix</span>
+        @await FlushAsync()
+        @{ await Model(); }
+        <span>suffix</span>
+    </rs:notice>
+</rs:card>

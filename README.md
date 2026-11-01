@@ -329,6 +329,7 @@ If you wish to use builds from this repo's `main` branch you can install them fr
 - DI-activated properties via `@inject`
 - Rendering slices from slices (aka partials) via `@(await RenderPartialAsync<MyPartial>())`
 - [Shareable templated helpers](#shareable-templated-helpers), with `void`/asynchronous implementations and strongly typed `@Helpers.MyHelperSlice.HelperMethod(...)` calls
+- [Experimental streaming Tag Helpers](#experimental-streaming-tag-helpers), with code-based renderers and typed adapters to `.cshtml` slices
 - Using slices as layouts for other slices, including layouts with strongly-typed models:
   - For the layout slice, inherit from `RazorLayoutSlice` or `RazorLayoutSlice<TModel>` and use `@await RenderBodyAsync()` in the layout to render the body
 
@@ -512,6 +513,116 @@ To share helpers with another project, reference their Razor class library or Nu
 
 The sample app's `/helpers` page demonstrates local and class-library helpers, custom signatures/delegates, conditional attributes, generic methods, and async callbacks. `TodoHelpers.TaskStatus` calls the shared `UiHelpers.StatusBadge`, and `TodoHelpers.TaskSummaryAsync` awaits `UiHelpers.AsyncNoticeAsync`, demonstrating synchronous and asynchronous helper composition. The existing todo table also uses the composed task-status helper.
 
+### Experimental streaming Tag Helpers
+
+This implementation spike supports custom, forward-only Tag Helpers on the existing `RazorSlice`
+base. `RazorSliceBase` remains the slim option and does not support Tag Helpers. This is **not MVC
+Tag Helper compatibility**: implementations derive from `RazorSliceTagHelper` and write directly
+to the slice, rather than editing a buffered `TagHelperOutput`.
+
+For a code-based implementation, use the SDK's normal discovery and attribute-binding annotations:
+
+```csharp
+using Microsoft.AspNetCore.Razor.TagHelpers;
+using RazorSlices;
+
+namespace MyApp;
+
+[HtmlTargetElement("notice")]
+public sealed class NoticeTagHelper : RazorSliceTagHelper
+{
+    public string Label { get; set; } = "";
+
+    protected override async ValueTask RenderAsync(RazorSliceTagHelperContext context)
+    {
+        context.WriteLiteral("<aside><strong>");
+        context.Write(Label);
+        context.WriteLiteral("</strong>");
+        await context.RenderBodyAsync();
+        context.WriteLiteral("</aside>");
+    }
+}
+```
+
+In a narrowly scoped `_ViewImports.cshtml`, enable discovery and replace the Getting Started
+example's disabling prefix:
+
+```cshtml
+@tagHelperPrefix rs:
+@addTagHelper *, MyApp
+```
+
+Then use `<rs:notice label="Summary">Body markup</rs:notice>` in a normal slice. Bound properties
+receive typed values. `context.Attributes` exposes unbound attributes; explicitly forward each
+with a preceding space and `context.WriteAttribute(attribute)` when appropriate.
+
+The built-in `partial` Tag Helper renders an existing slice instance. Enable its discovery in
+the same scoped imports:
+
+```cshtml
+@addTagHelper RazorSlices.RazorSlicePartialTagHelper, RazorSlices
+```
+
+Then construct the slice using its normal, strongly typed factory:
+
+```cshtml
+<rs:partial slice="@Slices.TodoRow.Create(todo)" />
+<rs:partial slice="@Slices.EmptyState.Create()" />
+```
+
+Both `RazorSlice` and `RazorSliceBase` instances are accepted. Supply a fresh instance for each
+invocation: partial rendering owns its disposal, including when rendering fails. Like
+`RenderPartialAsync`, the tag streams to the caller's output with its encoder and cancellation
+token, shares the full slice's rendering services and helper graph, and does not render a layout.
+The tag has no body or wrapper markup, and a missing or null `slice` fails explicitly.
+It adds the SDK's normal Tag Helper overhead compared with calling `RenderPartialAsync` directly.
+
+For a `.cshtml` implementation, provide a public C# adapter discoverable by the SDK:
+
+```csharp
+public sealed record CardModel(string Title, RazorSliceTagHelperContext Context);
+
+[HtmlTargetElement("card")]
+public sealed class CardTagHelper : RazorSliceTagHelper<Slices.Card, CardModel>
+{
+    public string Title { get; set; } = "";
+    protected override CardModel CreateModel(RazorSliceTagHelperContext context) => new(Title, context);
+}
+```
+
+With these declarations in `MyApp`, implement `Slices/Card.cshtml` as an ordinary model-based slice:
+
+```cshtml
+@inherits RazorSlice<MyApp.CardModel>
+<article>
+    <h2>@Model.Title</h2>
+    @await Model.Context.RenderBodyAsync()
+</article>
+```
+
+The adapter is needed because the SDK does not discover generated `.cshtml` types as Tag Helpers.
+The template remains a normal slice, but the adapter renders it as a fragment. Do not give it a
+layout; the adapter reports an error if one is configured.
+
+Only one rendering helper can handle each tag. It may render the body once or skip it; it cannot
+inspect or replay the body. Await rendering and do not keep the context after the helper returns.
+If rendering fails, any output already sent remains. For HTTP results, set headers and cookies
+before rendering starts.
+
+For dynamic, unbound `data-*` attributes, register
+`builder.Services.AddRazorSlicesTagHelpers()` and add `@inject RazorSliceTagHelperHtml Html` to
+the template or its scoped imports. This supplies the HTML helper the SDK expects and does not
+require MVC services.
+
+Unused Tag Helper support adds no rendering allocations to ordinary slices. Tags do add work, so
+prefer reusable widgets over replacing small helper calls. Code-based helpers need a public
+parameterless constructor and are created for each tag; get dependencies from
+`context.ServiceProvider`.
+
+Existing templated helpers are available through `context.Helpers`. Tag syntax is not supported
+inside `RazorSliceHelpers` implementations. The sample app's `/tag-helpers` page shows the
+supported patterns.
+
 ### Optimized builds
 
 When `Optimize` is `true` (normally in Release builds), Razor Slices removes unused MVC default
@@ -536,9 +647,10 @@ trimming, ReadyToRun, or Native AOT compilation.
 
 Properties referenced by compiled code, properties on public template types or in assemblies with
 friend assemblies, and unrecognized property implementations are retained. Explicit `@inject`
-declarations are preserved conservatively: a default property name explicitly injected anywhere
-in the project's Razor files or imports is retained throughout that project. Other injected
-properties are unchanged.
+declarations are preserved for their template and for descendants of the declaring
+`_ViewImports.cshtml`. Linked files use their logical Razor paths when available; when a source
+cannot be mapped reliably, its injected names are conservatively retained project-wide. Other
+injected properties are unchanged.
 
 Generated source and editor IntelliSense still show the original properties. Hot Reload of rewritten
 assemblies is not supported; disable this optimization if using optimized builds with Hot Reload (uncommon).
@@ -553,7 +665,7 @@ Code accessing the removed defaults solely through reflection must also disable 
 
 ### No intention to support
 
-- Tag Helpers and View Components (they're tied to MVC and are intrinsically "heavy")
+- General MVC Tag Helpers and View Components (the experimental streaming Tag Helpers above have a deliberately different contract)
 - `@model` directive (the Razor compiler does not support its use in conjunction with custom base-types via `@inherits`)
 - `@attribute [Authorize]` (wrong layer of abstraction for minimal APIs, etc.)
 - `@section` directive (the Razor compiler emits code that is incompatible with the rendering approach of Razor Slices)
