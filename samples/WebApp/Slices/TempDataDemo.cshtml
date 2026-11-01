@@ -2,7 +2,15 @@
 @implements IUsesLayout<_Layout, LayoutModel>
 
 <h1 class="mt-5">Route-handler TempData</h1>
-<p>The handler consumes TempData and the filter saves it before rendering. The form helper renders an antiforgery token prepared before the response starts.</p>
+<p>The handler consumes TempData and the filter saves it before rendering.</p>
+@if (UseAntiforgeryTokens)
+{
+    <p>The form helper renders an antiforgery token prepared before the response starts.</p>
+}
+else
+{
+    <p>ASP.NET Core validates the form submission using browser request headers, without an antiforgery token.</p>
+}
 @if (Model is not null)
 {
     <p class="alert alert-success">@Model</p>
@@ -12,11 +20,25 @@ else
     <p>No flash message.</p>
 }
 <form method="post" action="/tempdata">
-    @Helpers.FormHelpers.AntiforgeryToken(HttpContext)
+    @if (UseAntiforgeryTokens)
+    {
+        @Helpers.FormHelpers.AntiforgeryToken(HttpContext)
+    }
+    <div class="mb-3">
+        <label for="message" class="form-label">Flash message</label>
+        <input id="message" name="message" class="form-control" value="Changes saved. &lt;This message is HTML encoded.&gt;" required />
+    </div>
     <button type="submit" class="btn btn-primary">Set a flash message and redirect</button>
 </form>
 <p>Refresh after seeing the message: it has already been consumed.</p>
 
 @functions {
+    private static bool UseAntiforgeryTokens =>
+#if NET11_0_OR_GREATER
+        false;
+#else
+        true;
+#endif
+
     public LayoutModel LayoutModel => new() { Title = "Route-handler TempData" };
 }

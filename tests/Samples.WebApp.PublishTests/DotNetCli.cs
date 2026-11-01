@@ -14,19 +14,19 @@ public class DotNetCli
         return RunCommand("clean", args);
     }
 
-    public static string Publish(IEnumerable<string> args, ITestOutputHelper? testOutput = null)
+    public static string Publish(IEnumerable<string> args, ITestOutputHelper? testOutput = null, string? workingDirectory = null)
     {
-        return RunCommand("publish", args, testOutput);
+        return RunCommand("publish", args, testOutput, workingDirectory);
     }
 
-    public static string Run(IEnumerable<string> args, ITestOutputHelper? testOutput = null)
+    public static string Run(IEnumerable<string> args, ITestOutputHelper? testOutput = null, string? workingDirectory = null)
     {
-        return RunCommand("run", args, testOutput);
+        return RunCommand("run", args, testOutput, workingDirectory);
     }
 
-    public static string Restore(IEnumerable<string> args, ITestOutputHelper? testOutput = null)
+    public static string Restore(IEnumerable<string> args, ITestOutputHelper? testOutput = null, string? workingDirectory = null)
     {
-        return RunCommand("restore", args, testOutput);
+        return RunCommand("restore", args.Append("--disable-build-servers"), testOutput, workingDirectory);
     }
 
     public static string Pack(string projectPath, string outputDir, ITestOutputHelper? testOutput = null, params string[] additionalArguments)
@@ -43,7 +43,7 @@ public class DotNetCli
         return RunCommand("pack", args, testOutput);
     }
 
-    private static string RunCommand(string commandName, IEnumerable<string> args, ITestOutputHelper? testOutput = null)
+    internal static string RunCommand(string commandName, IEnumerable<string> args, ITestOutputHelper? testOutput = null, string? workingDirectory = null)
     {
         var process = new Process
         {
@@ -51,10 +51,23 @@ public class DotNetCli
             {
                 FileName = _fileName,
                 UseShellExecute = false,
+                CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
             }
         };
+        if (workingDirectory is not null)
+        {
+            process.StartInfo.WorkingDirectory = workingDirectory;
+            // Let the fixture's global.json select its SDK instead of inheriting the test runner's SDK.
+            foreach (var variable in new[] { "MSBuildSDKsPath", "MSBUILD_EXE_PATH", "MSBuildExtensionsPath", "MSBuildToolsPath", "MSBUILD_NUGET_PATH", "DOTNET_MSBUILD_SDK_RESOLVER_SDKS_DIR", "DOTNET_MSBUILD_SDK_RESOLVER_SDKS_VER" })
+            {
+                process.StartInfo.Environment.Remove(variable);
+            }
+        }
+        process.StartInfo.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+        process.StartInfo.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "0";
+        process.StartInfo.Environment["MSBUILDTERMINALLOGGER"] = "off";
 
         process.StartInfo.ArgumentList.Add(commandName);
         foreach (var arg in args)
@@ -83,8 +96,8 @@ public class DotNetCli
             throw new InvalidOperationException($"dotnet {commandName} took longer than the allowed time of {_timeout}");
         }
 
-        var stdOut = stdOutTask.GetAwaiter().GetResult();
-        var stdErr = stdErrTask.GetAwaiter().GetResult();
+        var stdOut = stdOutTask.WaitAsync(_timeout).GetAwaiter().GetResult();
+        var stdErr = stdErrTask.WaitAsync(_timeout).GetAwaiter().GetResult();
 
         return process.ExitCode != 0
             ? throw new InvalidOperationException($"""

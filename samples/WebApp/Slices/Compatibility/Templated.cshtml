@@ -1,0 +1,9 @@
+@using Microsoft.AspNetCore.Mvc.Razor
+@inherits RazorSlice<Task>
+@{
+    Func<object?, HelperResult> template = @<p>
+        @{ await Model; }
+        Completed template
+    </p>;
+}
+@template(null)

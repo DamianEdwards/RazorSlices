@@ -1,13 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
     <AssemblyName>RazorSlices.Samples.WebApp.Tests</AssemblyName>
     <RootNamespace>RazorSlices.Samples.WebApp.Tests</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>$(NoWarn);RSLICE0200</NoWarn>
     <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net11.0' and '$(RazorSlicesTestRuntimeAsync)' == 'true'">
+    <Features>$(Features);runtime-async=on</Features>
+    <DefineConstants>$(DefineConstants);RAZOR_SLICES_TEST_RUNTIME_ASYNC</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

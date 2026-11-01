@@ -20,8 +20,7 @@ public class TempDataTests
         using var factory = new WebApplicationFactory<Program>();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-        using var content = new FormUrlEncodedContent(
-            [FormHelperTests.ReadToken(await client.GetStringAsync("/tempdata"))]);
+        using var content = await FormHelperTests.CreateSampleFormContentAsync(client, "Changes saved. <This message is HTML encoded.>");
         using var redirect = await client.PostAsync("/tempdata", content);
         Assert.Equal(HttpStatusCode.Redirect, redirect.StatusCode);
         Assert.Equal("/tempdata", redirect.Headers.Location?.OriginalString);
@@ -41,8 +40,7 @@ public class TempDataTests
     {
         using var factory = new WebApplicationFactory<Program>();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        using var content = new FormUrlEncodedContent(
-            [FormHelperTests.ReadToken(await client.GetStringAsync("/tempdata"))]);
+        using var content = await FormHelperTests.CreateSampleFormContentAsync(client, "Changes saved.");
         using var redirect = await client.PostAsync("/tempdata", content);
         Assert.Equal(HttpStatusCode.Redirect, redirect.StatusCode);
         Assert.Contains("Changes saved.", await client.GetStringAsync("/tempdata?keep=true"));

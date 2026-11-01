@@ -6,8 +6,11 @@ namespace RazorSlices.Samples.WebApp.PublishTests;
 
 public class PackageContentsTests(ITestOutputHelper testOutput)
 {
-    [Fact]
-    public void Package_ContainsExpectedAssets()
+    [Theory]
+    [InlineData("net10.0", false)]
+    [InlineData("net11.0", false)]
+    [InlineData("net11.0", true)]
+    public void Package_ContainsExpectedAssets(string framework, bool runtimeAsync)
     {
         var projectPath = Path.Combine(PathHelper.RepoRoot, "src", "RazorSlices", "RazorSlices.csproj");
         var outputDir = Path.Combine(PathHelper.ArtifactsDir, "TestOutput", Path.GetRandomFileName(), "pack");
@@ -43,8 +46,8 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
         Assert.Contains(entries, e => e.Equals("tasks/netstandard2.0/Mono.Cecil.LICENSE.txt", StringComparison.OrdinalIgnoreCase));
 
         // Library assemblies for each targeted framework must be present
-        Assert.Contains(entries, e => e.Equals("lib/net8.0/RazorSlices.dll", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(entries, e => e.Equals("lib/net10.0/RazorSlices.dll", StringComparison.OrdinalIgnoreCase));
+        Assert.Single(entries, e => e.StartsWith("lib/", StringComparison.OrdinalIgnoreCase) && e.EndsWith("/RazorSlices.dll", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(entries, static entry => entry.EndsWith("Microsoft.AspNetCore.Razor.Language.dll", StringComparison.OrdinalIgnoreCase));
 
         using var manifest = archive.Entries.Single(e => e.FullName.EndsWith(".nuspec", StringComparison.Ordinal)).Open();
@@ -58,13 +61,21 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
                     new XElement("package", new XAttribute("pattern", "*"))))))
             .Save(Path.Combine(outputDir, "NuGet.Config"));
         var packages = System.Security.SecurityElement.Escape(Path.Combine(outputDir, "packages"));
+        if (framework == "net10.0")
+        {
+            File.WriteAllText(Path.Combine(outputDir, "global.json"), """
+                { "sdk": { "version": "10.0.100", "rollForward": "latestFeature", "allowPrerelease": false } }
+                """);
+        }
+        var features = runtimeAsync ? "<Features>runtime-async=on</Features>" : "";
         var producer = Path.Combine(outputDir, "producer");
         Directory.CreateDirectory(producer);
         var producerProject = Path.Combine(producer, "SharedHelpers.csproj");
         File.WriteAllText(producerProject, $$"""
             <Project Sdk="Microsoft.NET.Sdk.Razor">
               <PropertyGroup>
-                <TargetFramework>net8.0</TargetFramework>
+                <TargetFramework>{{framework}}</TargetFramework>
+                {{features}}
                 <LangVersion>14.0</LangVersion>
                 <ImplicitUsings>enable</ImplicitUsings>
                 <Nullable>enable</Nullable>
@@ -129,13 +140,13 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
                 }
             }
             """);
-        DotNetCli.Restore([producerProject], testOutput);
+        DotNetCli.Restore([producerProject], testOutput, outputDir);
         File.WriteAllText(Path.Combine(producer, "Lean.cshtml"), """
             @using RazorSlices
             @inherits RazorSliceBase<string>
             <em>@Model</em>
             """);
-        DotNetCli.Pack(producerProject, outputDir, testOutput);
+        DotNetCli.RunCommand("pack", [producerProject, "--configuration", "Release", "--output", outputDir, "--no-restore", "--disable-build-servers"], testOutput, outputDir);
         using (var package = ZipFile.OpenRead(Path.Combine(outputDir, "SharedHelpers.1.0.0.nupkg")))
         {
             Assert.DoesNotContain(package.Entries, static entry => entry.FullName.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase));
@@ -146,7 +157,8 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
         File.WriteAllText(consumerProject, $$"""
             <Project Sdk="Microsoft.NET.Sdk.Razor">
               <PropertyGroup>
-                <TargetFramework>net8.0</TargetFramework>
+                <TargetFramework>{{framework}}</TargetFramework>
+                {{features}}
                 <LangVersion>14.0</LangVersion>
                 <OutputType>Exe</OutputType>
                 <ImplicitUsings>enable</ImplicitUsings>
@@ -250,7 +262,9 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
                 }
             }
             """);
-        var result = DotNetCli.Run(["--project", consumerProject, "--configuration", "Release"], testOutput);
+        var published = Path.Combine(outputDir, "published");
+        DotNetCli.Publish([consumerProject, "--configuration", "Release", "--output", published], testOutput, outputDir);
+        var result = DotNetCli.RunCommand("exec", [Path.Combine(published, "Consumer.dll")], testOutput, outputDir);
         Assert.Contains("Shared SDK helper rendered with zero warm per-call allocations", result);
     }
 }

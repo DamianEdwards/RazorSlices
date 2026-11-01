@@ -14,8 +14,9 @@ public static class FormEndpointConventionBuilderExtensions
     /// </summary>
     /// <remarks>
     /// Endpoint filters run after parameter binding. Endpoints with FromForm or file-upload parameters
-    /// additionally require ASP.NET Core antiforgery middleware after routing and authentication/authorization.
-    /// This filter does not replace middleware validation during form binding.
+    /// additionally require ASP.NET Core antiforgery middleware on .NET 10. On .NET 11, WebApplication
+    /// provides default browser-header CSRF protection. This filter still validates tokens and does not
+    /// replace framework validation during form binding.
     /// </remarks>
     public static TBuilder WithAntiforgery<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder

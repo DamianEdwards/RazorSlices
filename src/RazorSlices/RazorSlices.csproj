@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageTags>ASP.NET Web MinimalApis IResult Razor templating templates</PackageTags>
@@ -57,11 +57,11 @@
 
   <ItemGroup>
     <!-- Reference the source generator just to ensure it's built but don't reference its output -->
-    <ProjectReference Include="..\SourceGenerator\SourceGenerator.csproj" OutputItemType="SourceGeneratorAssemblyPath" ReferenceOutputAssembly="false" Private="true" />
-    <ProjectReference Include="..\BuildTasks\BuildTasks.csproj" OutputItemType="BuildTaskAssemblyPath" ReferenceOutputAssembly="false" Private="false" />
+    <ProjectReference Include="..\SourceGenerator\SourceGenerator.csproj" OutputItemType="SourceGeneratorAssemblyPath" ReferenceOutputAssembly="false" Private="true" GlobalPropertiesToRemove="PublishAot;PublishTrimmed;PublishSingleFile;PublishReadyToRun;SelfContained;RuntimeIdentifier" />
+    <ProjectReference Include="..\BuildTasks\BuildTasks.csproj" OutputItemType="BuildTaskAssemblyPath" ReferenceOutputAssembly="false" Private="false" GlobalPropertiesToRemove="PublishAot;PublishTrimmed;PublishSingleFile;PublishReadyToRun;SelfContained;RuntimeIdentifier" />
   </ItemGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+  <PropertyGroup>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorInPackage</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 

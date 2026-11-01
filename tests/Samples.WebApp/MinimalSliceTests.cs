@@ -12,7 +12,6 @@ public class MinimalSliceTests
         Assert.Equal("""<p class="minimal &lt;model&gt;">&lt;model&gt;</p>""", (await slice.RenderAsync()).Trim());
     }
 
-#if NET10_0_OR_GREATER
     [Fact]
     public void ResultExtensionsAcceptMinimalInstancesWithoutWrappingThem()
     {
@@ -28,7 +27,6 @@ public class MinimalSliceTests
         Assert.Same(slice, Microsoft.AspNetCore.Http.TypedResults.RazorSlice(slice));
         Assert.Same(System.Text.Encodings.Web.HtmlEncoder.Default, slice.HtmlEncoder);
     }
-#endif
 
 #if DEBUG
     [Fact(Skip = "Debug tracing allocates; measure SDK slices in Release.")]

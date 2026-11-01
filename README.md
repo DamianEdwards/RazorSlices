@@ -3,7 +3,7 @@
 [![CI (main)](https://github.com/DamianEdwards/RazorSlices/actions/workflows/ci.yml/badge.svg)](https://github.com/DamianEdwards/RazorSlices/actions/workflows/ci.yml)
 [![Nuget](https://img.shields.io/nuget/v/RazorSlices)](https://www.nuget.org/packages/RazorSlices/)
 
-*Lightweight* Razor-based templates for ASP.NET Core without MVC, Razor Pages, or Blazor, optimized for high-performance, unbuffered rendering with low allocations. Compatible with trimming and native AOT. Great for returning dynamically rendered HTML from Minimal APIs, middleware, etc. Supports .NET 8+
+*Lightweight* Razor-based templates for ASP.NET Core without MVC, Razor Pages, or Blazor, optimized for high-performance, unbuffered rendering with low allocations. Compatible with trimming and native AOT. Great for returning dynamically rendered HTML from Minimal APIs, middleware, etc. Supports .NET 10+
 
 - [Getting Started](#getting-started)
 - [Installation](#installation)
@@ -11,7 +11,7 @@
 
 ## Getting Started
 
-1. [Install the NuGet package](#installation) into your ASP.NET Core project (.NET 8+):
+1. [Install the NuGet package](#installation) into your ASP.NET Core project (.NET 10+):
 
     ``` shell
     > dotnet add package RazorSlices
@@ -225,7 +225,7 @@ In the slice, keep the ordinary HTML form and add the hidden token with one help
 
 No `@inject` or token model is needed. Invalid POST tokens return HTTP 400, and missing `.WithAntiforgery()` causes the helper to throw. The example above has no form-bound parameters, so its filter can validate requests without antiforgery middleware. Return a result from the handler rather than writing the response directly.
 
-**Handlers with `[FromForm]`, `IFormFile`, or `IFormFileCollection` also require `UseAntiforgery()` middleware.** Configure it after routing and authentication/authorization (if present), before endpoints:
+**On .NET 10, handlers with `[FromForm]`, `IFormFile`, or `IFormFileCollection` also require `UseAntiforgery()` middleware.** Configure it after routing and authentication/authorization (if present), before endpoints:
 
 ```csharp
 using Microsoft.AspNetCore.Mvc;
@@ -240,9 +240,11 @@ forms.MapPost("/message", (TempData tempData, [FromForm] string message) =>
 });
 ```
 
-`.WithAntiforgery()` prepares tokens for the slice and validates requests during filter execution; it does not replace the middleware required for form parameter binding.
+`.WithAntiforgery()` prepares tokens for the slice and validates requests during filter execution; it does not replace framework protection for form parameter binding. .NET 10 requires `app.UseAntiforgery()`. In .NET 11, `WebApplication` also provides automatically registered CSRF protection; explicit antiforgery middleware remains supported.
 
-Visit `/tempdata` in the WebApp sample for the complete form and flash-message example.
+Visit `/tempdata` in the WebApp sample for the complete form and flash-message example. Its form-bound POST uses tokens on .NET 10 and the default browser-header CSRF protection on .NET 11, without token generation or a hidden token field. This automatic protection is not applied to arbitrary minimal endpoints without antiforgery metadata; the token helpers remain supported on both versions.
+
+The sample includes a guard that returns HTTP 400 for the framework's failed validation result before RC3 SDK-generated form binding reads the form. This works around its rejection-status bug without implementing token or browser-origin validation.
 
 ## Installation
 
@@ -386,7 +388,7 @@ If you wish to use builds from this repo's `main` branch you can install them fr
 - Asynchronous rendering, i.e. the template can contain `await` statements, e.g. `@await WriteTheThing()`
 - Writing UTF8 `byte[]` values directly to the output
 - Rendering directly to `PipeWriter`, `Stream`, `TextWriter`, `StringBuilder`, and `string` outputs, including optimizations for not boxing struct values, zero-allocation rendering of primitives like numbers, etc. (rather than just calling `ToString()` on everything)
-- `RazorSliceBase` implements `IResult`, so both minimal and normal slices can be returned directly from a minimal API route handler. Normal slices also support `Results.Extensions.RazorSlice<Hello>()` and in .NET 10+ `Results.RazorSlice<Hello>()`. When using normal slices with models use `Results.Extensions.RazorSlice<Hello, MyModel>(model)` and in .NET 10+ `Results.RazorSlice<Hello, MyModel>(model)`.
+- `RazorSliceBase` implements `IResult`, so both minimal and normal slices can be returned directly from a minimal API route handler. Normal slices also support `Results.RazorSlice<Hello>()`. When using normal slices with models use `Results.RazorSlice<Hello, MyModel>(model)`.
 - Full support for trimming and native AOT when used in conjunction with ASP.NET Core Minimal APIs
 - Generated Razor Slice proxy types are `public sealed partial class` by default. To use record classes instead, making them `public sealed partial record`, set the `RazorSliceProxiesAsRecords` property to `true` in your project file, e.g.:
     ``` xml
@@ -486,8 +488,6 @@ The helper property name matches the `.cshtml` filename:
 @Helpers.UiHelpers.StatusBadge("Completed", success: true)
 @await Helpers.UiHelpers.NoticeAsync("Summary", LoadMessageAsync)
 ```
-
-**Helpers require C# 14 or newer**, both in the project defining them and in projects using them. Set `<LangVersion>14.0</LangVersion>` and use a compatible SDK. .NET 8+ runtime targets remain supported; regular slices do not require C# 14.
 
 Each helper file must inherit from `RazorSliceHelpers` (or a derived base) and declare exactly one public interface with `@implements`. Directives can be shared through `_ViewImports.cshtml`.
 
