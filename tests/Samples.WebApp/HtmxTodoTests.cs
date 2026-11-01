@@ -34,6 +34,7 @@ public class HtmxTodoTests
         Assert.Contains("<!DOCTYPE html>", page);
         Assert.Contains("Todos using HTMX", page);
         Assert.Contains("htmx.org@", page);
+        Assert.Contains("""htmx.config.methodsThatUseUrlParams = ["get"];""", page);
         Assert.Contains("<form id=\"todo-create-form\" hx-post=\"/htmx-todo\"", page);
         Assert.Contains("hx-target=\"#todo-table\"", page);
         Assert.Contains("hx-swap=\"beforeend\"", page);

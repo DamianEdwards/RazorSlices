@@ -46,6 +46,10 @@
             <script src="https://unpkg.com/htmx.org@2.0.10/dist/htmx.min.js"
                     integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V"
                     crossorigin="anonymous"></script>
+            <script>
+                // Send DELETE parameters in the body so antiforgery can read the hidden token.
+                htmx.config.methodsThatUseUrlParams = ["get"];
+            </script>
         }
         return Task.CompletedTask;
     }

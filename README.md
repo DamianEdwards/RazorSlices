@@ -260,7 +260,8 @@ and delete todos without navigating away from the page:
 - DELETE returns an empty `200 OK` so HTMX removes the targeted row.
 - On .NET 10, `.WithAntiforgery()` prepares tokens before rendering and
   `Helpers.FormHelpers.AntiforgeryToken(HttpContext)` renders the hidden field. HTMX includes
-  that field in every mutation, including DELETE. On .NET 11, all mutations use the framework's
+  that field in every mutation, configuring DELETE to send form parameters in the request body
+  rather than HTMX's default query string. On .NET 11, all mutations use the framework's
   default browser-header CSRF protection, without tokens. Failed requests preserve the form and
   show an error.
 
