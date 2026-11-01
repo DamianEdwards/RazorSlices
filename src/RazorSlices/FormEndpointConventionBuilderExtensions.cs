@@ -12,6 +12,11 @@ public static class FormEndpointConventionBuilderExtensions
     /// Prepares tokens before rendering and validates unsafe requests before invoking the handler.
     /// Apply before WithTempData so invalid requests do not consume or save TempData.
     /// </summary>
+    /// <remarks>
+    /// Endpoint filters run after parameter binding. Endpoints with FromForm or file-upload parameters
+    /// additionally require ASP.NET Core antiforgery middleware after routing and authentication/authorization.
+    /// This filter does not replace middleware validation during form binding.
+    /// </remarks>
     public static TBuilder WithAntiforgery<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder
     {

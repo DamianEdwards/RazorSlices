@@ -33,11 +33,23 @@ public readonly record struct FormHelpers
             var tokens = httpContext.Features.Get<AntiforgeryTokenSet>()
                 ?? throw new InvalidOperationException(
                     "Prepare antiforgery tokens with .WithAntiforgery() before rendering the form.");
+#if RAZOR_SLICES_DISABLE_UTF8_LITERAL_OVERLOAD
+            WriteLiteral("<input type=\"hidden\" name=\"");
+#else
             WriteLiteral("<input type=\"hidden\" name=\""u8);
+#endif
             Write(tokens.FormFieldName);
+#if RAZOR_SLICES_DISABLE_UTF8_LITERAL_OVERLOAD
+            WriteLiteral("\" value=\"");
+#else
             WriteLiteral("\" value=\""u8);
+#endif
             Write(tokens.RequestToken);
+#if RAZOR_SLICES_DISABLE_UTF8_LITERAL_OVERLOAD
+            WriteLiteral("\" />");
+#else
             WriteLiteral("\" />"u8);
+#endif
         }
     }
 }

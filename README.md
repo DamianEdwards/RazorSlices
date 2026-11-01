@@ -223,7 +223,24 @@ In the slice, keep the ordinary HTML form and add the hidden token with one help
 </form>
 ```
 
-No `@inject` or token model is needed. Invalid POST tokens return HTTP 400, and missing `.WithAntiforgery()` causes the helper to throw. This pattern does not require `UseAntiforgery()` middleware. Return a result from the handler rather than writing the response directly.
+No `@inject` or token model is needed. Invalid POST tokens return HTTP 400, and missing `.WithAntiforgery()` causes the helper to throw. The example above has no form-bound parameters, so its filter can validate requests without antiforgery middleware. Return a result from the handler rather than writing the response directly.
+
+**Handlers with `[FromForm]`, `IFormFile`, or `IFormFileCollection` also require `UseAntiforgery()` middleware.** Configure it after routing and authentication/authorization (if present), before endpoints:
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+
+app.UseRouting();
+app.UseAntiforgery();
+
+forms.MapPost("/message", (TempData tempData, [FromForm] string message) =>
+{
+    tempData.Set("message", message);
+    return TypedResults.Redirect("/tempdata");
+});
+```
+
+`.WithAntiforgery()` prepares tokens for the slice and validates requests during filter execution; it does not replace the middleware required for form parameter binding.
 
 Visit `/tempdata` in the WebApp sample for the complete form and flash-message example.
 

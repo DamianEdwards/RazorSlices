@@ -1,10 +1,14 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace RazorSlices.Samples.WebApp.Tests;
 
@@ -85,6 +89,103 @@ public class FormHelperTests
         Assert.Equal(hasHttpContext
             ? "Prepare antiforgery tokens with .WithAntiforgery() before rendering the form."
             : "Rendering an antiforgery token requires an HttpContext.", error.Message);
+    }
+
+    [Fact]
+    public async Task FromFormBindingRequiresMiddlewareEvenWithTheEndpointFilter()
+    {
+        await using var app = await CreateFormBindingApp(useMiddleware: false);
+        using var client = app.GetTestClient();
+        using var page = await client.GetAsync("/forms");
+        var token = ReadToken(await page.Content.ReadAsStringAsync());
+        SetAntiforgeryCookie(client, page);
+        using var content = new FormUrlEncodedContent(
+            [new("message", "hello"), token]);
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => client.PostAsync("/forms", content));
+        Assert.Contains("app.UseAntiforgery()", error.Message);
+    }
+
+    [Fact]
+    public async Task FromFormBindingAcceptsMatchingTokenAndCookieWithMiddleware()
+    {
+        await using var app = await CreateFormBindingApp(useMiddleware: true);
+        using var client = app.GetTestClient();
+        using var page = await client.GetAsync("/forms");
+        page.EnsureSuccessStatusCode();
+        var token = ReadToken(await page.Content.ReadAsStringAsync());
+        SetAntiforgeryCookie(client, page);
+        using var content = new FormUrlEncodedContent([token, new("message", "posted value")]);
+        using var response = await client.PostAsync("/forms", content);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("posted value", await response.Content.ReadAsStringAsync());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FromFormBindingRejectsMissingOrInvalidTokensWithMiddleware(bool invalidToken)
+    {
+        var handlerCalls = 0;
+        await using var app = await CreateFormBindingApp(useMiddleware: true, () => handlerCalls++);
+        using var client = app.GetTestClient();
+        using var page = await client.GetAsync("/forms");
+        var token = ReadToken(await page.Content.ReadAsStringAsync());
+        SetAntiforgeryCookie(client, page);
+        var fields = new List<KeyValuePair<string, string>> { new("message", "must not reach handler") };
+        if (invalidToken) { fields.Add(new(token.Key, "invalid")); }
+        using var content = new FormUrlEncodedContent(fields);
+        using var response = await client.PostAsync("/forms", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, handlerCalls);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FromFormBindingRejectsTokenWithoutMatchingCookieWithMiddleware(bool differentCookie)
+    {
+        var handlerCalls = 0;
+        await using var app = await CreateFormBindingApp(useMiddleware: true, () => handlerCalls++);
+        using var first = app.GetTestClient();
+        using var second = app.GetTestClient();
+        var token = ReadToken(await first.GetStringAsync("/forms"));
+        if (differentCookie)
+        {
+            using var otherPage = await second.GetAsync("/forms");
+            SetAntiforgeryCookie(second, otherPage);
+        }
+        using var content = new FormUrlEncodedContent([token, new("message", "must not reach handler")]);
+        using var response = await second.PostAsync("/forms", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, handlerCalls);
+    }
+
+    private static async Task<WebApplication> CreateFormBindingApp(bool useMiddleware, Action? handlerCalled = null)
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Logging.ClearProviders();
+        builder.Services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
+        builder.Services.AddAntiforgery();
+        var app = builder.Build();
+        app.UseRouting();
+        if (useMiddleware) { app.UseAntiforgery(); }
+        var forms = app.MapGroup("/forms").WithAntiforgery();
+        forms.MapGet("", RazorSlice () => Slices.TempDataDemo.Create(null));
+        forms.MapPost("", ([FromForm] string message) =>
+        {
+            handlerCalled?.Invoke();
+            return TypedResults.Text(message);
+        });
+        await app.StartAsync();
+        return app;
+    }
+
+    private static void SetAntiforgeryCookie(HttpClient client, HttpResponseMessage page)
+    {
+        var cookie = Assert.Single(page.Headers.GetValues("Set-Cookie"),
+            value => value.StartsWith(".AspNetCore.Antiforgery.", StringComparison.Ordinal));
+        client.DefaultRequestHeaders.Add("Cookie", cookie.Split(';')[0]);
     }
 
     internal static KeyValuePair<string, string> ReadToken(string html)

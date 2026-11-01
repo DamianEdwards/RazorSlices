@@ -6,6 +6,8 @@
     <RootNamespace>RazorSlices</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- This variant compiles the library implementation directly, including its experimental APIs. -->
+    <NoWarn>$(NoWarn);RSLICE0200</NoWarn>
     <DefineConstants>$(DefineConstants);RAZOR_SLICES_DISABLE_UTF8_LITERAL_OVERLOAD</DefineConstants>
   </PropertyGroup>
 
