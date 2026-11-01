@@ -431,38 +431,28 @@ With these declarations in `MyApp`, implement `Slices/Card.cshtml` as an ordinar
 </article>
 ```
 
-The adapter is necessary because the SDK does not discover same-project Tag Helpers from
-generated `.cshtml` types alone. The template retains normal slice encoding, partials, helpers,
-and property injection, with the additional template/model activation costs. It is rendered as
-a fragment, so it must not declare or implement a layout; the adapter rejects layout-backed
-templates rather than silently skipping their layout.
+The adapter is needed because the SDK does not discover generated `.cshtml` types as Tag Helpers.
+The template remains a normal slice, but the adapter renders it as a fragment. Do not give it a
+layout; the adapter reports an error if one is configured.
 
-Only **one rendering helper per element** is allowed; nesting is supported. A body can be
-rendered once at the current output position, or omitted without executing it. It cannot be
-captured, replayed, inspected, edited, or rendered with a different encoder. Await all rendering;
-concurrent use is unsupported. Do not retain a context after its render. Already streamed bytes
-cannot be withdrawn when later rendering fails. `context.FlushAsync()` can flush output before
-an asynchronous body completes. HTTP results start the response before rendering, so prepare
-headers, cookies, and antiforgery tokens before result execution.
+Only one rendering helper can handle each tag. It may render the body once or skip it; it cannot
+inspect or replay the body. Await rendering and do not keep the context after the helper returns.
+If rendering fails, any output already sent remains. For HTTP results, set headers and cookies
+before rendering starts.
 
-Dynamic unbound `data-*` attributes cause the SDK to call its injected `Html.Raw` helper.
-For those templates, register `builder.Services.AddRazorSlicesTagHelpers()` and add
-`@inject RazorSliceTagHelperHtml Html` to the template or its scoped imports. This tiny replacement
-does not require MVC services. Like any injection, it adds property storage and activation work
-to every template inheriting that import, even one whose tag branch is skipped.
+For dynamic, unbound `data-*` attributes, register
+`builder.Services.AddRazorSlicesTagHelpers()` and add `@inject RazorSliceTagHelperHtml Html` to
+the template or its scoped imports. This supplies the HTML helper the SDK expects and does not
+require MVC services.
 
-Unused support adds no fields or rendering allocations to `RazorSlice`. Templates containing
-matched tags do acquire SDK-generated fields and an eagerly created runner, even when those tags
-are in unexecuted branches. Executed tags allocate SDK bookkeeping, a helper instance, and a
-context; compound attributes can also allocate captured strings. Bodies stream without subtree
-buffering. Prefer coarse reusable widgets over replacing every small helper call with a tag.
-Code-based helpers require a public parameterless constructor and are constructed per invocation,
-not injected or shared like `Helpers`. Dependencies can be obtained from `context.ServiceProvider`.
+Unused Tag Helper support adds no rendering allocations to ordinary slices. Tags do add work, so
+prefer reusable widgets over replacing small helper calls. Code-based helpers need a public
+parameterless constructor and are created for each tag; get dependencies from
+`context.ServiceProvider`.
 
-Existing templated helpers are available through `context.Helpers`. Tag-syntax consumption
-inside `RazorSliceHelpers` implementations is outside this spike. The sample app's `/tag-helpers`
-page demonstrates code and `.cshtml` implementations, nested tags, typed and compound attributes,
-normal helper composition, asynchronous bodies, and suppression.
+Existing templated helpers are available through `context.Helpers`. Tag syntax is not supported
+inside `RazorSliceHelpers` implementations. The sample app's `/tag-helpers` page shows the
+supported patterns.
 
 ### Optimized builds
 
