@@ -63,8 +63,8 @@ public partial class RazorSliceBase
     /// all blocks of HTML in your .cshtml file.
     /// </para>
     /// <para>
-    /// NOTE: We'd need a tweak to the Razor compiler to to have it support emitting <see cref="WriteLiteral(ReadOnlySpan{byte})"/> calls with UTF8 string literals
-    ///       i.e. https://github.com/dotnet/razor/issues/8429
+    /// Recent Razor SDKs emit UTF8 string literals for this overload. Pipe output avoids transcoding;
+    /// TextWriter output decodes the bytes to characters.
     /// </para>
     /// </remarks>
     /// <param name="value">The value to write to the output.</param>
@@ -276,11 +276,6 @@ public partial class RazorSliceBase
         return HtmlString.Empty;
     }
 
-    private static bool IsTaskFromAsyncMethod(Task task)
-    {
-        return task.GetType().FullName is { } fullName && fullName.StartsWith(nameof(System.Runtime.CompilerServices.AsyncTaskMethodBuilder), StringComparison.Ordinal);
-    }
-
     /// <summary>
     /// Writes the specified <see cref="IHtmlContent"/> value to the output.
     /// </summary>
@@ -293,36 +288,30 @@ public partial class RazorSliceBase
         TextWriter textWriter = _textWriter ?? Utf8PipeTextWriter.Get(_pipeWriter!);
 #pragma warning restore CA2000
         var faulted = false;
+        var returnWriter = true;
 
         try
         {
             if (htmlContent is HelperResult helperResult)
             {
                 // A templated Razor delegate is being rendered: https://learn.microsoft.com/aspnet/core/mvc/views/razor#templated-razor-delegates
-                // HelperResult captures the generated async templated delegate and blocks synchronously when calling it!
-                // This is not ideal for performance and in our case breaks the optimization used by Utf8PipeTextWriter which
-                // is cached in a thread static, but it can't be helped without changing the Razor compiler (writes are synchronous).
-                // However we can access the captured delegate, invoke it to get the Task and detect the case where it hasn't
-                // completed (i.e. has gone async) and in that case throw an exception.
+                // WriteHtml is synchronous. Completion, not the runtime's private Task implementation,
+                // determines whether the delegate can be consumed without blocking.
                 var actionResult = helperResult.WriteAction(textWriter);
 
-#if DEBUG
-                // Force a small delay when debugging to make it easier to create scenario where method is async but has already completed
-                Thread.Sleep(20);
-#endif
-
-                // If the Task is not completed or it's from a generated async method (i.e. one with an 'await' in it) throw an exception
-                if (!actionResult.IsCompleted || IsTaskFromAsyncMethod(actionResult))
+                if (!actionResult.IsCompleted)
                 {
-                    // NOTE: There's still a chance here that the Task run asynchronously but is completed by the time we check it (albeit it's a small window)
-                    //       and in that case it's very likely the Utf8PipeTextWriter will fault as it can't handle cross-thread writes (pooled via thread static).
-                    //       I don't think this causes any issues as the exception will be thrown and the request will fail, but it's worth noting.
+                    // The rejected callback can still hold this writer. Never pool it for another render.
+                    returnWriter = false;
+                    _ = actionResult.ContinueWith(static task => { _ = task.Exception; },
+                        CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
 
                     throw new InvalidOperationException("""
                         ----------------------------
                         !!! Razor Slices Error !!!
                         ----------------------------
-                        The WriteAction of a HelperResult instance returned a Task from an async templated Razor delegate.
+                        The WriteAction of a HelperResult instance returned an incomplete Task from a templated Razor delegate.
                         This causes performance and scale issues and is not supported in Razor Slices.
                         This happens when a templated Razor delegate does async work (i.e. has `@await SomethingAsync()` in it).
                         Use async templated methods instead of async templated Razor delegates. They have the advantage of supporting
@@ -387,7 +376,10 @@ public partial class RazorSliceBase
                 {
                     utf8PipeTextWriter.Flush();
                 }
-                Utf8PipeTextWriter.Return(utf8PipeTextWriter);
+                if (returnWriter)
+                {
+                    Utf8PipeTextWriter.Return(utf8PipeTextWriter);
+                }
             }
         }
 

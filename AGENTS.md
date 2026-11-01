@@ -8,10 +8,10 @@
 
 ```
 src/
-  RazorSlices/                    # Main library (net8.0, ASP.NET Core framework ref)
+  RazorSlices/                    # Main library (net10.0, ASP.NET Core framework ref)
   SourceGenerator/                # Roslyn incremental source generator (netstandard2.0)
 samples/
-  WebApp/                         # Main sample app (multi-TFM: net8.0, net9.0)
+  WebApp/                         # Main sample app (multi-TFM: net10.0, net11.0)
   PagesAndSlices/                 # Sample showing Razor Pages + Slices coexistence
   RazorClassLibrary/              # Sample Razor Class Library
 tests/
@@ -26,7 +26,7 @@ tests/
 ## Key Files
 
 - `src/RazorSlices/IRazorSliceProxy.cs` — Interfaces for generated proxy types (`IRazorSliceProxy` for no-model, `IRazorSliceProxy<TModel>` for model slices)
-- `src/RazorSlices/IResultExtensions.cs` — `Results.Extensions.RazorSlice<T>()` extension methods
+- `src/RazorSlices/IResultExtensions.cs` — `Results.RazorSlice<T>()` extension methods
 - `src/RazorSlices/IUsesLayout.cs` — Layout support interfaces
 - `src/RazorSlices/RazorSliceFactory.cs` — Invokes generated constructor callbacks, caches property injection, and handles Hot Reload replacement types
 - `src/RazorSlices/RazorSlice.cs` — Feature-rich base with helpers, layouts, partials, DI, and HTTP results
@@ -64,7 +64,9 @@ dotnet run --project samples/WebApp
 
 - **Diagnostics use `RSLICE` followed by four digits.** Reserve `RSLICE0000`-`RSLICE0099` for slice generation/activation, `RSLICE0100`-`RSLICE0199` for helper generation/analyzers, and `RSLICE0200`-`RSLICE0299` for experimental API opt-in. `RSLICE0200` identifies experimental TempData. Allocate other diagnostic families outside these ranges.
 - **Source generator targets `netstandard2.0`** — required by Roslyn. No `Span<T>`, no modern .NET APIs. Uses `LangVersion: Latest` for language features.
-- **Library targets `net8.0`** with ASP.NET Core framework reference.
+- **Library targets `net10.0`** with ASP.NET Core framework reference; .NET 10/11 consumers are tested.
+- **Tooling floor is .NET 10 / VS 18.0 / Roslyn 5.0.** Build tasks and generators remain `netstandard2.0`.
+- **Runtime Async is consumer-controlled.** `RazorSlicesTestRuntimeAsync=true` enables it only in net11.0 test/sample projects; package imports and the shipped library do not enable it.
 - **Central package management** via `Directory.Packages.props`.
 - **Versioning** in `src/Directory.Build.props` (`VersionPrefix`).
 - **Generated proxy classes** are `public sealed` by default. Set `RazorSliceProxiesSealed=false` to make them `public partial`.

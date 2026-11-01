@@ -9,8 +9,8 @@ public class BuildIntegrationTests
         ["Hello", "Minimal", "MinimalModel", "FullModel", "CustomMinimal", "CustomFull", "Markup", "Composed"];
 
     [Theory]
-    [InlineData("net8.0")]
     [InlineData("net10.0")]
+    [InlineData("net11.0")]
     public async Task OptimizationDefaultsAndOptOutWorkWithoutCleaning(string framework)
     {
         var root = FindRoot();

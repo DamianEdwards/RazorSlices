@@ -133,7 +133,7 @@ public class RazorSlicesCompilerLiteralRendering
         {
             AddJob(Job.Default
                 .WithCustomBuildConfiguration("Benchmarks")
-                .WithId(".NET 11 Preview"));
+                .WithId(".NET 11"));
         }
     }
 }

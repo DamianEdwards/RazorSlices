@@ -3,7 +3,6 @@ using RazorSlices;
 
 namespace Microsoft.AspNetCore.Http;
 
-#if NET10_0_OR_GREATER
 /// <summary>
 /// Extensions methods for <see cref="Results"/> to render Razor slices.
 /// </summary>
@@ -183,7 +182,6 @@ public static class TypedResultsExtensions
         }
     }
 }
-#endif
 
 /// <summary>
 /// RazorSlices IResult extensions.
@@ -197,9 +195,7 @@ public static class RazorSlicesExtensions
     /// <param name="_"></param>
     /// <param name="statusCode">The HTTP status code to set on the response.</param>
     /// <returns>An <see cref="RazorSlices.RazorSlice"/> that can be rendered to the response.</returns>
-#if NET10_0_OR_GREATER
     [Obsolete("For .NET 10.0 and later, call static extension method on Results type directly: Results.RazorSlice<TSliceProxy>(..)", error: true)]
-#endif
     public static RazorSlice RazorSlice<TSliceProxy>(this IResultExtensions _, int statusCode = StatusCodes.Status200OK)
         where TSliceProxy : IRazorSliceProxy
     {
@@ -220,9 +216,7 @@ public static class RazorSlicesExtensions
     /// <param name="model"></param>
     /// <param name="statusCode">The HTTP status code to set on the response.</param>
     /// <returns>An <see cref="RazorSlices.RazorSlice{TModel}"/> that can be rendered to the response.</returns>
-#if NET10_0_OR_GREATER
     [Obsolete("For .NET 10.0 and later, call static extension method on Results type directly: Results.RazorSlice<TSliceProxy, TModel>(..)", error: true)]
-#endif
     public static RazorSlice<TModel> RazorSlice<TSliceProxy, TModel>(this IResultExtensions _, TModel model, int statusCode = StatusCodes.Status200OK)
         where TSliceProxy : IRazorSliceProxy<TModel>
     {

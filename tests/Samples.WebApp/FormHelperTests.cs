@@ -19,14 +19,10 @@ public class FormHelperTests
     [InlineData("token\"<&")]
     public async Task FormPostsWithCookieAndConfiguredEncodedTokenField(string fieldName)
     {
-        using var factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
-                services.Configure<AntiforgeryOptions>(options => options.FormFieldName = fieldName)));
-        using var client = factory.CreateClient(new()
-        {
-            BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false
-        });
-        using var form = await client.GetAsync("/tempdata");
+        await using var app = await CreateFormBindingApp(useMiddleware: true, fieldName: fieldName);
+        using var client = app.GetTestClient();
+        client.BaseAddress = new Uri("https://localhost");
+        using var form = await client.GetAsync("/forms");
         form.EnsureSuccessStatusCode();
         Assert.Contains(form.Headers.GetValues("Set-Cookie"),
             cookie => cookie.StartsWith(".AspNetCore.Antiforgery.", StringComparison.Ordinal));
@@ -35,12 +31,14 @@ public class FormHelperTests
         Assert.Equal(fieldName, token.Key);
         Assert.NotEmpty(token.Value);
         if (fieldName.Contains('"')) { Assert.Contains("""name="token&quot;&lt;&amp;" """, html); }
-        using var content = new FormUrlEncodedContent([token]);
-        using var response = await client.PostAsync("/tempdata", content);
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Contains("Changes saved.", await client.GetStringAsync("/tempdata"));
+        SetAntiforgeryCookie(client, form);
+        using var content = new FormUrlEncodedContent([token, new("message", "posted value")]);
+        using var response = await client.PostAsync("/forms", content);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("posted value", await response.Content.ReadAsStringAsync());
     }
 
+#if !NET11_0_OR_GREATER
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -54,8 +52,9 @@ public class FormHelperTests
         var token = ReadToken(await client.GetStringAsync("/tempdata"));
         var loadCount = provider.LoadCount;
         var saveCount = provider.SaveCount;
-        using var content = new FormUrlEncodedContent(invalidToken
-            ? [new(token.Key, "invalid-token")] : Array.Empty<KeyValuePair<string, string>>());
+        var fields = new List<KeyValuePair<string, string>> { new("message", "must not reach handler") };
+        if (invalidToken) { fields.Add(new(token.Key, "invalid-token")); }
+        using var content = new FormUrlEncodedContent(fields);
         using var response = await client.PostAsync("/tempdata", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(loadCount, provider.LoadCount);
@@ -72,18 +71,78 @@ public class FormHelperTests
         using var secondClient = factory.CreateClient(new() { AllowAutoRedirect = false });
         var token = ReadToken(await firstClient.GetStringAsync("/tempdata"));
         if (differentCookie) { await secondClient.GetStringAsync("/tempdata"); }
-        using var content = new FormUrlEncodedContent([token]);
+        using var content = new FormUrlEncodedContent([token, new("message", "must not reach handler")]);
         using var response = await secondClient.PostAsync("/tempdata", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("No flash message.", await secondClient.GetStringAsync("/tempdata"));
     }
+#endif
+
+#if NET11_0_OR_GREATER
+    [Theory]
+    [InlineData("same-origin", null)]
+    [InlineData("none", null)]
+    [InlineData(null, "https://localhost")]
+    [InlineData(null, null)]
+    public async Task TokenFreeSampleFormAcceptsTrustedRequests(string? fetchSite, string? origin)
+    {
+        using var factory = new WebApplicationFactory<Program>();
+        Assert.Null(factory.Services.GetService<IAntiforgery>());
+        using var client = factory.CreateClient(new()
+        {
+            BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false
+        });
+        using var page = await client.GetAsync("/tempdata");
+        page.EnsureSuccessStatusCode();
+        var html = await page.Content.ReadAsStringAsync();
+        Assert.Contains("""name="message" """, html);
+        Assert.DoesNotContain("__RequestVerificationToken", html);
+        Assert.DoesNotContain(page.Headers.TryGetValues("Set-Cookie", out var cookies) ? cookies : [],
+            cookie => cookie.StartsWith(".AspNetCore.Antiforgery.", StringComparison.Ordinal));
+        if (fetchSite is not null) { client.DefaultRequestHeaders.Add("Sec-Fetch-Site", fetchSite); }
+        if (origin is not null) { client.DefaultRequestHeaders.Add("Origin", origin); }
+        using var content = new FormUrlEncodedContent([new("message", "Changes saved. <encoded>")]);
+        using var response = await client.PostAsync("/tempdata", content);
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("Changes saved. &lt;encoded&gt;", await client.GetStringAsync("/tempdata"));
+    }
+
+    [Theory]
+    [InlineData("cross-site", "https://attacker.example")]
+    [InlineData("same-site", "https://other.localhost")]
+    [InlineData(null, "https://attacker.example")]
+    [InlineData(null, "http://localhost")]
+    [InlineData(null, "https://localhost:8443")]
+    public async Task TokenFreeSampleFormRejectsUntrustedRequestsBeforeTempDataAccess(string? fetchSite, string origin)
+    {
+        var provider = new RecordingProvider();
+        using var factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+                services.AddSingleton<IRazorSliceTempDataProvider>(provider)));
+        using var client = factory.CreateClient(new()
+        {
+            BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false
+        });
+        using var page = await client.GetAsync("/tempdata");
+        page.EnsureSuccessStatusCode();
+        var loadCount = provider.LoadCount;
+        var saveCount = provider.SaveCount;
+        if (fetchSite is not null) { client.DefaultRequestHeaders.Add("Sec-Fetch-Site", fetchSite); }
+        client.DefaultRequestHeaders.Add("Origin", origin);
+        using var content = new FormUrlEncodedContent([new("message", "must not reach handler")]);
+        using var response = await client.PostAsync("/tempdata", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(loadCount, provider.LoadCount);
+        Assert.Equal(saveCount, provider.SaveCount);
+    }
+#endif
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task HelperFailsClearlyWhenPreparationIsMissing(bool hasHttpContext)
     {
-        using var slice = Slices.TempDataDemo.Create(null);
+        using var slice = Slices.Compatibility.Antiforgery.Create();
         if (hasHttpContext) { slice.HttpContext = new DefaultHttpContext(); }
         var error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await slice.RenderAsync());
         Assert.Equal(hasHttpContext
@@ -92,7 +151,7 @@ public class FormHelperTests
     }
 
     [Fact]
-    public async Task FromFormBindingRequiresMiddlewareEvenWithTheEndpointFilter()
+    public async Task FromFormBindingUsesFrameworkProtectionWhenMiddlewareIsNotExplicit()
     {
         await using var app = await CreateFormBindingApp(useMiddleware: false);
         using var client = app.GetTestClient();
@@ -101,9 +160,37 @@ public class FormHelperTests
         SetAntiforgeryCookie(client, page);
         using var content = new FormUrlEncodedContent(
             [new("message", "hello"), token]);
+#if NET11_0_OR_GREATER
+        // WebApplication adds CSRF protection automatically in .NET 11.
+        using var response = await client.PostAsync("/forms", content);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("hello", await response.Content.ReadAsStringAsync());
+#else
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => client.PostAsync("/forms", content));
         Assert.Contains("app.UseAntiforgery()", error.Message);
+#endif
     }
+
+#if NET11_0_OR_GREATER
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TokenFilterRejectsMissingOrInvalidTokensWithoutExplicitMiddleware(bool invalidToken)
+    {
+        var handlerCalls = 0;
+        await using var app = await CreateFormBindingApp(useMiddleware: false, () => handlerCalls++);
+        using var client = app.GetTestClient();
+        using var page = await client.GetAsync("/forms");
+        var token = ReadToken(await page.Content.ReadAsStringAsync());
+        SetAntiforgeryCookie(client, page);
+        var fields = new List<KeyValuePair<string, string>> { new("message", "must not reach handler") };
+        if (invalidToken) { fields.Add(new(token.Key, "invalid")); }
+        using var content = new FormUrlEncodedContent(fields);
+        using var response = await client.PostAsync("/forms", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, handlerCalls);
+    }
+#endif
 
     [Fact]
     public async Task FromFormBindingAcceptsMatchingTokenAndCookieWithMiddleware()
@@ -160,18 +247,33 @@ public class FormHelperTests
         Assert.Equal(0, handlerCalls);
     }
 
-    private static async Task<WebApplication> CreateFormBindingApp(bool useMiddleware, Action? handlerCalled = null)
+    internal static async Task<FormUrlEncodedContent> CreateSampleFormContentAsync(HttpClient client, string message)
+    {
+        using var page = await client.GetAsync("/tempdata");
+        page.EnsureSuccessStatusCode();
+        var fields = new List<KeyValuePair<string, string>> { new("message", message) };
+#if !NET11_0_OR_GREATER
+        fields.Add(ReadToken(await page.Content.ReadAsStringAsync()));
+#endif
+        return new FormUrlEncodedContent(fields);
+    }
+
+    private static async Task<WebApplication> CreateFormBindingApp(bool useMiddleware, Action? handlerCalled = null, string? fieldName = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
         builder.Services.AddAntiforgery();
+        if (fieldName is not null)
+        {
+            builder.Services.Configure<AntiforgeryOptions>(options => options.FormFieldName = fieldName);
+        }
         var app = builder.Build();
         app.UseRouting();
         if (useMiddleware) { app.UseAntiforgery(); }
         var forms = app.MapGroup("/forms").WithAntiforgery();
-        forms.MapGet("", RazorSlice () => Slices.TempDataDemo.Create(null));
+        forms.MapGet("", RazorSlice () => Slices.Compatibility.Antiforgery.Create());
         forms.MapPost("", ([FromForm] string message) =>
         {
             handlerCalled?.Invoke();
