@@ -11,7 +11,7 @@ namespace RazorSlices.SourceGenerator;
 internal static class RazorSliceHelperGenerator
 {
     internal static readonly DiagnosticDescriptor InvalidContract = new(
-        "RSG0100", "Invalid helper contract", "{0}", "RazorSlices", DiagnosticSeverity.Error, true);
+        "RSLICE0100", "Invalid helper contract", "{0}", "RazorSlices", DiagnosticSeverity.Error, true);
 
     private static readonly SymbolDisplayFormat TypeFormat = SymbolDisplayFormat.FullyQualifiedFormat
         .WithMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers |

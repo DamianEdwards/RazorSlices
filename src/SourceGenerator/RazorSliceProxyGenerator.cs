@@ -13,7 +13,7 @@ namespace RazorSlices.SourceGenerator;
 internal class RazorSliceProxyGenerator : IIncrementalGenerator
 {
     internal static readonly DiagnosticDescriptor UnsupportedMinimalFeature = new(
-        "RSG0004", "Unsupported minimal-slice feature",
+        "RSLICE0004", "Unsupported minimal-slice feature",
         "Minimal slices do not support {0}; inherit RazorSlice instead", "RazorSlices", DiagnosticSeverity.Error, true);
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -178,7 +178,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
             {
                 // TODO: Add an integer suffix to the class name so it can be generated and then log a warning?
                 var descriptor = new DiagnosticDescriptor(
-                    "RSG0001",
+                    "RSLICE0001",
                     "Duplicate Class Name",
                     $"Generated class with name {className} already exists. File '{relativeFilePath}' has been ignored.",
                     "Naming",
@@ -224,7 +224,7 @@ internal class RazorSliceProxyGenerator : IIncrementalGenerator
                                 {
                                     // Report diagnostic for unresolvable model type
                                     var descriptor = new DiagnosticDescriptor(
-                                        "RSG0002",
+                                        "RSLICE0002",
                                         "Unresolvable Model Type",
                                         $"Could not resolve model type '{modelTypeName}' for slice '{relativeFilePath}'. The generated proxy will not have a strongly-typed Create method.",
                                         "TypeResolution",

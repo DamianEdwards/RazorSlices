@@ -7,6 +7,7 @@
     <RootNamespace>RazorSlices.Benchmarks</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);RSLICE0200</NoWarn>
     <Configurations>Debug;Release;Benchmarks</Configurations>
   </PropertyGroup>
 

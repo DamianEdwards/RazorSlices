@@ -54,7 +54,7 @@ public class GeneratedActivationTests
     {
         var (_, diagnostics) = Generate(inherits: custom.Length == 0 ? "RazorSliceBase" : "MinimalBase",
             imports: imports, custom: custom);
-        Assert.Contains(diagnostics, static diagnostic => diagnostic.Id == "RSG0004");
+        Assert.Contains(diagnostics, static diagnostic => diagnostic.Id == "RSLICE0004");
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class GeneratedActivationTests
     {
         var (_, diagnostics) = Generate(inherits: "RazorSliceBase", child: "@implements IUsesLayout<LayoutProxy>",
             custom: "public sealed class LayoutProxy : IRazorSliceProxy { public static RazorSlice CreateSlice() => throw new System.NotSupportedException(); }");
-        Assert.Contains(diagnostics, static diagnostic => diagnostic.Id == "RSG0004");
+        Assert.Contains(diagnostics, static diagnostic => diagnostic.Id == "RSLICE0004");
     }
 
     [Theory]
@@ -147,7 +147,7 @@ public class GeneratedActivationTests
                     [RazorInject] public T Value { get; private set; } = default!;
                 }
                 """);
-        Assert.Contains(diagnostics, static diagnostic => diagnostic.Id == "RSG0003");
+        Assert.Contains(diagnostics, static diagnostic => diagnostic.Id == "RSLICE0003");
         Assert.DoesNotContain("__Activation", code);
     }
 
@@ -191,7 +191,7 @@ public class GeneratedActivationTests
     {
         var (code, diagnostics) = Generate(
             imports: "@inject Missing Value", members: "public object Value { get; private set; } = null!;");
-        Assert.Contains(diagnostics, static diagnostic => diagnostic.Id == "RSG0003");
+        Assert.Contains(diagnostics, static diagnostic => diagnostic.Id == "RSLICE0003");
         Assert.DoesNotContain("__Activation", code);
         Assert.DoesNotContain(diagnostics, static diagnostic => diagnostic.Id == "CS8785");
     }

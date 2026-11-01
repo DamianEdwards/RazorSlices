@@ -1,7 +1,9 @@
 using System.Reflection;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Html;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Razor.Runtime.TagHelpers;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,6 +86,21 @@ public class RazorSliceTagHelperTests
         var slice = new Host(static host => host.RenderLayoutTemplateAsync());
         var error = await Assert.ThrowsAsync<NotSupportedException>(async () => await slice.RenderAsync(TextWriter.Null));
         Assert.Contains("fragment", error.Message);
+    }
+
+    [Fact]
+    public async Task TagHelperCanUseTheBuiltInFormHelper()
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Features.Set(new AntiforgeryTokenSet("token<&", null, "__RequestVerificationToken", null));
+        var slice = new Host(host => host.TagAsync(context =>
+        {
+            context.Helpers.FormHelpers.AntiforgeryToken(context.HttpContext);
+            return ValueTask.CompletedTask;
+        }, static () => Task.CompletedTask)) { HttpContext = httpContext };
+
+        Assert.Equal("""<input type="hidden" name="__RequestVerificationToken" value="token&lt;&amp;" />""",
+            await slice.RenderAsync());
     }
 
     [Theory]

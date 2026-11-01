@@ -26,7 +26,7 @@ if (args.Length > 0 && string.Equals(args[0], "--compiler-literal-trace", String
     return;
 }
 
-BenchmarkSwitcher.FromTypes([typeof(RazorSlicesCompilerLiteralRendering)]).Run(args);
+BenchmarkSwitcher.FromTypes([typeof(RazorSlicesCompilerLiteralRendering), typeof(Benchmarks.TempDataSerialization)]).Run(args);
 
 static async Task RunCompilerLiteralSmoke()
 {
