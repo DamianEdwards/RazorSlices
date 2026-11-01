@@ -16,6 +16,7 @@ builder.WebHost.UseKestrelHttpsConfiguration();
 builder.Services.AddWebEncoders();
 builder.Services.AddRazorSlicesTagHelpers();
 builder.Services.AddSingleton<LoremService>();
+builder.Services.AddSingleton<HtmxTodoStore>();
 builder.Services.AddRazorSliceTempData();
 #if !NET11_0_OR_GREATER
 builder.Services.AddAntiforgery();
@@ -57,6 +58,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapSlices();
+app.MapHtmxTodoRoutes();
 
 Console.WriteLine($"RuntimeFeature.IsDynamicCodeSupported = {RuntimeFeature.IsDynamicCodeSupported}");
 Console.WriteLine($"RuntimeFeature.IsDynamicCodeCompiled = {RuntimeFeature.IsDynamicCodeCompiled}");

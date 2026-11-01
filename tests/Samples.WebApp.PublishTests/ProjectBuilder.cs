@@ -123,7 +123,7 @@ public class ProjectBuilder
             using var handler = new HttpClientHandler { AllowAutoRedirect = false };
             using var client = new HttpClient(handler) { BaseAddress = new Uri(await listening.Task), Timeout = TimeSpan.FromSeconds(30) };
             var endpoints = ProjectName == "WebApp"
-                ? new[] { ("/", "Todos"), ("/library", "Razor Class Library"), ("/helpers", "Reusable todo helpers"), ("/minimal", "&lt;minimal&gt;"), ("/nested", "Nested : Test"), ("/templated", "templated"), ("/tag-helpers", "<") }
+                ? new[] { ("/", "Todos"), ("/library", "Razor Class Library"), ("/helpers", "Reusable todo helpers"), ("/minimal", "&lt;minimal&gt;"), ("/nested", "Nested : Test"), ("/templated", "templated"), ("/tag-helpers", "<"), ("/htmx-todo", "Todos using HTMX") }
                 : new[] { ("/", "Hello"), ("/goodbye", "Goodbye") };
             foreach (var (path, expected) in endpoints)
             {
@@ -165,6 +165,8 @@ public class ProjectBuilder
                 using var untrustedResponse = await client.SendAsync(untrustedRequest);
                 Assert.Equal(HttpStatusCode.BadRequest, untrustedResponse.StatusCode);
                 Assert.Contains("No flash message.", await client.GetStringAsync("/tempdata"));
+
+                await VerifyHtmxTodosAsync(client, framework);
             }
         }
         finally
@@ -172,6 +174,61 @@ public class ProjectBuilder
             if (!process.HasExited) { process.Kill(entireProcessTree: true); }
             await process.WaitForExitAsync();
         }
+    }
+
+    private static async Task VerifyHtmxTodosAsync(HttpClient client, string framework)
+    {
+        var page = await client.GetStringAsync("/htmx-todo");
+        var token = Regex.Match(page, """name="__RequestVerificationToken" value="([^"]+)""");
+        Assert.Equal(framework == "net10.0", token.Success);
+        var formFields = new List<KeyValuePair<string, string>>();
+        if (token.Success)
+        {
+            formFields.Add(new("__RequestVerificationToken", WebUtility.HtmlDecode(token.Groups[1].Value)));
+        }
+        using var created = await MutateAsync(HttpMethod.Post, "/htmx-todo", [new("title", "Published <todo>")]);
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        var row = await created.Content.ReadAsStringAsync();
+        Assert.Contains("Published &lt;todo&gt;", row);
+        var id = Regex.Match(row, """id="todo-(\d+)""");
+        Assert.True(id.Success);
+        var path = $"/htmx-todo/{id.Groups[1].Value}";
+
+        using var updated = await MutateAsync(HttpMethod.Put, path, [new("isComplete", "true")]);
+        Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+        Assert.Contains("<td>Complete</td>", await updated.Content.ReadAsStringAsync());
+        using var deleted = await MutateAsync(HttpMethod.Delete, path, []);
+        Assert.Equal(HttpStatusCode.OK, deleted.StatusCode);
+        Assert.Equal(string.Empty, await deleted.Content.ReadAsStringAsync());
+        Assert.DoesNotContain($"id=\"todo-{id.Groups[1].Value}\"", await client.GetStringAsync("/htmx-todo"));
+
+        var beforeRejection = await client.GetStringAsync("/htmx-todo");
+        foreach (var method in new[] { HttpMethod.Post, HttpMethod.Put, HttpMethod.Delete })
+        {
+            using var request = new HttpRequestMessage(method, method == HttpMethod.Post ? "/htmx-todo" : "/htmx-todo/2")
+            {
+                Content = new FormUrlEncodedContent([new("title", "Must not be stored"), new("isComplete", "true")])
+            };
+            request.Headers.Add("Sec-Fetch-Site", "cross-site");
+            request.Headers.Add("Origin", "https://attacker.example");
+            using var rejected = await client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        }
+        var afterRejection = await client.GetStringAsync("/htmx-todo");
+        Assert.Equal(TodoRows(beforeRejection), TodoRows(afterRejection));
+
+        async Task<HttpResponseMessage> MutateAsync(HttpMethod method, string path, IEnumerable<KeyValuePair<string, string>> values)
+        {
+            using var request = new HttpRequestMessage(method, path)
+            {
+                Content = new FormUrlEncodedContent(formFields.Concat(values))
+            };
+            request.Headers.Add("Sec-Fetch-Site", "same-origin");
+            return await client.SendAsync(request);
+        }
+
+        static string TodoRows(string html)
+            => Regex.Match(html, """<tbody id="todo-table">.*?</tbody>""", RegexOptions.Singleline).Value;
     }
 
     public void Run()
