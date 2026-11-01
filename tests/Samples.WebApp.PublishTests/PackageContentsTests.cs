@@ -14,7 +14,7 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
         var buildArtifactsDir = Path.Combine(outputDir, "build-artifacts");
         Directory.CreateDirectory(outputDir);
 
-        DotNetCli.Restore([projectPath, "-p:ArtifactsPath=" + buildArtifactsDir], testOutput);
+        DotNetCli.Restore([projectPath, "-p:ArtifactsPath=" + buildArtifactsDir, "--disable-build-servers"], testOutput);
         var packOutput = DotNetCli.Pack(projectPath, outputDir, testOutput, "-p:ArtifactsPath=" + buildArtifactsDir);
         testOutput.WriteLine(packOutput);
 
@@ -167,6 +167,7 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
             @using SharedHelpers
             @tagHelperPrefix rs:
             @addTagHelper *, SharedHelpers
+            @addTagHelper RazorSlices.RazorSlicePartialTagHelper, RazorSlices
             @inherits RazorSlice
             @inject ISliceProbe Probe
             @inject IOptionalProbe? Optional
@@ -175,7 +176,7 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
             @await Helpers.Ui.GreetingAsync("loaded", 43)
             @await Helpers.Ui.TaskGreetingAsync("task")
             @Helpers.Ui.Values(42, "one", "two")
-            @await RenderPartialAsync(SharedHelpers.Lean.Create("<lean>"))
+            <rs:partial slice="@(SharedHelpers.Lean.Create("<lean>"))" />
             <rs:shared-notice label="<package-tag>">tag body</rs:shared-notice>
             """);
         File.WriteAllText(Path.Combine(consumer, "Program.cs"), """

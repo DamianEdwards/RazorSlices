@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Encodings.Web;
+using System.Text.Unicode;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Razor.Runtime.TagHelpers;
 using Microsoft.AspNetCore.Razor.TagHelpers;
@@ -83,6 +84,53 @@ public class RazorSliceTagHelperTests
         var slice = new Host(static host => host.RenderLayoutTemplateAsync());
         var error = await Assert.ThrowsAsync<NotSupportedException>(async () => await slice.RenderAsync(TextWriter.Null));
         Assert.Contains("fragment", error.Message);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task PartialTagRendersAndDisposesFullAndMinimalSlices(bool minimal, bool fail)
+    {
+        var failure = new InvalidOperationException("partial failed");
+        using var cancellation = new CancellationTokenSource();
+        Func<CancellationToken, Task> render = token =>
+        {
+            Assert.Equal(cancellation.Token, token);
+            return fail ? Task.FromException(failure) : Task.CompletedTask;
+        };
+        RazorSliceBase partial = minimal ? new MinimalPartial(render) : new FullPartial(render);
+        var host = new Host(host => host.RenderPartialTagAsync(partial));
+        var encoder = HtmlEncoder.Create(UnicodeRanges.All);
+        using var writer = new StringWriter();
+        if (fail)
+        {
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                await host.RenderAsync(writer, encoder, cancellation.Token));
+            Assert.Same(failure, error);
+        }
+        else
+        {
+            await host.RenderAsync(writer, encoder, cancellation.Token);
+        }
+        Assert.Equal("&lt;partial&gt;\u00e9", writer.ToString());
+        Assert.True(partial is MinimalPartial lean ? lean.WasDisposed : ((FullPartial)partial).WasDisposed);
+    }
+
+    [Fact]
+    public async Task PartialTagSkipsLayoutsLikeOrdinaryPartialRendering()
+    {
+        var host = new Host(host => host.RenderPartialTagAsync(new LayoutTemplate { Model = "model" }));
+        Assert.Equal("layout-backed partial", await host.RenderAsync());
+    }
+
+    [Fact]
+    public async Task PartialTagRejectsMissingOrNullSlices()
+    {
+        var host = new Host(host => host.RenderPartialTagAsync(null));
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(async () => await host.RenderAsync(TextWriter.Null));
+        Assert.Contains("non-null 'slice'", error.Message);
     }
 
     [Fact]
@@ -194,7 +242,11 @@ public class RazorSliceTagHelperTests
 
     private sealed class LayoutTemplate : RazorSlice<string>, IUsesLayout<LayoutProxy>
     {
-        public override Task ExecuteAsync() => Task.CompletedTask;
+        public override Task ExecuteAsync()
+        {
+            WriteLiteral("layout-backed partial");
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class LayoutProxy : IRazorSliceProxy
@@ -204,7 +256,40 @@ public class RazorSliceTagHelperTests
 
     private sealed class EmptyLayout : RazorLayoutSlice
     {
-        public override Task ExecuteAsync() => Task.CompletedTask;
+        public override Task ExecuteAsync()
+        {
+            throw new InvalidOperationException("A partial must not execute its layout.");
+        }
+    }
+
+    private sealed class FullPartial(Func<CancellationToken, Task> render) : RazorSlice
+    {
+        public bool WasDisposed { get; private set; }
+        public override Task ExecuteAsync()
+        {
+            Write("<partial>\u00e9");
+            return render(CancellationToken);
+        }
+        public override void Dispose()
+        {
+            WasDisposed = true;
+            base.Dispose();
+        }
+    }
+
+    private sealed class MinimalPartial(Func<CancellationToken, Task> render) : RazorSliceBase
+    {
+        public bool WasDisposed { get; private set; }
+        public override Task ExecuteAsync()
+        {
+            Write("<partial>\u00e9");
+            return render(CancellationToken);
+        }
+        public override void Dispose()
+        {
+            WasDisposed = true;
+            base.Dispose();
+        }
     }
 
     private sealed class Empty : RazorSlice
@@ -255,6 +340,19 @@ public class RazorSliceTagHelperTests
             var context = manager.Begin("template", TagMode.StartTagAndEndTag, "template", static () => Task.CompletedTask);
             context.Add(CreateTagHelper<LayoutTemplateAdapter>());
             await _runner.RunAsync(context);
+        }
+
+        internal async Task RenderPartialTagAsync(RazorSliceBase? partial)
+        {
+            var manager = _manager ??= new(StartTagHelperWritingScope, EndTagHelperWritingScope);
+            var context = manager.Begin("partial", TagMode.SelfClosing, "partial",
+                static () => throw new InvalidOperationException("The partial tag must not execute a body."));
+            var helper = CreateTagHelper<RazorSlicePartialTagHelper>();
+            helper.Slice = partial;
+            context.Add(helper);
+            await _runner.RunAsync(context);
+            Write(context.Output);
+            manager.End();
         }
 
         internal void Attributes(TagHelperExecutionContext context)

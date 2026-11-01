@@ -16,6 +16,9 @@
 <rs:notice show="@false">
     @{ throw new InvalidOperationException("A suppressed body must not execute."); }
 </rs:notice>
+<h2>Instance-based partials</h2>
+<rs:partial slice="@(global::RazorSlices.Samples.WebApp.Minimal.Greeting.Create(text))" />
+<rs:partial slice="@_FooterLinks.Create()" />
 @functions {
     public LayoutModel LayoutModel => new() { Title = "Streaming tag helpers" };
 }

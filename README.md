@@ -387,6 +387,27 @@ Then use `<rs:notice label="Summary">Body markup</rs:notice>` in a normal slice.
 receive typed values. `context.Attributes` exposes unbound attributes; explicitly forward each
 with a preceding space and `context.WriteAttribute(attribute)` when appropriate.
 
+The built-in `partial` Tag Helper renders an existing slice instance. Enable its discovery in
+the same scoped imports:
+
+```cshtml
+@addTagHelper RazorSlices.RazorSlicePartialTagHelper, RazorSlices
+```
+
+Then construct the slice using its normal, strongly typed factory:
+
+```cshtml
+<rs:partial slice="@Slices.TodoRow.Create(todo)" />
+<rs:partial slice="@Slices.EmptyState.Create()" />
+```
+
+Both `RazorSlice` and `RazorSliceBase` instances are accepted. Supply a fresh instance for each
+invocation: partial rendering owns its disposal, including when rendering fails. Like
+`RenderPartialAsync`, the tag streams to the caller's output with its encoder and cancellation
+token, shares the full slice's rendering services and helper graph, and does not render a layout.
+The tag has no body or wrapper markup, and a missing or null `slice` fails explicitly.
+It adds the SDK's normal Tag Helper overhead compared with calling `RenderPartialAsync` directly.
+
 For a `.cshtml` implementation, provide a public C# adapter discoverable by the SDK:
 
 ```csharp

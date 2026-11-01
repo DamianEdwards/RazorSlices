@@ -90,6 +90,9 @@ public sealed class RazorSliceTagHelperContext
     /// <summary>Renders a full slice inline, sharing the calling slice's output and helper graph.</summary>
     public ValueTask<HtmlString> RenderPartialAsync(RazorSlice partial) => Owner.RenderPartialAsync(partial);
 
+    /// <summary>Renders a full or minimal slice inline using the calling slice's output, encoder, and cancellation token.</summary>
+    public ValueTask<HtmlString> RenderPartialAsync(RazorSliceBase partial) => Owner.RenderPartialAsync(partial);
+
     /// <summary>Renders a model-free SDK-compiled slice inline.</summary>
     public ValueTask<HtmlString> RenderPartialAsync<TSlice>() where TSlice : IRazorSliceProxy
         => Owner.RenderPartialAsync<TSlice>();
