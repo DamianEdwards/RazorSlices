@@ -32,7 +32,7 @@ public class TagHelperTests
     [InlineData(true)]
     public async Task TemplateBodiesStreamAndAttributeHelpersUseTheCallingWriter(bool pipe)
     {
-        using var services = new ServiceCollection().AddSingleton<RazorSliceTagHelperHtml>().BuildServiceProvider();
+        using var services = new ServiceCollection().AddRazorSlicesTagHelpers().BuildServiceProvider();
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var slice = SliceTags.StreamingProbe.Create(async () =>
@@ -90,7 +90,7 @@ public class TagHelperTests
     [Fact]
     public async Task TemplateBodyFailurePropagatesAndDoesNotRenderClosingMarkup()
     {
-        using var services = new ServiceCollection().AddSingleton<RazorSliceTagHelperHtml>().BuildServiceProvider();
+        using var services = new ServiceCollection().AddRazorSlicesTagHelpers().BuildServiceProvider();
         var failure = new InvalidOperationException("body failed");
         var slice = SliceTags.StreamingProbe.Create(() => Task.FromException(failure));
         slice.ServiceProvider = services;

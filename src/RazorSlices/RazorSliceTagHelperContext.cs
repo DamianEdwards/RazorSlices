@@ -56,6 +56,11 @@ public sealed class RazorSliceTagHelperContext
     /// <summary>Writes trusted markup without HTML encoding.</summary>
     public void WriteLiteral(string? value) => Owner.WriteLiteral(value);
 
+#if !RAZOR_SLICES_DISABLE_UTF8_LITERAL_OVERLOAD
+    /// <summary>Writes trusted UTF-8 markup without decoding it for pipe output.</summary>
+    public void WriteLiteral(ReadOnlySpan<byte> value) => Owner.WriteLiteral(value);
+#endif
+
     /// <summary>Writes a value with the slice's normal formatting and HTML-content semantics.</summary>
     public void Write<T>(T? value) => Owner.Write(value);
 

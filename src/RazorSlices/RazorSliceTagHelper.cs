@@ -49,9 +49,10 @@ public abstract class RazorSliceTagHelper : TagHelper
     protected abstract ValueTask RenderAsync(RazorSliceTagHelperContext context);
 }
 
-/// <summary>A discoverable C# adapter that renders a model-based SDK-compiled Razor Slice as a Tag Helper.</summary>
+/// <summary>A discoverable C# adapter that renders a model-based SDK-compiled Razor Slice fragment as a Tag Helper.</summary>
 /// <typeparam name="TSlice">The generated slice proxy.</typeparam>
 /// <typeparam name="TModel">The template's model, which may carry its Tag Helper context.</typeparam>
+/// <remarks>The template must not use a layout; attempting to render one throws <see cref="NotSupportedException"/>.</remarks>
 public abstract class RazorSliceTagHelper<TSlice, TModel> : RazorSliceTagHelper
     where TSlice : IRazorSliceProxy<TModel>
 {
@@ -61,6 +62,14 @@ public abstract class RazorSliceTagHelper<TSlice, TModel> : RazorSliceTagHelper
     /// <inheritdoc />
     protected sealed override async ValueTask RenderAsync(RazorSliceTagHelperContext context)
     {
-        await context.RenderPartialAsync<TSlice, TModel>(CreateModel(context));
+#pragma warning disable CA2000 // Disposed on layout rejection or by RenderPartialAsync.
+        var template = TSlice.CreateSlice(CreateModel(context));
+        if (template is IUsesLayout)
+        {
+            template.Dispose();
+            throw new NotSupportedException("A .cshtml Tag Helper template must be a fragment and cannot use a layout.");
+        }
+        await context.RenderPartialAsync(template);
+#pragma warning restore CA2000
     }
 }

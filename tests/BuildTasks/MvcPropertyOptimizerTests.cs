@@ -158,6 +158,7 @@ public class MvcPropertyOptimizerTests
 
     [Theory]
     [InlineData("Link", "Tags/_ViewImports.cshtml", "/Tags/Page.cshtml", true, false)]
+    [InlineData("Link", ".\\Tags\\_ViewImports.cshtml", "/Tags/Page.cshtml", true, false)]
     [InlineData("Link", "Tags/Page.cshtml", "/Tags/Page.cshtml", true, false)]
     [InlineData("Link", "Tags/Page.cshtml", "/Tags/Other.cshtml", false, false)]
     [InlineData("Link", "Tags/_ViewImports.cshtml", "/TagsOther/Page.cshtml", false, false)]
@@ -188,6 +189,36 @@ public class MvcPropertyOptimizerTests
             Assert.Equal(genericRetained, GetType(module, nameof(GenericSlice)).Properties.Any(property => property.Name == "Json"));
         }
         finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    [Fact]
+    public void ExplicitInjectionsFollowDotPrefixedRazorItemIdentities()
+    {
+        var directoryName = ".RazorSlices-" + Guid.NewGuid().ToString("N");
+        var directory = Path.Combine(Environment.CurrentDirectory, directoryName, "Tags");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var import = Path.Combine(directory, "_ViewImports.cshtml");
+            File.WriteAllText(import, "@inject Microsoft.AspNetCore.Mvc.Rendering.IJsonHelper Json");
+            var identity = $".\\{directoryName}\\Tags\\_ViewImports.cshtml";
+            var scopes = new RazorInjectionScopes([new TaskItem(identity)]);
+
+            using var resolver = CreateResolver();
+            using var module = ReadFixture(resolver);
+            var template = GetType(module, nameof(UnusedSlice));
+            var metadata = template.CustomAttributes.Single(attribute =>
+                attribute.AttributeType.FullName == "Microsoft.AspNetCore.Razor.Hosting.RazorCompiledItemMetadataAttribute");
+            metadata.ConstructorArguments[1] = new CustomAttributeArgument(module.TypeSystem.String, $"/{directoryName}/Tags/Page.cshtml");
+            MvcPropertyOptimizer.Remove(module, scopes.ForTemplate, _ => { });
+
+            Assert.Contains(template.Properties, property => property.Name == "Json");
+            Assert.DoesNotContain(GetType(module, nameof(GenericSlice)).Properties, property => property.Name == "Json");
+        }
+        finally
+        {
+            Directory.Delete(Path.Combine(Environment.CurrentDirectory, directoryName), recursive: true);
+        }
     }
 
     [Theory]

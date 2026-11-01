@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Razor.Runtime.TagHelpers;
 using Microsoft.AspNetCore.Razor.TagHelpers;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RazorSlices.Tests;
 
@@ -77,6 +78,14 @@ public class RazorSliceTagHelperTests
     }
 
     [Fact]
+    public async Task TemplateAdapterRejectsLayoutBackedSlices()
+    {
+        var slice = new Host(static host => host.RenderLayoutTemplateAsync());
+        var error = await Assert.ThrowsAsync<NotSupportedException>(async () => await slice.RenderAsync(TextWriter.Null));
+        Assert.Contains("fragment", error.Message);
+    }
+
+    [Fact]
     public async Task ConditionalAndDataAttributesPreserveSdkEncodingAndSuppression()
     {
         var slice = new Host(host => host.TagAsync(Wrap, static () => Task.CompletedTask, host.Attributes));
@@ -126,6 +135,18 @@ public class RazorSliceTagHelperTests
             field => field.FieldType.Name.Contains("TagHelper", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void AddRazorSlicesTagHelpersRegistersTheRequiredServiceOnce()
+    {
+        var services = new ServiceCollection();
+        Assert.Same(services, services.AddRazorSlicesTagHelpers());
+        services.AddRazorSlicesTagHelpers();
+
+        using var provider = services.BuildServiceProvider();
+        Assert.IsType<RazorSliceTagHelperHtml>(provider.GetRequiredService<RazorSliceTagHelperHtml>());
+        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(RazorSliceTagHelperHtml));
+    }
+
 #if DEBUG
     [Fact(Skip = "Debug tracing allocates; measure unused-feature rendering in Release.")]
 #else
@@ -159,6 +180,31 @@ public class RazorSliceTagHelperTests
     {
         internal Func<RazorSliceTagHelperContext, ValueTask> Callback { get; set; } = null!;
         protected override ValueTask RenderAsync(RazorSliceTagHelperContext context) => Callback(context);
+    }
+
+    private sealed class LayoutTemplateAdapter : RazorSliceTagHelper<LayoutTemplateProxy, string>
+    {
+        protected override string CreateModel(RazorSliceTagHelperContext context) => "model";
+    }
+
+    private sealed class LayoutTemplateProxy : IRazorSliceProxy<string>
+    {
+        public static RazorSlice<string> CreateSlice(string model) => new LayoutTemplate { Model = model };
+    }
+
+    private sealed class LayoutTemplate : RazorSlice<string>, IUsesLayout<LayoutProxy>
+    {
+        public override Task ExecuteAsync() => Task.CompletedTask;
+    }
+
+    private sealed class LayoutProxy : IRazorSliceProxy
+    {
+        public static RazorSlice CreateSlice() => new EmptyLayout();
+    }
+
+    private sealed class EmptyLayout : RazorLayoutSlice
+    {
+        public override Task ExecuteAsync() => Task.CompletedTask;
     }
 
     private sealed class Empty : RazorSlice
@@ -200,6 +246,14 @@ public class RazorSliceTagHelperTests
                 helper.Callback = callback;
                 context.Add(helper);
             }
+            await _runner.RunAsync(context);
+        }
+
+        internal async Task RenderLayoutTemplateAsync()
+        {
+            var manager = _manager ??= new(StartTagHelperWritingScope, EndTagHelperWritingScope);
+            var context = manager.Begin("template", TagMode.StartTagAndEndTag, "template", static () => Task.CompletedTask);
+            context.Add(CreateTagHelper<LayoutTemplateAdapter>());
             await _runner.RunAsync(context);
         }
 

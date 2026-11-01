@@ -88,7 +88,9 @@ internal sealed class RazorInjectionScopes
         foreach (var file in files)
         {
             var names = new HashSet<string>(StringComparer.Ordinal);
-            foreach (Match match in Regex.Matches(File.ReadAllText(file.ItemSpec),
+            var sourcePath = file.GetMetadata("FullPath");
+            if (string.IsNullOrEmpty(sourcePath)) { sourcePath = file.ItemSpec; }
+            foreach (Match match in Regex.Matches(File.ReadAllText(sourcePath),
                 @"@inject\b[^\r\n]*\b(Html|Json|Component|Url|ModelExpressionProvider)\b"))
             {
                 names.Add(match.Groups[1].Value);
@@ -107,10 +109,27 @@ internal sealed class RazorInjectionScopes
                 _global.UnionWith(names);
                 continue;
             }
-            path = "/" + path.Replace('\\', '/').TrimStart('/');
+            path = NormalizeLogicalPath(path);
+            if (path is null)
+            {
+                _global.UnionWith(names);
+                continue;
+            }
             var import = path.EndsWith("/_ViewImports.cshtml", StringComparison.OrdinalIgnoreCase);
             _scopes.Add((import ? path.Substring(0, path.LastIndexOf('/') + 1) : path, import, names));
         }
+    }
+
+    private static string? NormalizeLogicalPath(string path)
+    {
+        var segments = new List<string>();
+        foreach (var segment in path.Replace('\\', '/').Split('/'))
+        {
+            if (segment.Length == 0 || segment == ".") { continue; }
+            if (segment == "..") { return null; }
+            segments.Add(segment);
+        }
+        return segments.Count == 0 ? null : "/" + string.Join("/", segments);
     }
 
     internal ISet<string> ForTemplate(TypeDefinition type)

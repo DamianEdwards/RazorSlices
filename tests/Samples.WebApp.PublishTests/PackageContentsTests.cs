@@ -11,9 +11,11 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
     {
         var projectPath = Path.Combine(PathHelper.RepoRoot, "src", "RazorSlices", "RazorSlices.csproj");
         var outputDir = Path.Combine(PathHelper.ArtifactsDir, "TestOutput", Path.GetRandomFileName(), "pack");
+        var buildArtifactsDir = Path.Combine(outputDir, "build-artifacts");
         Directory.CreateDirectory(outputDir);
 
-        var packOutput = DotNetCli.Pack(projectPath, outputDir, testOutput);
+        DotNetCli.Restore([projectPath, "-p:ArtifactsPath=" + buildArtifactsDir], testOutput);
+        var packOutput = DotNetCli.Pack(projectPath, outputDir, testOutput, "-p:ArtifactsPath=" + buildArtifactsDir);
         testOutput.WriteLine(packOutput);
 
         var nupkgFiles = Directory.GetFiles(outputDir, "*.nupkg");
@@ -86,6 +88,27 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
                 void Values<T>(T value, params string[] rest) where T : IFormattable;
             }
             """);
+        File.WriteAllText(Path.Combine(producer, "NoticeTagHelper.cs"), """
+            using Microsoft.AspNetCore.Razor.TagHelpers;
+            using RazorSlices;
+
+            namespace SharedHelpers;
+
+            [HtmlTargetElement("shared-notice")]
+            public sealed class NoticeTagHelper : RazorSliceTagHelper
+            {
+                public string Label { get; set; } = "";
+
+                protected override async ValueTask RenderAsync(RazorSliceTagHelperContext context)
+                {
+                    context.WriteLiteral("<aside>");
+                    context.Write(Label);
+                    context.WriteLiteral(": ");
+                    await context.RenderBodyAsync();
+                    context.WriteLiteral("</aside>");
+                }
+            }
+            """);
         File.WriteAllText(Path.Combine(producer, "Ui.cshtml"), """
             @using RazorSlices
             @using SharedHelpers
@@ -142,6 +165,8 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
         File.WriteAllText(Path.Combine(consumer, "Host.cshtml"), """
             @using RazorSlices
             @using SharedHelpers
+            @tagHelperPrefix rs:
+            @addTagHelper *, SharedHelpers
             @inherits RazorSlice
             @inject ISliceProbe Probe
             @inject IOptionalProbe? Optional
@@ -151,20 +176,24 @@ public class PackageContentsTests(ITestOutputHelper testOutput)
             @await Helpers.Ui.TaskGreetingAsync("task")
             @Helpers.Ui.Values(42, "one", "two")
             @await RenderPartialAsync(SharedHelpers.Lean.Create("<lean>"))
+            <rs:shared-notice label="<package-tag>">tag body</rs:shared-notice>
             """);
         File.WriteAllText(Path.Combine(consumer, "Program.cs"), """
             using RazorSlices;
             using SharedHelpers;
             using Microsoft.Extensions.DependencyInjection;
             using var services = new ServiceCollection()
-                .AddScoped<ISliceProbe, SliceProbe>().BuildServiceProvider();
+                .AddScoped<ISliceProbe, SliceProbe>()
+                .AddRazorSlicesTagHelpers()
+                .BuildServiceProvider();
             using var scope = services.CreateScope();
             var host = Consumer.Host.Create();
             host.ServiceProvider = scope.ServiceProvider;
             var html = await host.RenderAsync();
             if (!html.Contains("<p>&lt;package&gt;: 42</p>") ||
                 !html.Contains("async loaded: 43") || !html.Contains("task task") || !html.Contains("42 2") ||
-                !html.Contains("<em>&lt;lean&gt;</em>"))
+                !html.Contains("<em>&lt;lean&gt;</em>") ||
+                !html.Contains("<aside>&lt;package-tag&gt;: tag body</aside>"))
             {
                 throw new InvalidOperationException(html);
             }

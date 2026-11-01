@@ -411,8 +411,10 @@ With these declarations in `MyApp`, implement `Slices/Card.cshtml` as an ordinar
 ```
 
 The adapter is necessary because the SDK does not discover same-project Tag Helpers from
-generated `.cshtml` types alone. The template retains normal slice encoding, partials, layouts,
-helpers, and property injection, with the additional template/model activation costs.
+generated `.cshtml` types alone. The template retains normal slice encoding, partials, helpers,
+and property injection, with the additional template/model activation costs. It is rendered as
+a fragment, so it must not declare or implement a layout; the adapter rejects layout-backed
+templates rather than silently skipping their layout.
 
 Only **one rendering helper per element** is allowed; nesting is supported. A body can be
 rendered once at the current output position, or omitted without executing it. It cannot be
@@ -423,7 +425,7 @@ an asynchronous body completes. HTTP results start the response before rendering
 headers, cookies, and antiforgery tokens before result execution.
 
 Dynamic unbound `data-*` attributes cause the SDK to call its injected `Html.Raw` helper.
-For those templates, register `builder.Services.AddSingleton<RazorSliceTagHelperHtml>()` and add
+For those templates, register `builder.Services.AddRazorSlicesTagHelpers()` and add
 `@inject RazorSliceTagHelperHtml Html` to the template or its scoped imports. This tiny replacement
 does not require MVC services. Like any injection, it adds property storage and activation work
 to every template inheriting that import, even one whose tag branch is skipped.

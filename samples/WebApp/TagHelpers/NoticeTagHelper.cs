@@ -11,17 +11,17 @@ public sealed class NoticeTagHelper : RazorSliceTagHelper
     protected override async ValueTask RenderAsync(RazorSliceTagHelperContext context)
     {
         if (!Show) { return; }
-        context.WriteLiteral("<aside");
+        context.WriteLiteral("<aside"u8);
         foreach (var attribute in context.Attributes)
         {
-            context.WriteLiteral(" ");
+            context.WriteLiteral(" "u8);
             context.WriteAttribute(attribute);
         }
-        context.WriteLiteral("><strong>");
+        context.WriteLiteral("><strong>"u8);
         context.Write(Label);
-        context.WriteLiteral("</strong>");
+        context.WriteLiteral("</strong>"u8);
         await context.RenderBodyAsync();
-        context.WriteLiteral("</aside>");
+        context.WriteLiteral("</aside>"u8);
     }
 }
 
