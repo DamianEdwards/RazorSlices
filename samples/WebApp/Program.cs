@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using RazorSlices;
 using RazorSlices.Samples.WebApp;
 using RazorSlices.Samples.WebApp.Services;
 
@@ -13,6 +14,8 @@ builder.WebHost.UseKestrelHttpsConfiguration();
 
 builder.Services.AddWebEncoders();
 builder.Services.AddSingleton<LoremService>();
+builder.Services.AddRazorSliceTempData();
+builder.Services.AddAntiforgery();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default);

@@ -11,7 +11,7 @@ namespace RazorSlices.SourceGenerator;
 internal static class RazorSliceActivationGenerator
 {
     internal static readonly DiagnosticDescriptor RuntimeFallback = new(
-        "RSG0003", "Runtime slice activation",
+        "RSLICE0003", "Runtime slice activation",
         "Slice activation will use runtime discovery: {0}", "RazorSlices", DiagnosticSeverity.Info, true);
 
     private static readonly SymbolDisplayFormat TypeFormat = SymbolDisplayFormat.FullyQualifiedFormat

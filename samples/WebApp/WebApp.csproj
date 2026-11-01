@@ -8,6 +8,7 @@
     <AssemblyName>RazorSlices.Samples.WebApp</AssemblyName>
     <RootNamespace>RazorSlices.Samples.WebApp</RootNamespace>
     <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);RSLICE0200</NoWarn>
     <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>

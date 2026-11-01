@@ -61,6 +61,7 @@ dotnet run --project samples/WebApp
 
 ## Conventions
 
+- **Diagnostics use `RSLICE` followed by four digits.** Reserve `RSLICE0000`-`RSLICE0099` for slice generation/activation, `RSLICE0100`-`RSLICE0199` for helper generation/analyzers, and `RSLICE0200`-`RSLICE0299` for experimental API opt-in. `RSLICE0200` identifies experimental TempData. Allocate other diagnostic families outside these ranges.
 - **Source generator targets `netstandard2.0`** — required by Roslyn. No `Span<T>`, no modern .NET APIs. Uses `LangVersion: Latest` for language features.
 - **Library targets `net8.0`** with ASP.NET Core framework reference.
 - **Central package management** via `Directory.Packages.props`.
@@ -83,7 +84,7 @@ The `RazorSliceProxyGenerator` is an `IIncrementalGenerator` that:
 ### Slice Activation
 Generated full-slice proxies use `RazorSliceFactory.Create` with a static constructor callback and a generated per-type initialization plan. There is no runtime constructor, model-property, or injection discovery on the normal generated path. Unsupported injection shapes retain cached runtime discovery (compiled assignments on JIT, reflection on AOT). Hot Reload replacement types use reflective construction and replacement-specific injection metadata published together.
 
-Minimal slices use `RazorSliceBaseFactory` and `IRazorSliceBaseProxy` contracts, with constructor replacement for Hot Reload but no injection plan. `RazorSlice<T>` still derives from `RazorSlice`; `RazorSliceBase<T>` derives directly from the minimal base. Both generic branches declare `Model`. `RSG0004` rejects effective or inherited injection/layout declarations on minimal slices.
+Minimal slices use `RazorSliceBaseFactory` and `IRazorSliceBaseProxy` contracts, with constructor replacement for Hot Reload but no injection plan. `RazorSlice<T>` still derives from `RazorSlice`; `RazorSliceBase<T>` derives directly from the minimal base. Both generic branches declare `Model`. `RSLICE0004` rejects effective or inherited injection/layout declarations on minimal slices.
 
 `RazorSliceBase` implements `IResult` and owns status code, content type, and optional encoder state. Only full slices retain `HttpContext`; direct minimal results do not allocate an adapter. Setting `HtmlEncoder` explicitly avoids resolving request services during HTTP execution.
 

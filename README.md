@@ -75,6 +75,175 @@
 
     This will configure the Razor Slices source generator to only generate proxy types for *.cshtml* files in the *Slices* directory in your project.
 
+## Route-handler TempData
+
+Use `TempData` to carry typed values across requests, such as a flash message after a redirect. **This API is experimental:** its design and payload format may change between releases. Opt in by suppressing diagnostic `RSLICE0200` in your application project:
+
+```xml
+<PropertyGroup>
+  <NoWarn>$(NoWarn);RSLICE0200</NoWarn>
+</PropertyGroup>
+```
+
+Register the services, accept a `TempData` parameter in your handler, and add `.WithTempData()`:
+
+```csharp
+using RazorSlices;
+
+builder.Services.AddRazorSliceTempData();
+
+app.MapPost("/save", (TempData tempData) =>
+{
+    tempData.Set("message", "Changes saved.");
+    return TypedResults.Redirect("/");
+}).WithTempData();
+
+app.MapGet("/", RazorSlice (TempData tempData) =>
+    Slices.Home.Create(tempData.GetString("message")))
+    .WithTempData();
+```
+
+Values are saved automatically. Reading a value consumes it, so the next request no longer sees it. Protect form POSTs with the [antiforgery helper](#antiforgery-form-helper) below.
+
+### Typed values
+
+```csharp
+tempData.Set("count", 42);
+tempData.Set("success", true);
+tempData.Set("savedAt", DateTimeOffset.UtcNow);
+tempData.Set("id", Guid.NewGuid());
+
+var count = tempData.Get<int>("count");
+var success = tempData.Get<bool>("success");
+var savedAt = tempData.Get<DateTimeOffset>("savedAt");
+
+if (tempData.TryGet<Guid>("id", out var id))
+{
+    // Use the identifier.
+}
+```
+
+Missing keys return the type's default value (`null` for strings). `TryGet` distinguishes missing keys from a stored default. Reading the wrong type throws without consuming the value. Strings remain strings, even when they look like dates or GUIDs.
+
+Built-in values are stored without formatting or boxing; strings and `BigInteger` retain their existing data. Only values retained for the next request are encoded when saving. Custom UTF-8 types use the eager formatting path below.
+
+For custom types implementing both `IUtf8SpanFormattable` and `IUtf8SpanParsable<T>`, use the UTF-8 APIs:
+
+```csharp
+tempData.SetUtf8("reference", reference);
+var restored = tempData.GetUtf8<MyReference>("reference");
+var retained = tempData.GetUtf8<MyReference>("reference", consume: false);
+```
+
+Custom formatting and parsing must round-trip using invariant culture and the default format.
+
+### Keeping values
+
+Use `Peek` to read without consuming, or `Keep` to retain a value you have already read:
+
+```csharp
+var message = tempData.Peek("message");
+var count = tempData.Peek<int>("count");
+
+var notice = tempData.GetString("notice");
+tempData.Keep("notice");
+
+tempData.Keep(); // Retain all values.
+```
+
+Redirects do not automatically retain values that you have read.
+
+### Route groups and cookie options
+
+Apply `.WithTempData()` once to a group instead of each endpoint:
+
+```csharp
+var pages = app.MapGroup("/pages").WithTempData();
+
+pages.MapGet("/home", RazorSlice (TempData tempData) =>
+    Slices.Home.Create(tempData.GetString("message")));
+```
+
+TempData uses cookies by default. Configure them during registration:
+
+```csharp
+builder.Services.AddRazorSliceTempData(options =>
+{
+    options.Cookie.Name = "MyApp.TempData";
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+});
+```
+
+Keep cookie values small. Supported values are nullable strings, booleans, numeric types (including `Half`, `Int128`, and `BigInteger`), date/time types, GUIDs, and custom UTF-8-formattable/parsable types. Collections, arbitrary objects, and enums are not supported. Keys are case-insensitive strings.
+
+RazorSlices TempData is independent of MVC TempData and does not share its cookies, session keys, or payload format. To use ASP.NET Core session instead of cookies:
+
+```csharp
+builder.Services.AddDistributedMemoryCache(); // Or a distributed cache for production.
+builder.Services.AddSession();
+builder.Services.AddSingleton<IRazorSliceTempDataProvider, RazorSliceSessionTempDataProvider>();
+builder.Services.AddRazorSliceTempData();
+
+// After building the app, before endpoints:
+app.UseSession();
+```
+
+With a remote session cache, call `await context.Session.LoadAsync(context.RequestAborted)` before accessing TempData. Register a custom `IRazorSliceTempDataProvider` to use another storage mechanism.
+
+**Use TempData only in the handler, before returning a result.** Pass retrieved values into the slice model, not the `TempData` object. Missing `.WithTempData()`, template-time access, or access after the response starts throws. Async handlers are supported; handlers that write directly to the response are not supported when using TempData.
+
+### Antiforgery form helper
+
+Register ASP.NET Core antiforgery and apply `.WithAntiforgery()` to the form's GET and POST endpoints. If using TempData, apply it before `.WithTempData()`:
+
+```csharp
+builder.Services.AddAntiforgery();
+builder.Services.AddRazorSliceTempData();
+
+var forms = app.MapGroup("/tempdata").WithAntiforgery().WithTempData();
+
+forms.MapGet("", RazorSlice (TempData tempData) =>
+    Slices.TempDataDemo.Create(tempData.GetString("message")));
+
+forms.MapPost("", (TempData tempData) =>
+{
+    tempData.Set("message", "Changes saved.");
+    return TypedResults.Redirect("/tempdata");
+});
+```
+
+In the slice, keep the ordinary HTML form and add the hidden token with one helper call:
+
+```cshtml
+@using RazorSlices
+
+<form method="post" action="/tempdata">
+    @Helpers.FormHelpers.AntiforgeryToken(HttpContext)
+    <button type="submit">Save</button>
+</form>
+```
+
+No `@inject` or token model is needed. Invalid POST tokens return HTTP 400, and missing `.WithAntiforgery()` causes the helper to throw. The example above has no form-bound parameters, so its filter can validate requests without antiforgery middleware. Return a result from the handler rather than writing the response directly.
+
+**Handlers with `[FromForm]`, `IFormFile`, or `IFormFileCollection` also require `UseAntiforgery()` middleware.** Configure it after routing and authentication/authorization (if present), before endpoints:
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+
+app.UseRouting();
+app.UseAntiforgery();
+
+forms.MapPost("/message", (TempData tempData, [FromForm] string message) =>
+{
+    tempData.Set("message", message);
+    return TypedResults.Redirect("/tempdata");
+});
+```
+
+`.WithAntiforgery()` prepares tokens for the slice and validates requests during filter execution; it does not replace the middleware required for form parameter binding.
+
+Visit `/tempdata` in the WebApp sample for the complete form and flash-message example.
+
 ## Installation
 
 ### NuGet Releases
@@ -260,7 +429,7 @@ An explicit lambda return type, as above, lets the ASP.NET Core request-delegate
 without needing to inspect the proxy emitted by the Razor Slices generator in the same compilation.
 
 Minimal slices do not support `@inject`, helpers, layouts, sections, partial calls of their own, or templated Razor
-delegates requiring a writer stack. The generator reports `RSG0004` for effective injections and layouts, including
+delegates requiring a writer stack. The generator reports `RSLICE0004` for effective injections and layouts, including
 inherited declarations; keep minimal templates outside import hierarchies that inject services. Choose `RazorSlice`
 when those features are needed. The protected virtual rendering pipeline permits custom bases to add lifecycle
 behavior without adding application state to every minimal slice.
