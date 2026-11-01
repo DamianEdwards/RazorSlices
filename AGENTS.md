@@ -1,0 +1,112 @@
+# AGENTS.md
+
+## Project Overview
+
+**RazorSlices** is a lightweight Razor-based template library for ASP.NET Core without MVC, Razor Pages, or Blazor. It's optimized for high-performance, unbuffered rendering with low allocations and is compatible with trimming and native AOT.
+
+## Repository Structure
+
+```
+src/
+  RazorSlices/                    # Main library (net10.0, ASP.NET Core framework ref)
+  SourceGenerator/                # Roslyn incremental source generator (netstandard2.0)
+samples/
+  WebApp/                         # Main sample app (multi-TFM: net10.0, net11.0)
+  PagesAndSlices/                 # Sample showing Razor Pages + Slices coexistence
+  RazorClassLibrary/              # Sample Razor Class Library
+tests/
+  RazorSlices/                    # Unit tests for library
+  SourceGenerator/                # Unit tests for source generator
+  Samples.WebApp/                 # Integration tests (WebApplicationFactory)
+  Samples.WebApp.PublishTests/    # Publish/AOT tests
+  Benchmarks/                     # Benchmarks (BenchmarkDotNet)
+  BenchmarksWebApps/              # Benchmark projects
+```
+
+## Key Files
+
+- `src/RazorSlices/IRazorSliceProxy.cs` — Interfaces for generated proxy types (`IRazorSliceProxy` for no-model, `IRazorSliceProxy<TModel>` for model slices)
+- `src/RazorSlices/IResultExtensions.cs` — `Results.RazorSlice<T>()` extension methods
+- `src/RazorSlices/IUsesLayout.cs` — Layout support interfaces
+- `src/RazorSlices/RazorSliceFactory.cs` — Invokes generated constructor callbacks, caches property injection, and handles Hot Reload replacement types
+- `src/RazorSlices/RazorSlice.cs` — Feature-rich base with helpers, layouts, partials, DI, and HTTP results
+- `src/RazorSlices/RazorSliceBase.cs` — Minimal streaming core with HTTP results; no DI, helpers, layouts, or partials
+- `src/RazorSlices/RazorSliceHelperCache.cs` — Render-graph helper cache with inline/small-array/dictionary storage
+- `src/RazorSlices/RazorSliceTagHelper.cs` — Experimental streaming Tag Helper contract and typed `.cshtml` adapter
+- `src/BuildTasks/RemoveMvcDefaultInjectedProperties.cs` — Optimized-build removal of unused MVC default properties from SDK slices and helper implementations
+- `src/RazorSlices/RazorSlice.Partials.cs` — Partial rendering support
+- `src/SourceGenerator/RazorSliceProxyGenerator.cs` — The incremental source generator
+- `src/SourceGenerator/RazorDirectiveParser.cs` — Parses @inherits/@using from .cshtml
+- `src/SourceGenerator/ViewImportsResolver.cs` — Hierarchical _ViewImports resolution
+- `src/SourceGenerator/ModelTypeResolver.cs` — Resolves model types to FQN via Compilation
+- `src/RazorSlices/build/RazorSlices.props` — MSBuild properties for consumers
+- `src/RazorSlices/build/RazorSlices.targets` — MSBuild targets that configure AdditionalTexts for the generator
+- `src/Directory.Build.props` — Version and package metadata
+
+## Build & Test
+
+```shell
+# Build entire solution
+dotnet build
+
+# Run all tests
+dotnet test
+
+# Run specific test project
+dotnet test tests/SourceGenerator
+dotnet test tests/Samples.WebApp
+
+# Run the sample web app
+dotnet run --project samples/WebApp
+```
+
+## Conventions
+
+- **Diagnostics use `RSLICE` followed by four digits.** Reserve `RSLICE0000`-`RSLICE0099` for slice generation/activation, `RSLICE0100`-`RSLICE0199` for helper generation/analyzers, and `RSLICE0200`-`RSLICE0299` for experimental API opt-in. `RSLICE0200` identifies experimental TempData. Allocate other diagnostic families outside these ranges.
+- **Source generator targets `netstandard2.0`** — required by Roslyn. No `Span<T>`, no modern .NET APIs. Uses `LangVersion: Latest` for language features.
+- **Library targets `net10.0`** with ASP.NET Core framework reference; .NET 10/11 consumers are tested.
+- **Tooling floor is .NET 10 / VS 18.0 / Roslyn 5.0.** Build tasks and generators remain `netstandard2.0`.
+- **Runtime Async is consumer-controlled.** `RazorSlicesTestRuntimeAsync=true` enables it only in net11.0 test/sample projects; package imports and the shipped library do not enable it.
+- **Central package management** via `Directory.Packages.props`.
+- **Versioning** in `src/Directory.Build.props` (`VersionPrefix`).
+- **Generated proxy classes** are `public sealed` by default. Set `RazorSliceProxiesSealed=false` to make them `public partial`.
+- **`_ViewImports.cshtml`** files are inherited hierarchically — child directories inherit directives from parents up to the project root. `@inherits` from the most specific file wins; `@using` accumulates.
+- All `.cshtml` files (except `_ViewImports` and `_ViewStart`) are automatically treated as Razor Slices unless `EnableDefaultRazorSlices` is set to `false`.
+
+## Architecture Notes
+
+### Source Generator Pipeline
+The `RazorSliceProxyGenerator` is an `IIncrementalGenerator` that:
+1. Collects all `.cshtml` `AdditionalText` files
+2. Filters to files with `GenerateRazorSlice=true` metadata
+3. Parses `@inherits` and `@using` directives from each file and its `_ViewImports.cshtml` hierarchy
+4. Resolves model types to fully-qualified names using the `Compilation`
+5. Generates proxy classes implementing `IRazorSliceProxy` (no model) or `IRazorSliceProxy<TModel>` (with model)
+6. Emits static callbacks that directly construct the compiled Razor types and initialize their models; the Razor compiler must expose these types to application code
+
+### Slice Activation
+Generated full-slice proxies use `RazorSliceFactory.Create` with a static constructor callback and a generated per-type initialization plan. There is no runtime constructor, model-property, or injection discovery on the normal generated path. Unsupported injection shapes retain cached runtime discovery (compiled assignments on JIT, reflection on AOT). Hot Reload replacement types use reflective construction and replacement-specific injection metadata published together.
+
+Minimal slices use `RazorSliceBaseFactory` and `IRazorSliceBaseProxy` contracts, with constructor replacement for Hot Reload but no injection plan. `RazorSlice<T>` still derives from `RazorSlice`; `RazorSliceBase<T>` derives directly from the minimal base. Both generic branches declare `Model`. `RSLICE0004` rejects effective or inherited injection/layout declarations on minimal slices.
+
+`RazorSliceBase` implements `IResult` and owns status code, content type, and optional encoder state. Only full slices retain `HttpContext`; direct minimal results do not allocate an adapter. Setting `HtmlEncoder` explicitly avoids resolving request services during HTTP execution.
+
+Optimized builds remove unused default MVC injected properties from internal SDK templates across the full/minimal/helper hierarchies. Explicit injections, referenced members, public templates, and friend-assembly exposure are retained. `RazorSlicesRemoveMvcDefaultInjectedProperties=false` disables rewriting; Hot Reload uses unoptimized builds. Release SDK allocation expectations exclude the removed five reference fields.
+
+Helpers are built into `RazorSlice`: no DI registration or injection is needed. Instances are lazy and shared throughout one root render graph, including partials, layouts, sections, and helper composition. Independent roots do not share a helper cache. Rendering is sequential/nested; concurrent graph use is undefined.
+
+Experimental Tag Helpers also use `RazorSlice`, without new base fields; `RazorSliceBase` and `RazorSliceHelpers` do not consume tag syntax. Implementations derive from `RazorSliceTagHelper` and are constructed per invocation. Only one renderer may match an element, and its body streams once or is omitted; MVC capture/edit/replay semantics are unavailable. Public C# adapters expose model-based `.cshtml` slices to SDK discovery without inspecting generated methods. Dynamic unbound `data-*` attributes need scoped `@inject RazorSliceTagHelperHtml Html` and `AddRazorSlicesTagHelpers()` service registration. Explicit MVC-default injection preservation follows logical template/import scopes, with project-wide preservation for unresolved paths.
+
+### Model Type Resolution
+The generator resolves type names from Razor directives against the compilation:
+- Primitives (`bool`, `int`, etc.) → mapped to `global::System.*`
+- Using aliases (`Models = Namespace.Type`) → expanded and resolved
+- Generic types (`Func<T1, T2>`) → parsed recursively, each argument resolved
+- Array types (`Todo[]`) → element type resolved, suffix preserved
+- Searched in: explicit `@using` namespaces, then implicit namespaces (`System`, `System.Collections.Generic`, etc.)
+
+### Key Interfaces
+- `IRazorSliceProxy` — no-model slices, has `static abstract RazorSlice CreateSlice()`
+- `IRazorSliceProxy<TModel>` — model slices, has `static abstract RazorSlice<TModel> CreateSlice(TModel model)`
+- `IUsesLayout<TLayout>` — layouts without models (constrains `TLayout : IRazorSliceProxy`)
+- `IUsesLayout<TLayout, TModel>` — layouts with models (constrains `TLayout : IRazorSliceProxy<TModel>`)

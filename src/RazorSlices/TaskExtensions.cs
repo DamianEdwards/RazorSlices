@@ -18,12 +18,12 @@ internal static class TaskExtensions
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool HandleSynchronousCompletion(this ValueTask task)
+    public static bool HandleSynchronousCompletion(this in ValueTask valueTask)
     {
-        if (task.IsCompletedSuccessfully)
+        if (valueTask.IsCompletedSuccessfully)
         {
             // Signal consumption to the IValueTaskSource
-            task.GetAwaiter().GetResult();
+            valueTask.GetAwaiter().GetResult();
             return true;
         }
         return false;

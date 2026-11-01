@@ -1,0 +1,32 @@
+@inherits RazorSlice
+@implements IUsesLayout<_Layout, LayoutModel>
+
+<h1 class="mt-5">Streaming response</h1>
+
+<p>The server flushes this message immediately, then sends a script every second to update it without any JavaScript libraries.</p>
+<p id="countdown" role="status">Counting down... <span id="countdown-value">10</span></p>
+<noscript>Enable JavaScript to see the countdown updates.</noscript>
+
+@await FlushAsync()
+
+@for (var count = 9; count >= 0; count--)
+{
+    await Task.Delay(TimeSpan.FromSeconds(1), CancellationToken);
+    <script>
+        document.getElementById('countdown-value').textContent = '@count';
+    </script>
+    @await FlushAsync()
+}
+
+@{
+    // Leave zero visible for a second before replacing the message.
+    await Task.Delay(TimeSpan.FromSeconds(1), CancellationToken);
+}
+<script>
+    document.getElementById('countdown').textContent = 'Countdown complete!';
+</script>
+@await FlushAsync()
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = "Streaming response" };
+}

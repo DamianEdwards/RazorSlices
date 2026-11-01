@@ -1,0 +1,90 @@
+﻿@using Microsoft.AspNetCore.Html
+@using Microsoft.AspNetCore.Mvc.Razor
+
+@inherits RazorSlice<bool>
+@implements IUsesLayout<_Layout, LayoutModel>
+
+@{
+    var async = Model;
+    Func<object?, HelperResult> tmpl = !async ?
+        @<p>
+            Hello from a templated Razor delegate! The following value was passed in: @item
+        </p>
+        :
+        @<p>
+            @{await Task.Yield();}
+            Hello from an async templated Razor delegate! The following value was passed in: @item
+        </p>;
+}
+
+<h1 class="mt-5">@Title()</h1>
+
+<div class="list-group">
+    <div class="list-group-item">
+        <p>This is from the page. What follows is from rendering the templated delegate declared on this slice:</p>
+        <figure>
+            <blockquote class="blockquote">
+                @tmpl(DateTime.Now)
+            </blockquote>
+            <figcaption class="blockquote-footer">
+                Rendered by the templated delegate
+            </figcaption>
+        </figure>
+    </div>
+    <div class="list-group-item">
+        <p>This is from the page. What follows is from rendering a templated method declared in the <code>@@functions</code> block on this slice:</p>
+        <figure>
+            <blockquote class="blockquote">
+                @if (!async)
+                {
+                    @Content(DateTime.Now)
+                }
+                else
+                {
+                    @await AsyncContent(DateTime.Now)
+                }
+            </blockquote>
+            <figcaption class="blockquote-footer">
+                Rendered by the templated method
+            </figcaption>
+        </figure>
+    </div>
+    <div class="list-group-item">
+        <p>This is from the page. What follows is from rendering a partial that has a templated delegated passed in as the model:</p>
+        <figure>
+            <blockquote class="blockquote">
+                @await RenderPartialAsync(_TemplatedPartial.Create(tmpl))
+            </blockquote>
+            <figcaption class="blockquote-footer">
+                Rendered by the partial
+            </figcaption>
+        </figure>
+    </div>
+</div>
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = Title() };
+
+    static string Title() => "Templated Razor Delegates/Methods";
+
+    private IHtmlContent Content<T>(T item)
+    {
+        <div>
+            Hello from a templated method! The following value was passed in: @item
+        </div>
+
+        // Returning HtmlContent.Empty makes it possible to call this using a Razor expression instead of a block
+        return HtmlString.Empty;
+    }
+
+    private async Task<IHtmlContent> AsyncContent<T>(T item)
+    {
+        await Task.Delay(16);
+        <div>
+            Hello from a templated async method! The following value was passed in: @item
+        </div>
+
+        // Returning HtmlContent.Empty makes it possible to call this using a Razor expression instead of a block
+        return HtmlString.Empty;
+    }
+}

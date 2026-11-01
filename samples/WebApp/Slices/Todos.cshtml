@@ -1,0 +1,20 @@
+@inherits DeepGenericTodosSliceBase<Models.Todo[]>
+@implements IUsesLayout<_Layout, LayoutModel>
+
+<h1 class="mt-5">Todos</h1>
+<table class="table">
+    <tr>
+        <th>Id</th>
+        <th>Title</th>
+        <th>Due by</th>
+        <th>Status</th>
+    </tr>
+    @foreach (var todo in Model)
+    {
+        @await RenderPartialAsync(_TodoRow.Create(todo))
+    }
+</table>
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = $"Todos ({Model.Length})" };
+}

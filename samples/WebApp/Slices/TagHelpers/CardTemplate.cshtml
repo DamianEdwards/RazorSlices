@@ -1,0 +1,5 @@
+@inherits RazorSlice<CardTagModel>
+<article class="card card-body">
+    <h2>@Model.Title</h2>
+    @await Model.Context.RenderBodyAsync()
+</article>

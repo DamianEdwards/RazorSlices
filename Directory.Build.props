@@ -2,6 +2,13 @@
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Benchmarks'">
+    <Optimize>true</Optimize>
   </PropertyGroup>
 
 </Project>

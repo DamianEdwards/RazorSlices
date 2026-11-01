@@ -17,7 +17,7 @@
         </ItemGroup>
 
         <!-- TF but no TFMs -> single sample (aka the default pathway) up until now -->
-        <ItemGroup Condition="'$(_IsSingleTargetTfm)' == 'true'">
+        <ItemGroup Condition="'$(_IsSingleTargetTfmNoRids)' == 'true'">
             <_SingleSamplePublish
                     Include="$(MSBuildProjectFullPath)"
                     AdditionalProperties="PublishDir=$(ArtifactsRoot)$(MSBuildProjectName)/$(TargetFramework)" />

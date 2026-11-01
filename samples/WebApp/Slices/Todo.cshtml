@@ -1,0 +1,21 @@
+﻿@using Microsoft.AspNetCore.Html
+
+@inherits TodoSliceBase
+@implements IUsesLayout<_Layout, LayoutModel>
+
+<a href="/">Back to all todos</a>
+<h1 class="mt-5">@Title(Model)</h1>
+@if (Model.DueBy is { } dueBy)
+{
+    <div class="text-muted">Due by @dueBy</div>
+}
+@if (Model.IsComplete)
+{
+    <div class="text-muted">Completed</div>
+}
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = Title(Model) };
+
+    static string Title(Models.Todo todo) => $"Todo {todo.Id}: {todo.Title}";
+}

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="PublishAot;PublishTrimmed;PublishSingleFile;PublishReadyToRun;SelfContained;RuntimeIdentifier">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>RazorSlices.SourceGenerator</AssemblyName>
+    <RootNamespace>RazorSlices.SourceGenerator</RootNamespace>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <LangVersion>Latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IsPackable>false</IsPackable>
+    <PublishAot>false</PublishAot>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <SelfContained>false</SelfContained>
+    <RuntimeIdentifier></RuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+
+    <InternalsVisibleTo Include="RazorSlices.SourceGenerator.Tests" />
+    <None Remove="AnalyzerReleases.Shipped.md;AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
+
+</Project>

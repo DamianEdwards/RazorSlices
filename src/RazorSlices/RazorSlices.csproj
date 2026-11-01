@@ -1,16 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageTags>ASP.NET Web MinimalApis IResult Razor templating templates</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <LangVersion>preview</LangVersion>
+    <PackageIcon>razorslices-icon.png</PackageIcon>
     <AnalysisMode>Recommended</AnalysisMode>
     <AnalysisModeReliability>All</AnalysisModeReliability>
     <AnalysisModePerformance>All</AnalysisModePerformance>
     <AnalysisModeSecurity>All</AnalysisModeSecurity>
+    <IsAotCompatible>true</IsAotCompatible>
+    <Configurations>Debug;Release;Benchmarks</Configurations>
+    <!-- Build task assemblies deliberately aren't application references under lib. -->
+    <NoWarn>$(NoWarn);NU5100</NoWarn>
+    <!-- Internal implementation uses its own experimental TempData APIs. Consumers opt in separately. -->
+    <NoWarn>$(NoWarn);RSLICE0200</NoWarn>
+    <AssemblyName Condition=" '$(Configuration)' == 'Benchmarks' ">RazorSlices.ForBenchmarks</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Benchmarks' ">
+    <Optimize>True</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,25 +30,88 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\assets\razorslices-icon.png" Pack="true" PackagePath="\" />
+    <None Include=".\build\**\*.*" Pack="true" PackagePath="build" />
+    <None Include="..\BuildTasks\Mono.Cecil.LICENSE.txt" Pack="true" PackagePath="tasks/netstandard2.0" />
     <None Include="..\..\.editorconfig" Link=".editorconfig" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <InternalsVisibleTo Include="RazorSlices.Tests" />
+    <InternalsVisibleTo Include="Benchmarks" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="RazorSlice.Formattables.cs">
+    <Compile Update="RazorSliceBase.Formattables.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
-      <DependentUpon>RazorSlice.Formattables.tt</DependentUpon>
+      <DependentUpon>RazorSliceBase.Formattables.tt</DependentUpon>
     </Compile>
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="RazorSlice.Formattables.tt">
+    <None Update="RazorSliceBase.Formattables.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>RazorSlice.Formattables.cs</LastGenOutput>
+      <LastGenOutput>RazorSliceBase.Formattables.cs</LastGenOutput>
     </None>
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference the source generator just to ensure it's built but don't reference its output -->
+    <ProjectReference Include="..\SourceGenerator\SourceGenerator.csproj" OutputItemType="SourceGeneratorAssemblyPath" ReferenceOutputAssembly="false" Private="true" GlobalPropertiesToRemove="PublishAot;PublishTrimmed;PublishSingleFile;PublishReadyToRun;SelfContained;RuntimeIdentifier" />
+    <ProjectReference Include="..\BuildTasks\BuildTasks.csproj" OutputItemType="BuildTaskAssemblyPath" ReferenceOutputAssembly="false" Private="false" GlobalPropertiesToRemove="PublishAot;PublishTrimmed;PublishSingleFile;PublishReadyToRun;SelfContained;RuntimeIdentifier" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorInPackage</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <!-- Include source generator assembly in this project's package output -->
+  <Target Name="IncludeSourceGeneratorInPackage">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="@(SourceGeneratorAssemblyPath)" PackagePath="analyzers/dotnet/cs" />
+      <TfmSpecificPackageFile Include="@(BuildTaskAssemblyPath)" PackagePath="tasks/netstandard2.0" />
+      <TfmSpecificPackageFile Include="@(BuildTaskAssemblyPath->'%(RootDir)%(Directory)Mono.Cecil.dll')" PackagePath="tasks/netstandard2.0" />
+    </ItemGroup>
+  </Target>
+
+  <UsingTask TaskName="RewritePackageReadme" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <SourceFile ParameterType="System.String" Required="true" />
+      <DestinationFile ParameterType="System.String" Required="true" />
+      <Commit ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        if (!Regex.IsMatch(Commit, @"\A[0-9a-fA-F]{40}\z"))
+        {
+            Log.LogError("A full Git commit SHA is required to pack the README logo.");
+            return false;
+        }
+
+        var readme = File.ReadAllText(SourceFile);
+        const string imagePath = "assets/razorslices-logo.svg";
+        if (!readme.Contains(imagePath))
+        {
+            Log.LogError("The README logo path was not found in the source README.");
+            return false;
+        }
+
+        var imageUrl = $"https://raw.githubusercontent.com/DamianEdwards/RazorSlices/{Commit}/{imagePath}";
+        Directory.CreateDirectory(Path.GetDirectoryName(DestinationFile));
+        File.WriteAllText(DestinationFile, readme.Replace(imagePath, imageUrl));
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="PreparePackageReadme" BeforeTargets="_GetPackageFiles" DependsOnTargets="InitializeSourceControlInformation">
+    <RewritePackageReadme SourceFile="$(MSBuildProjectDirectory)\..\..\README.md"
+                          DestinationFile="$(IntermediateOutputPath)Package.README.md"
+                          Commit="$(SourceRevisionId)" />
+    <ItemGroup>
+      <None Include="$(IntermediateOutputPath)Package.README.md" Pack="true" PackagePath="README.md" />
+    </ItemGroup>
+  </Target>
 
 </Project>

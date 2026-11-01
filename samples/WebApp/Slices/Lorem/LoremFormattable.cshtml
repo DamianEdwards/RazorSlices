@@ -1,0 +1,50 @@
+﻿@inherits RazorSlice<LoremParams>
+@implements IUsesLayout<_LoremLayout, LayoutModel>
+
+@{
+    var content = new LoremContent { ParagraphCount = Model.ParagraphCount };
+}
+
+@content
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = $"Lorem Ipsum (Formattable: {Model.ParagraphCount} paragraphs)" };
+
+    protected override Task ExecuteSectionAsync(string name)
+    {
+        if (name == "lorem-header")
+        {
+            <p class="text-info">This page renders a custom <code>ISpanFormattable</code> type that contains lorem ipsum content.</p>
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public struct LoremContent : ISpanFormattable
+    {
+        public int ParagraphCount { get; set; }
+
+        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
+        {
+            charsWritten = 0;
+            var dest = destination;
+            for (int i = 0; i < ParagraphCount; i++)
+            {
+                if (!dest.TryWrite($"{PageContent.Paragraph}", out var written))
+                {
+                    charsWritten = 0;
+                    return false;
+                }
+
+                charsWritten += written;
+                dest = dest[written..];
+            }
+            return true;
+        }
+
+        public string ToString(string? format, IFormatProvider? formatProvider)
+        {
+            throw new NotSupportedException("Call TryFormat instead.");
+        }
+    }
+}

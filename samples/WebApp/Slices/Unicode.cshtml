@@ -1,0 +1,65 @@
+﻿@inherits RazorSlice
+@implements IUsesLayout<_Layout, LayoutModel>
+@using RazorSlices.Samples.WebApp.Slices
+
+<h1 class="mt-5">@Title</h1>
+            
+<h2>Emoji</h2>
+            
+<h3>As literals</h3>
+<p>
+    <span class="emoji" title="Beaming falce with smiling eyes (U+1F601)">😁</span>
+    <span class="emoji" title="Pile of poo (U+1F4A9)">💩</span>
+    <span class="emoji" title="Bear (U+1F43B)">🐻</span>
+    <span class="emoji" title="Spouting whale (U+1F433)">🐳</span>
+    <span class="emoji" title="Red heart (U+2764, U+FE0F)">❤️</span>
+    <span class="emoji" title="Hot pepper (U+1F336, U+FE0F)">🌶️</span>
+    <span class="emoji" title="Face in clouds (U+1F636, U+200D, U+1F32B, U+FE0F)">😶‍🌫️</span>
+    <span class="emoji" title="Alien monster (U+1F47E)">👾</span>
+    <span class="emoji" title="Shaking face (U+1FAE8)">🫨</span>
+</p>
+
+<h3>As dynamic content (string)</h3>
+<p>
+    @foreach (var emoji in UnicodeData.Emojis)
+    {
+        <span class="emoji">@emoji</span>
+    }
+</p>
+
+<h3>As dynamic content (UTF8)</h3>
+<p>
+    @foreach (var emoji in UnicodeData.EmojisUtf8)
+    {
+        <span class="emoji">@emoji</span>
+    }
+</p>
+
+<h2><a href="https://learn.microsoft.com/globalization/encoding/surrogate-pairs#variation-selection"></a>Variations</h2>
+
+<h3>As literals</h3>
+<p>
+    Some kanji with variations:
+    <span lang="ja" title="U+845B: as used in the name of the Nishi-Kasai railway station">西葛西駅</span>
+    <span lang="ja" title="U+845B with U+E0100 (VS17): as used in the name of Katsuragi City in Nara prefecture">葛&#xE0100;城市</span>
+</p>
+
+<h3>As dynamic content (string)</h3>
+<p>
+    Some kanji with variations:
+    <span lang="ja" title="U+845B: as used in the name of the Nishi-Kasai railway station">@UnicodeData.Kanji1</span>
+    <span lang="ja" title="U+845B with U+E0100 (VS17): as used in the name of Katsuragi City in Nara prefecture">@UnicodeData.Kanji2</span>
+</p>
+
+<h3>As dynamic content (UTF8)</h3>
+<p>
+    Some kanji with variations:
+    <span lang="ja" title="U+845B: as used in the name of the Nishi-Kasai railway station">@UnicodeData.Kanji1Utf8</span>
+    <span lang="ja" title="U+845B with U+E0100 (VS17): as used in the name of Katsuragi City in Nara prefecture">@UnicodeData.Kanji2Utf8</span>
+</p>
+
+@functions {
+    static string Title = "Unicode";
+
+    public LayoutModel LayoutModel => new() { Title = Title };
+}

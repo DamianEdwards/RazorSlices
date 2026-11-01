@@ -1,0 +1,17 @@
+@inherits RazorSlice
+@implements IUsesLayout<_Layout, LayoutModel>
+
+<h1 class="mt-5">Attribute rendering</h1>
+
+<div class="@false">False</div>
+<div class="@null">Null</div>
+<div class="@("")">Empty</div>
+<div class="@("false")">False String</div>
+<div class="@("active")">String</div>
+<input type="checkbox" checked="@true" name="true" />
+<input type="checkbox" checked="@false" name="false" />
+<input type="checkbox" checked="@null" name="null" />
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = "Attribute rendering" };
+}

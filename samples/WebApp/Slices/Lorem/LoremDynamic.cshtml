@@ -1,0 +1,25 @@
+﻿@inherits RazorSlice<LoremParams>
+@implements IUsesLayout<_LoremLayout, LayoutModel>
+
+@for (var i = 0; i < Model.ParagraphCount; i++)
+{
+    <p>@PageContent.SentencesUtf8(Model.ParagraphSentenceCount)</p>
+}
+
+@functions {
+    public LayoutModel LayoutModel => new() { Title = $"Lorem Ipsum (Dynamic: {Model.ParagraphCount} paragraphs)" };
+
+    protected override Task ExecuteSectionAsync(string name)
+    {
+        if (name == "lorem-header")
+        {
+            <p class="text-info">
+                This page dynamically renders lorem ipsum content based on the passed arguments. Specify the number of paragraphs
+                and the paragraph sentence count via the query string, e.g.
+                <a href="lorem-dynamic?paraCount=12&paraLength=6"><code>/lorem-dynamic?paraCount=12&amp;paraLength=6</code></a>.
+            </p>
+        }
+
+        return Task.CompletedTask;
+    }
+}

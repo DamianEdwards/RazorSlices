@@ -1,6 +1,5 @@
 ﻿using System.Buffers;
 using System.Diagnostics;
-using System.IO;
 using System.Text;
 using System.Text.Encodings.Web;
 
@@ -52,6 +51,12 @@ internal static class TextWriterHtmlExtensions
             }
 
             encodeStatus = htmlEncoder.Encode(textToEncode, encodeBufferSpan, out var charsConsumed, out var charsEncoded);
+            if (charsConsumed == 0 && encodeStatus == OperationStatus.DestinationTooSmall)
+            {
+                // Flush the encoded prefix before retrying an escape that cannot fit in the remaining space.
+                encodeBufferSpan = default;
+                continue;
+            }
             waitingToWrite += charsEncoded;
 
             if (textToEncode.Length - charsConsumed == 0)
@@ -65,7 +70,7 @@ internal static class TextWriterHtmlExtensions
 
         if (waitingToWrite > 0)
         {
-            textWriter.Write(encodeBufferSpan);
+            textWriter.Write(encodeBuffer.AsSpan()[..waitingToWrite]);
         }
 
         ArrayPool<char>.Shared.Return(encodeBuffer);
@@ -83,8 +88,9 @@ internal static class TextWriterHtmlExtensions
             if ((charsWritten * BufferSizes.HtmlEncodeAllowanceRatio) < BufferSizes.SmallFormattableWriteCharSize)
             {
                 Span<char> encodedBuffer = stackalloc char[BufferSizes.SmallFormattableWriteCharSize];
-                if (htmlEncoder.Encode(formatBuffer, encodedBuffer, out var charsConsumed, out var charsEncoded) == OperationStatus.Done)
+                if (htmlEncoder.Encode(formatBuffer[..charsWritten], encodedBuffer, out var charsConsumed, out var charsEncoded) == OperationStatus.Done)
                 {
+                    textWriter.Write(encodedBuffer[..charsEncoded]);
                     return true;
                 }
             }
@@ -92,7 +98,6 @@ internal static class TextWriterHtmlExtensions
         return false;
     }
 
-#if NET8_0_OR_GREATER
     public static void HtmlEncodeAndWriteUtf8SpanFormattable<T>(this TextWriter textWriter, T? formattable, HtmlEncoder htmlEncoder, ReadOnlySpan<char> format = default, IFormatProvider? formatProvider = null)
         where T : IUtf8SpanFormattable
     {
@@ -133,7 +138,6 @@ internal static class TextWriterHtmlExtensions
         }
         return false;
     }
-#endif
 
     public static void HtmlEncodeAndWrite(this TextWriter textWriter, ReadOnlySpan<char> value, HtmlEncoder htmlEncoder)
     {
@@ -147,9 +151,9 @@ internal static class TextWriterHtmlExtensions
     {
         var charCount = Encoding.UTF8.GetCharCount(value);
         var buffer = ArrayPool<char>.Shared.Rent(charCount);
-        var bytesDecoded = Encoding.UTF8.GetChars(value, buffer);
+        var charsWritten = Encoding.UTF8.GetChars(value, buffer);
 
-        Debug.Assert(bytesDecoded == value.Length, "Bad decoding when writing to TextWriter in HtmlEncodeAndWriteUtf8(ReadOnlySpan<byte>)");
+        Debug.Assert(charsWritten == charCount, "Bad decoding when writing to TextWriter in HtmlEncodeAndWriteUtf8(ReadOnlySpan<byte>)");
 
         htmlEncoder.Encode(textWriter, buffer, 0, charCount);
         ArrayPool<char>.Shared.Return(buffer);
@@ -157,11 +161,11 @@ internal static class TextWriterHtmlExtensions
 
     public static void WriteUtf8(this TextWriter textWriter, ReadOnlySpan<byte> value)
     {
-        var charCount = Encoding.Unicode.GetCharCount(value);
+        var charCount = Encoding.UTF8.GetCharCount(value);
         var buffer = ArrayPool<char>.Shared.Rent(charCount);
-        var bytesDecoded = Encoding.Unicode.GetChars(value, buffer);
+        var charsWritten = Encoding.UTF8.GetChars(value, buffer);
 
-        Debug.Assert(bytesDecoded == value.Length, "Bad decoding when writing to TextWriter in WriteUtf8(ReadOnlySpan<byte>)");
+        Debug.Assert(charsWritten == charCount, "Bad decoding when writing to TextWriter in WriteUtf8(ReadOnlySpan<byte>)");
 
         textWriter.Write(buffer, 0, charCount);
         ArrayPool<char>.Shared.Return(buffer);

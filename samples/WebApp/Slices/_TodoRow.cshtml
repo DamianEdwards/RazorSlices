@@ -1,0 +1,9 @@
+@using RazorSlices.Samples.WebApp.Helpers
+@inherits RazorSlice<Models.Todo>
+
+<tr class="@(Model.IsComplete ? "complete" : null)">
+    <td>@Model.Id</td>
+    <td><a href="@Model.Id">@Model.Title</a></td>
+    <td>@Model.DueBy</td>
+    <td>@Helpers.TodoHelpers.TaskStatus(Model.IsComplete)</td>
+</tr>

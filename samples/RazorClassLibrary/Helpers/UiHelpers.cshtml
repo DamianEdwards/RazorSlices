@@ -1,0 +1,15 @@
+@using RazorSlices.Samples.RazorClassLibrary.Helpers
+@inherits RazorSliceHelpers
+@implements IUiHelpers
+@functions {
+    public void StatusBadge(string text, bool success = false, string? title = null)
+    {
+        <span class="badge @(success ? "text-bg-success" : "text-bg-secondary")" title="@title">@text</span>
+    }
+
+    public async ValueTask AsyncNoticeAsync(string heading, Func<CancellationToken, ValueTask<string>> loadMessage)
+    {
+        var message = await loadMessage(CancellationToken);
+        <aside class="alert alert-info"><strong>@heading</strong><p>@message</p></aside>
+    }
+}

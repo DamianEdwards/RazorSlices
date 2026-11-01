@@ -8,27 +8,28 @@ on:
         type: boolean
         default: false
 
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+  DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+  DOTNET_ADD_GLOBAL_TOOLS_TO_PATH: false
+  DOTNET_MULTILEVEL_LOOKUP: 0
+  DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     name: Build & Test
-    env:
-      DOTNET_CLI_TELEMETRY_OPTOUT: 1
-      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
-      DOTNET_NOLOGO: true
-      DOTNET_GENERATE_ASPNET_CERTIFICATE: false
-      DOTNET_ADD_GLOBAL_TOOLS_TO_PATH: false
-      DOTNET_MULTILEVEL_LOOKUP: 0
-      DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
 
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Install .NET SDK
-      uses: actions/setup-dotnet@v3
+    - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+
+    - name: Install .NET SDKs/runtimes
+      uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
       with:
-        dotnet-version: 6.0.x
-        global-json-file: "./global.json"
+        dotnet-version: 10.0.x
+        global-json-file: global.json
     
     - name: Restore dependencies
       run: dotnet restore
@@ -43,13 +44,16 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
 
+    # PublishSample scenarios run in the parallel matrix below.
     - name: Test
-      run: dotnet test --configuration Release --no-restore --no-build
+      run: dotnet test --configuration Release --no-restore --no-build --filter "FullyQualifiedName!~RazorSlices.Samples.WebApp.PublishTests.PublishSample"
 
     - name: Publish samples
-      run: |
-        dotnet build -c Release /t:PublishSamples --no-build --verbosity normal
-      
+      run: dotnet build -c Release /t:PublishSamples -p:NoBuild=true --verbosity normal
+
+    - name: Build benchmarks
+      run: dotnet build --configuration Benchmarks
+
     - name: Pack (ci)
       run: dotnet pack --configuration Release --output ./artifacts/ci --verbosity normal -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true
 
@@ -58,8 +62,52 @@ jobs:
       run: dotnet pack --configuration Release --output ./artifacts/ship --verbosity normal -p:BuildNumber=$BUILD_NUMBER -p:SourceRevisionId=$GITHUB_SHA -p:ContinuousIntegrationBuild=true -p:IsShipCandidate=true
 
     - name: Upload artifacts (packages)
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: nupkg
         path: ./artifacts/**/*.nupkg
         retention-days: 5
+
+  publish-tests:
+    runs-on: ubuntu-latest
+    name: Publish ${{ matrix.project }} (${{ matrix.framework }})
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+        - WebApp
+        - PagesAndSlices
+        framework:
+        - net10.0
+        - net11.0
+
+    steps:
+    - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+
+    - name: Install .NET SDKs/runtimes
+      uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+      with:
+        dotnet-version: 10.0.x
+        global-json-file: global.json
+
+    - name: Publish and verify
+      # %22 encodes the quotes around xUnit theory argument values for VSTest.
+      run: >-
+        dotnet test tests/Samples.WebApp.PublishTests/Samples.WebApp.PublishTests.csproj
+        --configuration Release
+        --filter "FullyQualifiedName~RazorSlices.Samples.WebApp.PublishTests.PublishSample&DisplayName~projectName: %22${{ matrix.project }}%22&DisplayName~${{ matrix.framework }}"
+
+  runtime-async-tests:
+    runs-on: ubuntu-latest
+    name: Runtime Async consumers
+    steps:
+    - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+    - uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+      with:
+        dotnet-version: 10.0.x
+        global-json-file: global.json
+    - name: Test library with Runtime Async callers
+      run: dotnet test tests/RazorSlices/RazorSlices.Tests.csproj -c Release -f net11.0 -p:RazorSlicesTestRuntimeAsync=true -p:ArtifactsPath=$GITHUB_WORKSPACE/artifacts/runtime-async-unit
+    - name: Test SDK-generated app and RCL templates
+      run: dotnet test tests/Samples.WebApp/Samples.WebApp.csproj -c Release -f net11.0 -p:RazorSlicesTestRuntimeAsync=true -p:ArtifactsPath=$GITHUB_WORKSPACE/artifacts/runtime-async-consumer
