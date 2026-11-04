@@ -21,7 +21,7 @@ internal static class MapSlicesExtensions
         tempDataEndpoints.WithTempData();
         tempDataEndpoints.MapGet("", RazorSlice (TempData tempData, bool keep = false) =>
         {
-            var message = tempData.GetString("message");
+            var message = tempData.Get<string>("message");
             if (keep) { tempData.Keep("message"); }
             return Slices.TempDataDemo.Create(message);
         });
