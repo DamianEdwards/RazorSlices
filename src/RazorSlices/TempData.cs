@@ -37,17 +37,10 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
         return ValueTask.FromResult<TempData?>(GetOrCreate(context));
     }
 
-    /// <summary>Gets and consumes a string value, or sets a string value. Missing keys return null.</summary>
-    public string? this[string key]
-    {
-        get => GetString(key);
-        set => Set(key, value);
-    }
-
     /// <summary>Gets the number of current values, including values consumed in this request.</summary>
     public int Count => Entries.Count;
 
-    /// <summary>Stores a string without inferring numbers, dates, or GUIDs from its contents.</summary>
+    /// <summary>Stores a nullable string for Get&lt;string&gt;, Peek&lt;string&gt;, or TryGet&lt;string&gt;, without inferring other types from its contents.</summary>
     public void Set(string key, string? value)
     {
         EnsureAccess();
@@ -63,21 +56,22 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
 
     /// <summary>
     /// Stores a built-in numeric, date/time, or GUID value natively without boxing or formatting.
-    /// Custom types should use SetUtf8 instead.
+    /// Other types are formatted immediately as UTF-8 and read using their character-span parser.
     /// </summary>
     public void Set<T>(string key, T value)
         where T : IUtf8SpanFormattable, ISpanParsable<T>
     {
-        if (!TypeInfo<T>.IsBuiltIn)
+        if (TypeInfo<T>.IsBuiltIn)
         {
             EnsureAccess();
-            throw new InvalidOperationException("Custom TempData types must support UTF-8 parsing and use SetUtf8.");
+            Store(key, Entry.FromNative(TypeName<T>(), NativeType<T>.Kind, value));
+            return;
         }
-        EnsureAccess();
-        Store(key, Entry.FromNative(TypeName<T>(), NativeType<T>.Kind, value));
+        SetCore(key, value);
     }
 
     /// <summary>Stores a custom value supporting both UTF-8 formatting and UTF-8 parsing without boxing.</summary>
+    /// <remarks>Built-ins satisfying these constraints retain native storage. Values can also use generic reads when the exact type implements ISpanParsable&lt;T&gt;, regardless of which writer was used.</remarks>
     public void SetUtf8<T>(string key, T value)
         where T : IUtf8SpanFormattable, IUtf8SpanParsable<T>
     {
@@ -125,41 +119,31 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
         }
     }
 
-    /// <summary>Gets and consumes a string, returning null for a missing key. Type mismatches throw.</summary>
-    public string? GetString(string key) => ReadString(key, consume: true);
-
-    /// <summary>Gets a string without consuming it.</summary>
-    public string? Peek(string key) => ReadString(key, consume: false);
-
-    /// <summary>Gets and consumes a typed value. Missing keys return default; type mismatches throw.</summary>
+    /// <summary>Gets and consumes an exact-type value, including strings. Missing keys return default; type mismatches throw.</summary>
+    /// <remarks>Value types return default(T), not Nullable&lt;T&gt;. Custom values use their character-span parser, regardless of which writer was used. Failed reads do not consume.</remarks>
     public T? Get<T>(string key) where T : ISpanParsable<T>
         => TryRead<T>(key, consume: true, out var value) ? value : default;
 
-    /// <summary>Gets a typed value without consuming it. Missing keys return default.</summary>
+    /// <summary>Gets an exact-type value, including strings, without consuming it. Missing keys return default; type mismatches throw.</summary>
     public T? Peek<T>(string key) where T : ISpanParsable<T>
         => TryRead<T>(key, consume: false, out var value) ? value : default;
 
-    /// <summary>Gets and consumes a typed value. Returns false only when the key is missing.</summary>
-    public bool TryGet<T>(string key, [MaybeNullWhen(false)] out T value) where T : ISpanParsable<T>
+    /// <summary>Gets and consumes an exact-type value. Returns false only when the key is missing; a stored null string returns true with null. Type mismatches and parsing errors throw without consuming.</summary>
+    public bool TryGet<T>(string key, [MaybeNull] out T value) where T : ISpanParsable<T>
         => TryRead(key, consume: true, out value);
 
-    /// <summary>Gets a custom UTF-8-parsable value, consuming it by default. Type mismatches throw.</summary>
-    public T? GetUtf8<T>(string key, bool consume = true) where T : IUtf8SpanFormattable, IUtf8SpanParsable<T>
-    {
-        if (!Entries.TryGetValue(key, out var entry)) { return default; }
-        CheckType(key, entry, TypeName<T>());
-        T value;
-        if (entry.Kind != TempDataValueKind.Utf8)
-        {
-            value = entry.ReadNative<T>();
-        }
-        else
-        {
-            value = T.Parse(entry.Bytes, CultureInfo.InvariantCulture);
-        }
-        MarkConsumed(key, entry, consume);
-        return value;
-    }
+    /// <summary>Gets and consumes an exact-type UTF-8-parsable value. Missing keys return default; type mismatches and parsing errors throw without consuming.</summary>
+    /// <remarks>Supports custom UTF-8 values and built-ins satisfying the constraints, including those stored with Set. Strings use Get&lt;string&gt; instead.</remarks>
+    public T? GetUtf8<T>(string key) where T : IUtf8SpanFormattable, IUtf8SpanParsable<T>
+        => TryReadUtf8<T>(key, consume: true, out var value) ? value : default;
+
+    /// <summary>Gets an exact-type UTF-8-parsable value without consuming it. Missing keys return default; type mismatches and parsing errors throw.</summary>
+    public T? PeekUtf8<T>(string key) where T : IUtf8SpanFormattable, IUtf8SpanParsable<T>
+        => TryReadUtf8<T>(key, consume: false, out var value) ? value : default;
+
+    /// <summary>Gets and consumes an exact-type UTF-8-parsable value. Returns false only when the key is missing; type mismatches and parsing errors throw without consuming.</summary>
+    public bool TryGetUtf8<T>(string key, [MaybeNullWhen(false)] out T value) where T : IUtf8SpanFormattable, IUtf8SpanParsable<T>
+        => TryReadUtf8(key, consume: true, out value);
 
     /// <summary>Returns whether the key exists without consuming it.</summary>
     public bool ContainsKey(string key) => Entries.ContainsKey(key);
@@ -191,22 +175,37 @@ public sealed class TempData : IBindableFromHttpContext<TempData>
     /// <summary>Removes all values.</summary>
     public void Clear() => Entries.Clear();
 
-    private string? ReadString(string key, bool consume)
+    private bool TryReadUtf8<T>(string key, bool consume, [MaybeNullWhen(false)] out T value)
+        where T : IUtf8SpanFormattable, IUtf8SpanParsable<T>
     {
-        if (!Entries.TryGetValue(key, out var entry)) { return null; }
-        CheckType(key, entry, "string");
-        var value = entry.Text;
+        if (!Entries.TryGetValue(key, out var entry))
+        {
+            value = default;
+            return false;
+        }
+        CheckType(key, entry, TypeName<T>());
+        value = entry.Kind != TempDataValueKind.Utf8
+            ? entry.ReadNative<T>()
+            : T.Parse(entry.Bytes, CultureInfo.InvariantCulture);
         MarkConsumed(key, entry, consume);
-        return value;
+        return true;
     }
 
-    private bool TryRead<T>(string key, bool consume, [MaybeNullWhen(false)] out T value)
+    private bool TryRead<T>(string key, bool consume, [MaybeNull] out T value)
         where T : ISpanParsable<T>
     {
         if (!Entries.TryGetValue(key, out var entry))
         {
             value = default;
             return false;
+        }
+        if (typeof(T) == typeof(string))
+        {
+            CheckType(key, entry, "string");
+            var storedString = entry.Text;
+            value = Unsafe.As<string?, T>(ref storedString);
+            MarkConsumed(key, entry, consume);
+            return true;
         }
         CheckType(key, entry, TypeName<T>());
         if (entry.Kind != TempDataValueKind.Utf8)

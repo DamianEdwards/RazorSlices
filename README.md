@@ -100,7 +100,7 @@ app.MapPost("/save", (TempData tempData) =>
 }).WithTempData();
 
 app.MapGet("/", RazorSlice (TempData tempData) =>
-    Slices.Home.Create(tempData.GetString("message")))
+    Slices.Home.Create(tempData.Get<string>("message")))
     .WithTempData();
 ```
 
@@ -124,29 +124,67 @@ if (tempData.TryGet<Guid>("id", out var id))
 }
 ```
 
-Missing keys return the type's default value (`null` for strings). `TryGet` distinguishes missing keys from a stored default. Reading the wrong type throws without consuming the value. Strings remain strings, even when they look like dates or GUIDs.
+Missing keys return the type's default value (`null` for strings, `0` for `int`, `false` for `bool`, etc.). The `T?` return annotation does not wrap value types in `Nullable<T>`. `TryGet` distinguishes missing keys from a stored default, including a stored null string:
 
-Built-in values are stored without formatting or boxing; strings and `BigInteger` retain their existing data. Only values retained for the next request are encoded when saving. Custom UTF-8 types use the eager formatting path below.
+```csharp
+tempData.Set("message", (string?)null);
+if (tempData.TryGet<string>("message", out var message))
+{
+    // The key exists, but message can still be null.
+}
+```
 
-For custom types implementing both `IUtf8SpanFormattable` and `IUtf8SpanParsable<T>`, use the UTF-8 APIs:
+Reading the wrong type throws without consuming the value. Strings remain strings, even when they look like dates or GUIDs: `Set("count", "42")` can be read with `Get<string>`, not `Get<int>`. String reads return the stored string directly, without parsing or copying it.
+
+Built-in values are stored without formatting or boxing; strings and `BigInteger` retain their existing data. Only built-in values retained for the next request are encoded when saving. Other types implementing `IUtf8SpanFormattable` and `ISpanParsable<T>` work with the same generic APIs:
+
+```csharp
+tempData.Set("reference", reference);
+var restored = tempData.Get<MyReference>("reference");
+```
+
+These values are formatted immediately as UTF-8 when written, then decoded to characters and parsed when read. Saving does not reformat them.
+
+For types implementing both `IUtf8SpanFormattable` and `IUtf8SpanParsable<T>`, the UTF-8 APIs avoid decoding to characters when reading:
 
 ```csharp
 tempData.SetUtf8("reference", reference);
 var restored = tempData.GetUtf8<MyReference>("reference");
-var retained = tempData.GetUtf8<MyReference>("reference", consume: false);
+var retained = tempData.PeekUtf8<MyReference>("reference");
+if (tempData.TryGetUtf8<MyReference>("reference", out var found))
+{
+    // Use the restored value.
+}
 ```
 
 Custom formatting and parsing must round-trip using invariant culture and the default format.
+
+### API compatibility
+
+| Stored value | Write | Read and consume | Read without consuming |
+|---|---|---|---|
+| Nullable string | `Set(key, stringValue)` | `Get<string>`, `TryGet<string>` | `Peek<string>` |
+| Built-in Boolean, number, date/time, or GUID | `Set(key, value)` | `Get<T>`, `TryGet<T>` | `Peek<T>` |
+| Other UTF-8-formattable, character-span-parsable type | `Set(key, value)` | `Get<T>`, `TryGet<T>` | `Peek<T>` |
+| Custom UTF-8-formattable/parsable type | `SetUtf8(key, value)` | `GetUtf8<T>`, `TryGetUtf8<T>` | `PeekUtf8<T>` |
+
+Use the exact stored type when reading: an `int` cannot be read as a `long`, and a custom value cannot be read as its formatted string. There is no implicit conversion or type inference from textual contents.
+
+The generic `Set<T>` accepts types implementing `IUtf8SpanFormattable` and `ISpanParsable<T>`, using native storage for supported built-ins and immediate UTF-8 formatting for other types. String and Boolean writes use overloads; in particular, use `Set(key, stringValue)`, not explicit `Set<string>`. Generic reads require `ISpanParsable<T>` and include strings and Booleans. Null values are supported only by the string overload; null custom reference values throw `ArgumentNullException`.
+
+The UTF-8 family requires both `IUtf8SpanFormattable` and `IUtf8SpanParsable<T>`. Types satisfying both families' constraints work with either read family, regardless of which writer was used. Built-ins still use native storage; other types use their character-span or UTF-8 parser according to the read method. Strings use the built-in family, not the UTF-8 family.
+
+Both `TryGet` and `TryGetUtf8` return false only for missing keys; they do not suppress type mismatches or parsing errors. Get and successful TryGet operations consume the value; Peek operations do not. Consumed values remain readable in the current request but are omitted when saving, unless retained with `Keep`. Failed reads do not consume.
 
 ### Keeping values
 
 Use `Peek` to read without consuming, or `Keep` to retain a value you have already read:
 
 ```csharp
-var message = tempData.Peek("message");
+var message = tempData.Peek<string>("message");
 var count = tempData.Peek<int>("count");
 
-var notice = tempData.GetString("notice");
+var notice = tempData.Get<string>("notice");
 tempData.Keep("notice");
 
 tempData.Keep(); // Retain all values.
@@ -162,7 +200,7 @@ Apply `.WithTempData()` once to a group instead of each endpoint:
 var pages = app.MapGroup("/pages").WithTempData();
 
 pages.MapGet("/home", RazorSlice (TempData tempData) =>
-    Slices.Home.Create(tempData.GetString("message")));
+    Slices.Home.Create(tempData.Get<string>("message")));
 ```
 
 TempData uses cookies by default. Configure them during registration:
@@ -175,7 +213,7 @@ builder.Services.AddRazorSliceTempData(options =>
 });
 ```
 
-Keep cookie values small. Supported values are nullable strings, booleans, numeric types (including `Half`, `Int128`, and `BigInteger`), date/time types, GUIDs, and custom UTF-8-formattable/parsable types. Collections, arbitrary objects, and enums are not supported. Keys are case-insensitive strings.
+Keep cookie values small. Supported values are nullable strings, booleans, native numeric types (including `Half`, `Int128`, and `BigInteger`), date/time types, GUIDs, and other UTF-8-formattable types with a corresponding character-span or UTF-8 parser. Collections, arbitrary objects, and enums are not automatically serialized; types must satisfy the relevant API's constraints. Keys are case-insensitive strings.
 
 RazorSlices TempData is independent of MVC TempData and does not share its cookies, session keys, or payload format. To use ASP.NET Core session instead of cookies:
 
@@ -204,7 +242,7 @@ builder.Services.AddRazorSliceTempData();
 var forms = app.MapGroup("/tempdata").WithAntiforgery().WithTempData();
 
 forms.MapGet("", RazorSlice (TempData tempData) =>
-    Slices.TempDataDemo.Create(tempData.GetString("message")));
+    Slices.TempDataDemo.Create(tempData.Get<string>("message")));
 
 forms.MapPost("", (TempData tempData) =>
 {

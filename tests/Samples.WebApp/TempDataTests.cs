@@ -56,10 +56,10 @@ public class TempDataTests
         await using var app = await CreateApp(provider, app =>
             app.MapGet("/", async (TempData data) =>
             {
-                data["message"] = "before await";
+                data.Set("message", "before await");
                 await Task.Yield();
                 Assert.Equal(0, provider.SaveCount);
-                data["message"] = "after await";
+                data.Set("message", "after await");
                 return expected;
             }).WithTempData().AddEndpointFilter(async (context, next) =>
             {
@@ -102,8 +102,8 @@ public class TempDataTests
         await using var app = await CreateApp(provider, app =>
             app.MapGet("/", (TempData data) =>
             {
-                data["message"] = "hello";
-                Assert.Equal("hello", peek ? data.Peek("message") : data["message"]);
+                data.Set("message", "hello");
+                Assert.Equal("hello", peek ? data.Peek<string>("message") : data.Get<string>("message"));
                 return TypedResults.Redirect("/next");
             }).WithTempData());
         using var client = app.GetTestClient();
@@ -123,7 +123,7 @@ public class TempDataTests
             app.MapGet("/", async Task<IResult> (TempData data) =>
             {
                 captured = data;
-                data["message"] = "not saved";
+                data.Set("message", "not saved");
                 await Task.Yield();
                 if (cancel) { throw new OperationCanceledException(); }
                 throw new InvalidOperationException("handler failed");
@@ -159,7 +159,7 @@ public class TempDataTests
     public async Task AccessWithoutRegisteredServicesFailsClearly()
     {
         await using var app = await CreateApp(new RecordingProvider(), app =>
-            app.MapGet("/", (TempData data) => TypedResults.Text((string?)data["message"] ?? "missing"))
+            app.MapGet("/", (TempData data) => TypedResults.Text(data.Get<string>("message") ?? "missing"))
                 .WithTempData(), registerServices: false);
         using var client = app.GetTestClient();
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => client.GetAsync("/"));
@@ -175,11 +175,11 @@ public class TempDataTests
             var group = app.MapGroup("/session").WithTempData();
             group.MapGet("/set", (TempData data) =>
             {
-                data["message"] = "session flash";
+                data.Set("message", "session flash");
                 return TypedResults.NoContent();
             });
             group.MapGet("/read", (TempData data) =>
-                TypedResults.Text((string?)data["message"] ?? "missing"));
+                TypedResults.Text(data.Get<string>("message") ?? "missing"));
         }, configureServices: services =>
         {
             services.AddDistributedMemoryCache();
@@ -220,7 +220,7 @@ public class TempDataTests
         await using var app = await CreateApp(provider, app =>
             app.MapGet("/", (TempData data) =>
             {
-                data["message"] = "hello";
+                data.Set("message", "hello");
                 data.Keep();
                 return new CheckingResult(() =>
                 {
@@ -262,9 +262,9 @@ public class TempDataTests
             app.MapGet("/", (TempData data, HttpContext context) =>
             {
                 captured = data;
-                data["message"] = "too late";
+                data.Set("message", "too late");
                 context.Features.Set<IHttpResponseFeature>(new StartedResponseFeature());
-                if (accessAfterStart) { _ = data["message"]; }
+                if (accessAfterStart) { _ = data.Get<string>("message"); }
                 return TypedResults.NoContent();
             }).WithTempData());
         using var client = app.GetTestClient();
@@ -285,8 +285,8 @@ public class TempDataTests
             group.MapGet("/", (TempData first, TempData second) =>
             {
                 Assert.Same(first, second);
-                first["message"] = "shared";
-                Assert.Equal("shared", second.Peek("message"));
+                first.Set("message", "shared");
+                Assert.Equal("shared", second.Peek<string>("message"));
                 return TypedResults.NoContent();
             }).WithTempData().WithTempData();
         });
@@ -307,7 +307,7 @@ public class TempDataTests
             app.MapGet("/", (TempData data) =>
             {
                 captured = data;
-                data["message"] = "cannot save";
+                data.Set("message", "cannot save");
                 return new CheckingResult(() => resultExecuted = true);
             }).WithTempData());
         using var client = app.GetTestClient();
@@ -340,14 +340,24 @@ public class TempDataTests
     {
         Assert.Null(typeof(TempData).GetMethod("Save", BindingFlags.Public | BindingFlags.Instance));
         Assert.Null(typeof(TempData).GetMethod("Load", BindingFlags.Public | BindingFlags.Instance));
+        Assert.Null(typeof(TempData).GetProperty("Item"));
+        Assert.Null(typeof(TempData).GetMethod("GetString"));
+        Assert.All(typeof(TempData).GetMethods().Where(method => method.Name == "Peek"),
+            method => Assert.True(method.IsGenericMethod));
+        Assert.Single(typeof(TempData).GetMethod("GetUtf8")!.GetParameters());
         Assert.DoesNotContain(typeof(IDictionary<string, object?>), typeof(TempData).GetInterfaces());
     }
 
     private static void AssertClosed(TempData data)
     {
-        Assert.Throws<InvalidOperationException>(() => data["message"]);
-        Assert.Throws<InvalidOperationException>(() => data["message"] = "invalid");
-        Assert.Throws<InvalidOperationException>(() => data.Peek("message"));
+        Assert.Throws<InvalidOperationException>(() => data.Get<string>("message"));
+        Assert.Throws<InvalidOperationException>(() => data.Set("message", "invalid"));
+        Assert.Throws<InvalidOperationException>(() => data.Peek<string>("message"));
+        Assert.Throws<InvalidOperationException>(() => data.TryGet<string>("message", out _));
+        Assert.Throws<InvalidOperationException>(() => data.GetUtf8<int>("message"));
+        Assert.Throws<InvalidOperationException>(() => data.PeekUtf8<int>("message"));
+        Assert.Throws<InvalidOperationException>(() => data.TryGetUtf8<int>("message", out _));
+        Assert.Throws<InvalidOperationException>(() => data.SetUtf8("message", 42));
         Assert.Throws<InvalidOperationException>(() => data.Keep());
         Assert.Throws<InvalidOperationException>(() => data.Keep("message"));
         Assert.Throws<InvalidOperationException>(() => data.Count);

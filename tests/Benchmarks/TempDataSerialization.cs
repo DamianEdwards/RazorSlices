@@ -59,7 +59,7 @@ public class TempDataSerialization
     public string? RazorSlicesStringSetAndRead()
     {
         _referenceData.Set("text", _text);
-        return _referenceData.Peek("text");
+        return _referenceData.Peek<string>("text");
     }
 
     [Benchmark]
